@@ -33,6 +33,7 @@ sudo apt-get install -y \
     xorg \
     openbox \
     xinit \
+    xserver-xorg-legacy \
     x11-xserver-utils \
     git
 
@@ -58,18 +59,28 @@ ExecStart=
 ExecStart=-/sbin/agetty --autologin $USER_NAME --noclear %I \$TERM
 EOF
 
-# ~/.bash_profile: start X on tty1
-BASH_PROFILE="$HOME/.bash_profile"
-if ! grep -q "startx" "$BASH_PROFILE" 2>/dev/null; then
-    cat >> "$BASH_PROFILE" <<'EOF'
+# ~/.profile: start X on tty1 (Ubuntu default)
+PROFILE="$HOME/.profile"
+# Also check .bash_profile if it exists (takes precedence)
+if [ -f "$HOME/.bash_profile" ]; then PROFILE="$HOME/.bash_profile"; fi
+
+if ! grep -q "startx" "$PROFILE" 2>/dev/null; then
+    cat >> "$PROFILE" <<'EOF'
 
 # Auto-start X on tty1
 if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
+    # Ensure standard env is loaded if we use .bash_profile
+    [ -n "$BASH_VERSION" ] && [ -f ~/.bashrc ] && . ~/.bashrc
     exec startx -- -nocursor 2>/dev/null
 fi
 EOF
-    echo "      Added startx to $BASH_PROFILE"
+    echo "      Added startx to $PROFILE"
 fi
+
+# Fix X11 permissions for non-root users
+echo "[4b/5] Setting X11 permissions..."
+sudo sed -i 's/allowed_users=console/allowed_users=anybody/' /etc/X11/Xwrapper.config 2>/dev/null || \
+echo "allowed_users=anybody" | sudo tee /etc/X11/Xwrapper.config > /dev/null
 
 # Openbox autostart → launch music player
 OPENBOX_CFG="$HOME/.config/openbox"
