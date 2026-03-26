@@ -1,0 +1,34 @@
+[Unit]
+Description=Pi Music Console – Touchscreen Music Player
+After=graphical.target sound.target
+Wants=graphical.target sound.target
+
+[Service]
+# Run as the auto-login user
+User=pizza
+Group=pizza
+
+# Set the display so Tkinter can reach the framebuffer / X server
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/pizza/.Xauthority
+Environment=HOME=/home/pizza
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+WorkingDirectory=/home/pizza
+
+# Delay slightly so the display server is ready
+ExecStartPre=/bin/sleep 3
+
+ExecStart=/usr/bin/python3 /home/pizza/Pi_Music_Console/music_player.py
+
+# Restart automatically if it crashes
+Restart=always
+RestartSec=5
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pi-music
+
+[Install]
+WantedBy=graphical.target
