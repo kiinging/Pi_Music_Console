@@ -34,9 +34,7 @@ sudo apt-get install -y \
     openbox \
     xinit \
     x11-xserver-utils \
-    git \
-    build-essential \
-    python3-dev
+    git
 
 # ── 2. Python packages (pip - backup only) ──────────────────
 echo "[2/5] Checking Python packages..."
