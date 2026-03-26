@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================
-#  Pi Music Console – One-Shot Installer
-#  Run once on the Raspberry Pi after git clone / git pull
+#  Pi Music Console – One-Shot Installer (v2)
+#  Fixed for Ubuntu 24.04 + Pi 5 (PEP 668 & lgpio fix)
 #  Usage:  bash install.sh
 # =============================================================
 set -e
@@ -13,13 +13,13 @@ MUSIC_DIR="$HOME/music"
 USER_NAME="$(whoami)"
 
 echo ""
-echo "=== Pi Music Console Installer ==="
+echo "=== Pi Music Console Installer (v2) ==="
 echo "Repo  : $REPO_DIR"
 echo "User  : $USER_NAME"
 echo ""
 
 # ── 1. System packages ──────────────────────────────────────
-echo "[1/5] Installing system packages..."
+echo "[1/5] Installing system packages (apt)..."
 sudo apt-get update -qq
 sudo apt-get install -y \
     alsa-utils \
@@ -28,21 +28,25 @@ sudo apt-get install -y \
     python3-pip \
     python3-tk \
     python3-gpiozero \
+    python3-evdev \
+    python3-lgpio \
     xorg \
     openbox \
     xinit \
     x11-xserver-utils \
-    git
+    git \
+    build-essential \
+    python3-dev
 
-# ── 2. Python packages ──────────────────────────────────────
-echo "[2/5] Installing Python packages..."
-pip3 install --break-system-packages -r "$REPO_DIR/requirements.txt" 2>/dev/null \
-  || pip3 install -r "$REPO_DIR/requirements.txt"
+# ── 2. Python packages (pip - backup only) ──────────────────
+echo "[2/5] Checking Python packages..."
+# Most are already installed via 'apt' above. This is just a safety.
+pip3 install --break-system-packages -r "$REPO_DIR/requirements.txt" 2>/dev/null || true
 
 # ── 3. Create ~/music folder ────────────────────────────────
 echo "[3/5] Creating music folder..."
 mkdir -p "$MUSIC_DIR"
-echo "      Put your .mp4 / .mp3 / .flac files in: $MUSIC_DIR"
+echo "      Folder: $MUSIC_DIR"
 
 # ── 4. Auto-login + auto-start X ────────────────────────────
 echo "[4/5] Setting up auto-login and auto-start X..."
@@ -102,9 +106,6 @@ echo "      Service enabled: pi-music.service"
 
 echo ""
 echo "=== Done! ==="
-echo ""
-echo "Next steps:"
-echo "  1. Add music files to:  ~/music/"
-echo "  2. Reboot:              sudo reboot"
-echo "  3. Watch logs:          journalctl -u pi-music -f"
+echo "Next steps: "
+echo "  1. Reboot:    sudo reboot"
 echo ""
