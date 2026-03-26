@@ -1,0 +1,6 @@
+# Pi Music Console – Python Dependencies
+# Install with: pip3 install -r requirements.txt
+
+gpiozero
+RPi.GPIO
+evdev
