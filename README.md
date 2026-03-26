@@ -4,6 +4,91 @@ A touchscreen music player for **Raspberry Pi 5** with PCM5122 DAC, rotary encod
 
 ---
 
+## ⚡ Quick Start (on the Pi)
+
+### 1 — First-time setup
+
+```bash
+# Clone the repo
+git clone git@github.com:kiinging/Pi_Music_Console.git
+cd Pi_Music_Console
+
+# Run the one-shot installer (installs all dependencies, sets up auto-login & service)
+bash install.sh
+```
+
+The installer automatically:
+- Installs all system packages (`mpv`, `alsa-utils`, `ffmpeg`, `python3-tk`, `xorg`, `openbox`)
+- Installs Python packages (`gpiozero`, `RPi.GPIO`, `evdev`)
+- Creates `~/music/` folder
+- Configures auto-login on tty1
+- Sets up Openbox to launch the GUI on boot
+- Installs and enables `pi-music.service`
+
+### 2 — Add your music
+
+```bash
+mkdir -p ~/music
+# Copy .mp4 / .mp3 / .flac / .wav files into ~/music/
+```
+
+### 3 — Reboot
+
+```bash
+sudo reboot
+```
+
+After reboot: auto-login → X starts → music player GUI appears → tap a song to play ✅
+
+### Check logs if something goes wrong
+
+```bash
+journalctl -u pi-music -f
+```
+
+---
+
+## 🔄 Git Workflow (PC ↔ Pi)
+
+### Set up SSH key on Pi (one time, so you can push from Pi too)
+
+```bash
+# Generate SSH key
+ssh-keygen -t ed25519 -C "pi-music-console"
+# Press Enter 3× to accept defaults
+
+# Show the public key – copy this
+cat ~/.ssh/id_ed25519.pub
+```
+
+Then on GitHub → **Settings → SSH and GPG keys → New SSH key** → paste it in.
+
+### Push from PC
+
+```bash
+git add .
+git commit -m "your message"
+git push
+```
+
+### Pull on Pi (after PC push)
+
+```bash
+cd ~/Pi_Music_Console
+git pull
+sudo systemctl restart pi-music.service
+```
+
+### Push from Pi
+
+```bash
+git add .
+git commit -m "your message"
+git push
+```
+
+---
+
 ## 📦 Hardware Requirements
 
 | Component | Detail |
@@ -252,6 +337,8 @@ sudo systemctl restart pi-music.service
 |---|---|
 | `music_player.py` | Main Python Tkinter GUI |
 | `pi-music.service` | systemd unit file for auto-start |
+| `install.sh` | One-shot installer – run once on the Pi |
+| `requirements.txt` | Python pip dependencies |
 | `README.md` | This file |
 | `README_projectDescription.md` | Project design notes |
 
@@ -270,4 +357,4 @@ sudo systemctl restart pi-music.service
 
 ---
 
-----------------------------------------------------------------------------------------
+*Built for Curtin Electronic Fundamentals 2026 — Pi Music Console project.*
