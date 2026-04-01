@@ -32,7 +32,7 @@ ALSA_MIXER = "Master"
 
 # GPIO pins for rotary encoder (BCM numbering)
 CLK_PIN = 17
-DT_PIN  = 18
+DT_PIN  = 27
 
 # ──────────────────────────────────────────────
 # Rotary encoder – import gpiozero only on Pi
