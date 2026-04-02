@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# Pi Music Console – Kiosk Launcher
-# This script starts the X server and then the Python GUI.
+# Pi Music Console – GUI Launcher
+# Optimized for Raspberry Pi OS (Pi 5)
 
-# 1. Clean up old X locks if they exist
-rm -f /tmp/.X0-lock
+# Get the directory of this script
+DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# 2. Start the Python GUI through xinit
-# -- :0  means use display 0
-# vt7    means use virtual terminal 7
-# -auth  points to the user's .Xauthority
-echo "Starting Pi Music Console Kiosk..."
-xinit /usr/bin/python3 "$(dirname "$0")/music_player.py" -- :0 vt7 -nolisten tcp
+echo "Starting Pi Music Console..."
+
+# Ensure we are in the right directory
+cd "$DIR"
+
+# Launch the Python app
+# On Raspberry Pi OS Desktop, the GUI environment is already active.
+/usr/bin/python3 music_player.py

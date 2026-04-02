@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 """
-Pi Music Console
-================
-Touchscreen music player for Raspberry Pi 5
-- Scans ~/music for .mp4, .mp3, .flac, .wav, .ogg files
-- Touch-to-play with large buttons (5" screen 800x480)
-- Volume display updated live
-- Rotary encoder via gpiozero (CLK=GPIO17, DT=GPIO18)
-- Audio output through PCM5122 DAC via ALSA/mpv
+#  Touchscreen music player for Raspberry Pi 5 (RPi OS Bookworm)
+#  - Scans ~/music for audio files
+#  - Touch-to-play with large buttons (800x480)
+#  - Rotary encoder via gpiozero (CLK=GPIO17, DT=GPIO27)
+#  - Audio output through PCM5122 DAC (hifiberry-dac overlay)
 """
 
 import os
@@ -27,8 +24,9 @@ SCREEN_HEIGHT = 480
 VOLUME_STEP = 5          # % per encoder click
 SUPPORTED_EXT = (".mp4", ".mp3", ".flac", ".wav", ".ogg", ".m4a", ".aac")
 
-# ALSA mixer name – change if your DAC uses a different control
-ALSA_MIXER = "Master"
+# ALSA mixer name – PCM5122 often uses 'Digital' or 'Playback'
+# We will attempt to auto-detect this in __init__
+ALSA_MIXER = "Digital"
 
 # GPIO pins for rotary encoder (BCM numbering)
 CLK_PIN = 17
@@ -45,11 +43,11 @@ except (ImportError, Exception):
     pass   # Running on dev PC – encoder silently disabled
 
 
-def get_volume() -> int:
-    """Read current ALSA Master volume (0-100)."""
+def get_volume(mixer_name: str) -> int:
+    """Read current ALSA volume (0-100)."""
     try:
         out = subprocess.check_output(
-            ["amixer", "get", ALSA_MIXER], stderr=subprocess.DEVNULL
+            ["amixer", "get", mixer_name], stderr=subprocess.DEVNULL
         ).decode()
         for line in out.splitlines():
             if "%" in line:
@@ -61,12 +59,12 @@ def get_volume() -> int:
     return 50
 
 
-def set_volume(value: int) -> int:
-    """Clamp and set ALSA Master volume, return actual value."""
+def set_volume(mixer_name: str, value: int) -> int:
+    """Clamp and set ALSA volume, return actual value."""
     value = max(0, min(100, value))
     try:
         subprocess.run(
-            ["amixer", "set", ALSA_MIXER, f"{value}%"],
+            ["amixer", "set", mixer_name, f"{value}%"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
@@ -130,8 +128,9 @@ class PiMusicConsole(tk.Tk):
     def __init__(self):
         super().__init__()
 
-        self.player = Player()
-        self.volume = get_volume()
+        # ── Volume / Mixer setup ────────────────
+        self.mixer = self._detect_mixer()
+        self.volume = get_volume(self.mixer)
 
         # ── Window setup ────────────────────────
         self.title("Pi Music Console")
@@ -139,7 +138,6 @@ class PiMusicConsole(tk.Tk):
         self.resizable(False, False)
         self.configure(bg="#0f0f1a")
         # Remove window decorations for fullscreen kiosk feel
-        self.overrideredirect(True)
         self.attributes("-fullscreen", True)
 
         # ── Fonts ───────────────────────────────
@@ -241,6 +239,16 @@ class PiMusicConsole(tk.Tk):
         # ── Poll player status every second ─────
         self._poll_player()
 
+    def _detect_mixer(self) -> str:
+        """Attempt to find a working ALSA mixer name (Digital, Master, or Playback)."""
+        for name in [ALSA_MIXER, "Master", "Playback", "HDMI"]:
+            try:
+                subprocess.check_output(["amixer", "get", name], stderr=subprocess.DEVNULL)
+                return name
+            except subprocess.CalledProcessError:
+                continue
+        return "Master"  # Fallback
+
     # ── Song loading ────────────────────────────
     def _load_songs(self):
         for w in self.song_frame.winfo_children():
@@ -319,11 +327,11 @@ class PiMusicConsole(tk.Tk):
 
     # ── Volume ──────────────────────────────────
     def _volume_up(self):
-        self.volume = set_volume(self.volume + VOLUME_STEP)
+        self.volume = set_volume(self.mixer, self.volume + VOLUME_STEP)
         self._refresh_volume()
 
     def _volume_down(self):
-        self.volume = set_volume(self.volume - VOLUME_STEP)
+        self.volume = set_volume(self.mixer, self.volume - VOLUME_STEP)
         self._refresh_volume()
 
     def _refresh_volume(self):

@@ -1,4 +1,4 @@
-# Hardware Setup & Manual Testing Guide
+# Hardware Setup & Manual Testing Guide (Raspberry Pi OS)
 
 This guide describes how to connect the Adafruit PCM5122 DAC and a Rotary Encoder to your Raspberry Pi 5.
 
@@ -22,7 +22,7 @@ This guide describes how to connect the Adafruit PCM5122 DAC and a Rotary Encode
 
 ---
 
-## ── 2. Configuration (Bottom-Up) ──────────────────────────
+## ── 2. Configuration (Raspberry Pi OS) ──────────────────────────
 
 ### Step A: Enable the DAC
 1. Run: `sudo nano /boot/firmware/config.txt`
@@ -36,7 +36,7 @@ This guide describes how to connect the Adafruit PCM5122 DAC and a Rotary Encode
 3. Save and Reboot: `sudo reboot`
 
 ### Step B: Install Dependencies
-Run my new fixed installer:
+Run the new installer:
 ```bash
 bash install.sh
 ```
@@ -49,23 +49,23 @@ bash test_audio.sh
 *You should hear a sine wave tone.*
 
 ### Step D: Test Encoder
-Run the Python test script (ensure your wiring matches the table above):
+Run the Python test script:
 ```bash
 python3 test_encoder.py
 ```
 *Turn the knob; you should see "Clockwise" or "Counter-clockwise" printed.*
 
-### Step E: Test GUI (Headless)
-To see if your screen can display windows without a full desktop:
+### Step E: Verify GUI Autostart
+On Raspberry Pi OS (Pi 5/Wayland), the app handles its own window. To test it manually from the desktop:
 ```bash
-startx /usr/bin/python3 music_player.py
+python3 music_player.py
 ```
-*(Note: music_player.py must be in the current directory).*
 
-### Troubleshooting Pi 5 / Ubuntu Server
-If you see a "Fatal server error" or "can not open gpiochip":
-1.  **Check config.txt**: Ensure `dtoverlay=vc4-kms-v3d` is present in `/boot/firmware/config.txt`.
-2.  **Ubuntu Server GPIO**: Ubuntu lacks default GPIO rules. Run `bash install.sh` to create the `/etc/udev/rules.d/99-gpio.rules` and the `gpio` group.
-3.  **Verify Permissions**: Run `ls -l /dev/gpiochip*`. You should see `root:gpio`. If you see `root:root`, the udev rule didn't trigger; run `sudo udevadm trigger`.
-4.  **REBOOT**: You MUST reboot after running the installer for group memberships and udev rules to apply to your session.
-5.  **Force Hotplug**: If your 5" screen isn't being detected, add `video=HDMI-A-1:800x480M@60D` to your kernel command line in `/boot/firmware/cmdline.txt`.
+---
+
+## ── 3. Troubleshooting (Pi 5 / Bookworm) ─────────────────────
+
+1.  **Mixer Name**: If volume control doesn't work, run `amixer scontrols`. If it says "Digital" instead of "Master", update `ALSA_MIXER` in `music_player.py`.
+2.  **Display Orientation**: If your 5" screen is upside down, use the **Screen Configuration** tool in the Raspberry Pi OS menu.
+3.  **Permissions**: Ensure your user is in the `gpio` and `audio` groups (the installer does this).
+4.  **GPIO Chip**: Pi 5 uses the RP1 chip. The code uses `lgpio` (via `gpiozero`) which is the correct backend for this hardware.
