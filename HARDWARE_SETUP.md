@@ -26,9 +26,12 @@ This guide describes how to connect the Adafruit PCM5122 DAC and a Rotary Encode
 
 ### Step A: Enable the DAC
 1. Run: `sudo nano /boot/firmware/config.txt`
-2. Add this line at the very bottom:
+2. Add or modify these lines at the bottom:
    ```text
-   dtoverlay=iqaudio-dac
+   # Disable onboard audio to avoid conflicts
+   dtparam=audio=off
+   dtparam=i2s=on
+   dtoverlay=hifiberry-dac
    ```
 3. Save and Reboot: `sudo reboot`
 
@@ -58,3 +61,9 @@ To see if your screen can display windows without a full desktop:
 startx /usr/bin/python3 music_player.py
 ```
 *(Note: music_player.py must be in the current directory).*
+
+### Troubleshooting Xorg
+If you see a "Fatal server error" or "Cannot run in framebuffer mode":
+1.  **Run the update installer**: `bash install.sh` (this now configures the `modesetting` driver and permissions).
+2.  **Re-login**: You must logout and log back in for the new group permissions (`video`, `render`) to take effect.
+3.  **Check config.txt**: Ensure `dtoverlay=vc4-kms-v3d` is present in `/boot/firmware/config.txt`.

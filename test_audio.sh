@@ -9,12 +9,12 @@ echo ""
 
 # 1. Check if the card is detected
 echo "[1/2] Checking ALSA sound cards..."
-if aplay -l | grep -q "PCM51"; then
-    echo "SUCCESS: PCM5122 DAC detected!"
-    aplay -l | grep "card"
+if aplay -l | grep -Ei -q "pcm51|hifiberry|iqaudio"; then
+    echo "SUCCESS: DAC detected!"
+    aplay -l | grep -Ei "card|pcm51|hifiberry"
 else
     echo "ERROR: DAC not found."
-    echo "Did you add 'dtoverlay=iqaudio-dac' to /boot/firmware/config.txt?"
+    echo "Did you add 'dtoverlay=hifiberry-dac' (or 'iqaudio-dac') to /boot/firmware/config.txt?"
     echo "Current cards detected:"
     aplay -l
     exit 1

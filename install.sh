@@ -38,15 +38,39 @@ sudo apt-get install -y \
 echo "[2/3] Checking Python requirements..."
 pip3 install --break-system-packages -r "$REPO_DIR/requirements.txt" 2>/dev/null || true
 
-# ── 3. Directory Setup ──────────────────────────────────────
-echo "[3/3] Creating music folder..."
+# ── 3. Xorg Configuration (Fixed for Pi 5) ──────────────────
+echo "[3/4] Configuring Xorg for Pi 5 / Ubuntu..."
+
+# Force the 'modesetting' driver (fixes "cannot run in framebuffer mode")
+sudo mkdir -p /etc/X11/xorg.conf.d
+sudo tee /etc/X11/xorg.conf.d/99-kms.conf > /dev/null <<EOF
+Section "Device"
+    Identifier "Card0"
+    Driver "modesetting"
+EndSection
+EOF
+
+# Allow non-root users to start X server
+if [ -f /etc/X11/Xwrapper.config ]; then
+    sudo sed -i 's/allowed_users=.*/allowed_users=anybody/' /etc/X11/Xwrapper.config
+else
+    echo "allowed_users=anybody" | sudo tee /etc/X11/Xwrapper.config > /dev/null
+fi
+
+# Add user to video/render groups for permission
+sudo usermod -a -G video,render "$USER_NAME"
+echo "      - Added $USER_NAME to 'video' and 'render' groups."
+echo "      - Created /etc/X11/xorg.conf.d/99-kms.conf"
+
+# ── 4. Directory Setup ──────────────────────────────────────
+echo "[4/4] Creating music folder..."
 mkdir -p "$HOME/music"
 echo "      Folder: $HOME/music"
 
 echo ""
 echo "=== Setup Complete! ==="
 echo "Next steps for Hardware Testing:"
-echo "  1. DAC: Add 'dtoverlay=iqaudio-dac' to /boot/firmware/config.txt"
+echo "  1. DAC: Add 'dtoverlay=hifiberry-dac' to /boot/firmware/config.txt"
 echo "  2. Test Audio: Run './test_audio.sh'"
 echo "  3. Test Encoder: Run 'python3 test_encoder.py'"
 echo ""
