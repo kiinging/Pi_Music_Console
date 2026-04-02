@@ -16,10 +16,8 @@ Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 WorkingDirectory=/home/pizza
 
-# Wait until X is actually running
-ExecStartPre=/bin/bash -c "until xset -q >/dev/null 2>&1; do sleep 1; done"
-
-ExecStart=/usr/bin/python3 /home/pizza/Pi_Music_Console/music_player.py
+# Use the kiosk launcher to handle both X and the Python app
+ExecStart=/usr/bin/bash /home/pizza/Pi_Music_Console/start_kiosk.sh
 
 # Restart automatically if it crashes
 Restart=always

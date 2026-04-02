@@ -27,6 +27,7 @@ sudo apt-get install -y \
     python3-gpiozero \
     python3-evdev \
     python3-lgpio \
+    liblgpio-dev \
     xorg \
     openbox \
     xserver-xorg-legacy \
@@ -38,8 +39,18 @@ sudo apt-get install -y \
 echo "[2/3] Checking Python requirements..."
 pip3 install --break-system-packages -r "$REPO_DIR/requirements.txt" 2>/dev/null || true
 
-# ── 3. Xorg Configuration (Fixed for Pi 5) ──────────────────
-echo "[3/4] Configuring Xorg for Pi 5 / Ubuntu..."
+# ── 3. Configuration (Xorg & Hardware Permissions) ──────────
+echo "[3/4] Configuring hardware for Pi 5 / Ubuntu Server..."
+
+# Check config.txt for the required graphics overlay
+CONFIG_FILE="/boot/firmware/config.txt"
+if [ -f "$CONFIG_FILE" ]; then
+    if ! grep -q "dtoverlay=vc4-kms-v3d" "$CONFIG_FILE"; then
+        echo "WARNING: 'dtoverlay=vc4-kms-v3d' not found in $CONFIG_FILE."
+        echo "         This is usually required for the X server on Pi 5."
+        echo "         Please add it manually and reboot."
+    fi
+fi
 
 # Force the 'modesetting' driver (fixes "cannot run in framebuffer mode")
 sudo mkdir -p /etc/X11/xorg.conf.d
@@ -47,20 +58,35 @@ sudo tee /etc/X11/xorg.conf.d/99-kms.conf > /dev/null <<EOF
 Section "Device"
     Identifier "Card0"
     Driver "modesetting"
+    Option "kmsdev" "/dev/dri/card0"
 EndSection
 EOF
 
-# Allow non-root users to start X server
+# GPIO Permissions (Essential for Ubuntu Server)
+# Ensure 'gpio' group exists
+sudo groupadd -f gpio
+# Create udev rule to grant 'gpio' group access to /dev/gpiochip*
+sudo tee /etc/udev/rules.d/99-gpio.rules > /dev/null <<EOF
+KERNEL=="gpiochip*", ACTION=="add", PROGRAM="/bin/sh -c 'chown root:gpio /dev/%k && chmod 775 /dev/%k'"
+EOF
+sudo udevadm control --reload-rules && sudo udevadm trigger
+
+# Allow non-root users to start X server and give them a console
 if [ -f /etc/X11/Xwrapper.config ]; then
     sudo sed -i 's/allowed_users=.*/allowed_users=anybody/' /etc/X11/Xwrapper.config
 else
     echo "allowed_users=anybody" | sudo tee /etc/X11/Xwrapper.config > /dev/null
 fi
 
-# Add user to video/render groups for permission
-sudo usermod -a -G video,render "$USER_NAME"
-echo "      - Added $USER_NAME to 'video' and 'render' groups."
+# Add user to required groups for hardware access (Critical for Pi 5 + Ubuntu)
+echo "      - Adding $USER_NAME to 'video', 'render', 'gpio', 'i2c', and 'input' groups..."
+for grp in video render gpio i2c input; do
+    if getent group "$grp" > /dev/null; then
+        sudo usermod -a -G "$grp" "$USER_NAME"
+    fi
+done
 echo "      - Created /etc/X11/xorg.conf.d/99-kms.conf"
+echo "      - Set up /etc/udev/rules.d/99-gpio.rules"
 
 # ── 4. Directory Setup ──────────────────────────────────────
 echo "[4/4] Creating music folder..."

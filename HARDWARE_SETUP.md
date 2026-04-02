@@ -62,8 +62,10 @@ startx /usr/bin/python3 music_player.py
 ```
 *(Note: music_player.py must be in the current directory).*
 
-### Troubleshooting Xorg
-If you see a "Fatal server error" or "Cannot run in framebuffer mode":
-1.  **Run the update installer**: `bash install.sh` (this now configures the `modesetting` driver and permissions).
-2.  **Re-login**: You must logout and log back in for the new group permissions (`video`, `render`) to take effect.
-3.  **Check config.txt**: Ensure `dtoverlay=vc4-kms-v3d` is present in `/boot/firmware/config.txt`.
+### Troubleshooting Pi 5 / Ubuntu Server
+If you see a "Fatal server error" or "can not open gpiochip":
+1.  **Check config.txt**: Ensure `dtoverlay=vc4-kms-v3d` is present in `/boot/firmware/config.txt`.
+2.  **Ubuntu Server GPIO**: Ubuntu lacks default GPIO rules. Run `bash install.sh` to create the `/etc/udev/rules.d/99-gpio.rules` and the `gpio` group.
+3.  **Verify Permissions**: Run `ls -l /dev/gpiochip*`. You should see `root:gpio`. If you see `root:root`, the udev rule didn't trigger; run `sudo udevadm trigger`.
+4.  **REBOOT**: You MUST reboot after running the installer for group memberships and udev rules to apply to your session.
+5.  **Force Hotplug**: If your 5" screen isn't being detected, add `video=HDMI-A-1:800x480M@60D` to your kernel command line in `/boot/firmware/cmdline.txt`.
