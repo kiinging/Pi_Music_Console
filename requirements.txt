@@ -1,7 +1,3 @@
-# Pi Music Console – Python Dependencies
-# NOTE: Packages are now installed via 'apt' in install.sh for Pi 5 & Ubuntu 24.04 compatibility.
-# If you still need pip, use: pip3 install --break-system-packages -r requirements.txt
-
-gpiozero
 evdev
-lgpio
+numpy
+pillow
