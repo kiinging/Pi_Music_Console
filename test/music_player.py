@@ -15,6 +15,8 @@ import tkinter as tk
 from tkinter import font as tkfont
 from pathlib import Path
 
+# music_player.py
+
 # ──────────────────────────────────────────────
 # Configuration
 # ──────────────────────────────────────────────
