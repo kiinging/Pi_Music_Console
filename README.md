@@ -1,5 +1,6 @@
 # 🎵 Pi Music Console
 
+testing.......
 A touchscreen music player for **Raspberry Pi 5** with PCM5122 DAC, rotary encoder volume control, and auto-boot kiosk mode.
 
 ---

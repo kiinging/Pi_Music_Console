@@ -1,9 +1,8 @@
-from gpiozero import RotaryEncoder, Device
+from gpiozero import RotaryEncoder, Button, Device
 from gpiozero.pins.lgpio import LGPIOFactory
 from signal import pause
-import sys
 
-# Force lgpio backend for Raspberry Pi 5
+# Force LGPIO backend (Pi 5)
 Device.pin_factory = LGPIOFactory()
 
 # =============================================================
@@ -12,6 +11,8 @@ Device.pin_factory = LGPIOFactory()
 
 CLK_PIN = 17
 DT_PIN  = 27
+SW_PIN  = 22
+
 
 print("--- Rotary Encoder Hardware Test ---")
 print(f"Configuration: CLK={CLK_PIN} (Pin 11), DT={DT_PIN} (Pin 13)")
@@ -19,29 +20,20 @@ print("Turn the knob to verify...")
 print("Press Ctrl+C to exit.")
 print("-------------------------------------")
 
-try:
-    encoder = RotaryEncoder(
-        CLK_PIN,
-        DT_PIN,
-        max_steps=100,
-        wrap=True
-    )
+# Rotary encoder
+encoder = RotaryEncoder(
+    CLK_PIN,
+    DT_PIN,
+    max_steps=20,
+    wrap=False
+)
 
-    def rotated_cw():
-        print(">>> Rotated Clockwise (Volume ++)")
+encoder.when_rotated_clockwise = lambda: print("Clockwise", encoder.steps)
+encoder.when_rotated_counter_clockwise = lambda: print("Counter-clockwise", encoder.steps)
 
-    def rotated_ccw():
-        print("<<< Rotated Counter-Clockwise (Volume --)")
+# Push button
+button = Button(SW_PIN, pull_up=True)
+button.when_pressed = lambda: print("=== Button Pressed ===")
 
-    encoder.when_rotated_clockwise = rotated_cw
-    encoder.when_rotated_counter_clockwise = rotated_ccw
+pause()
 
-    pause()
-
-except KeyboardInterrupt:
-    print("\nTest stopped.")
-
-except (ImportError, Exception) as e:
-    print(f"\nERROR: {e}")
-    print("Ensure python3-lgpio and python3-gpiozero are installed.")
-    sys.exit(1)
