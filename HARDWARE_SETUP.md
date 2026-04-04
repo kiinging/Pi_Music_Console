@@ -16,6 +16,19 @@ This guide describes how to connect the Adafruit PCM5122 DAC and a Rotary Encode
 | | **DT** | **GPIO 27** | **Pin 13** |
 | | **GND** | GND | Pin 9 |
 
+### ── 1.1 Audio Output (Amplifier Connection) ────────────────
+
+If you are connecting the DAC directly to an amplifier (bypassing the 3.5mm jack), use the following pins on the DAC board:
+
+| DAC PIN | FUNCTION | CONNECTION |
+| :--- | :--- | :--- |
+| **L** | Left Channel | Amplifier Left Input |
+| **R** | Right Channel | Amplifier Right Input |
+| **G** | Audio Ground | Amplifier GND / Shield |
+
+> [!TIP]
+> **Line-Level Output**: The PCM5122 provides a ~2V RMS line-level output. This is perfect for power amplifiers but not designed to drive low-impedance headphones directly.
+
 > [!IMPORTANT]
 > **PIN CHANGE**: I have moved the Encoder **DT** pin from 18 to **27**. 
 > This is because Pin 18 (GPIO 18) is required by the I2S DAC for the **Bit Clock (BCK)**.

@@ -20,7 +20,7 @@ from pathlib import Path
 # ──────────────────────────────────────────────
 # Configuration
 # ──────────────────────────────────────────────
-MUSIC_FOLDER = Path.home() / "music"
+MUSIC_FOLDER = Path.home() / "Music"
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 480
 VOLUME_STEP = 5          # % per encoder click
