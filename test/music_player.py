@@ -95,7 +95,8 @@ class Player:
             self._proc = subprocess.Popen(
                 [
                     "mpv",
-                    "--no-video",
+                    "--fs",             # Fullscreen for videos
+                    "--ontop",          # Stay on top of GUI
                     "--audio-device=alsa",
                     "--really-quiet",
                     path,
@@ -129,6 +130,9 @@ class Player:
 class PiMusicConsole(tk.Tk):
     def __init__(self):
         super().__init__()
+
+        # ── Player Backend ──────────────────────
+        self.player = Player()
 
         # ── Volume / Mixer setup ────────────────
         self.mixer = self._detect_mixer()
@@ -171,6 +175,16 @@ class PiMusicConsole(tk.Tk):
             bg="#1a1a2e",
         )
         self.vol_label.pack(side="right", padx=18, pady=10)
+
+        # System Status (Dashboard)
+        self.sys_label = tk.Label(
+            header_frame,
+            text="🌡️ --°C  |  🧠 --%",
+            font=status_font,
+            fg="#9d9db5",
+            bg="#1a1a2e",
+        )
+        self.sys_label.pack(side="right", padx=30, pady=10)
 
         # ── Song list (scrollable) ───────────────
         list_frame = tk.Frame(self, bg="#0f0f1a")
@@ -240,6 +254,9 @@ class PiMusicConsole(tk.Tk):
 
         # ── Poll player status every second ─────
         self._poll_player()
+
+        # ── Dashboard update ────────────────────
+        self._update_dashboard()
 
     def _detect_mixer(self) -> str:
         """Attempt to find a working ALSA mixer name (Digital, Master, or Playback)."""
@@ -360,6 +377,28 @@ class PiMusicConsole(tk.Tk):
             self.status_label.configure(text="Select a song to play", fg="#9d9db5")
         # Reschedule
         self.after(1000, self._poll_player)
+
+    # ── Dashboard Update ────────────────────────
+    def _update_dashboard(self):
+        """Fetch system stats (temp and load) and update label."""
+        try:
+            # CPU Temp
+            temp_c = 0.0
+            if os.path.exists("/sys/class/thermal/thermal_zone0/temp"):
+                with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
+                    temp_milli = int(f.read().strip())
+                    temp_c = temp_milli / 1000.0
+            
+            # CPU Load (1 min avg)
+            load1, _, _ = os.getloadavg()
+            # Normalize to cores (Pi 5 has 4 cores)
+            load_pct = (load1 / 4.0) * 100
+            
+            self.sys_label.configure(text=f"🌡️ {temp_c:.1f}°C  |  🧠 {load_pct:.0f}%")
+        except Exception:
+             self.sys_label.configure(text="🌡️ ??°C  |  🧠 ??%")
+        
+        self.after(5000, self._update_dashboard)
 
 
 # ──────────────────────────────────────────────
