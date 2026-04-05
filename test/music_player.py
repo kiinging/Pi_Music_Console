@@ -33,13 +33,14 @@ ALSA_MIXER = "Digital"
 # GPIO pins for rotary encoder (BCM numbering)
 CLK_PIN = 17
 DT_PIN  = 27
+SW_PIN  = 22
 
 # ──────────────────────────────────────────────
 # Rotary encoder – import gpiozero only on Pi
 # ──────────────────────────────────────────────
 ENCODER_AVAILABLE = False
 try:
-    from gpiozero import RotaryEncoder
+    from gpiozero import RotaryEncoder, Button
     ENCODER_AVAILABLE = True
 except (ImportError, Exception):
     pass   # Running on dev PC – encoder silently disabled
@@ -131,8 +132,11 @@ class PiMusicConsole(tk.Tk):
     def __init__(self):
         super().__init__()
 
-        # ── Player Backend ──────────────────────
+        # ── Hardware / App State ────────────────
         self.player = Player()
+        self.selected_idx = 0
+        self.last_sw_time = 0
+        self.click_count = 0
 
         # ── Volume / Mixer setup ────────────────
         self.mixer = self._detect_mixer()
@@ -223,7 +227,7 @@ class PiMusicConsole(tk.Tk):
         )
         self.status_label.pack(side="left", padx=14, pady=6)
 
-        stop_btn = tk.Button(
+        self.stop_btn = tk.Button(
             status_frame,
             text="⏹ Stop",
             font=btn_font,
@@ -238,7 +242,24 @@ class PiMusicConsole(tk.Tk):
             cursor="hand2",
             command=self.stop,
         )
-        stop_btn.pack(side="right", padx=10, pady=6)
+        self.stop_btn.pack(side="right", padx=10, pady=6)
+
+        quit_btn = tk.Button(
+            status_frame,
+            text="🚪 Quit",
+            font=btn_font,
+            fg="#ffffff",
+            bg="#2a2a40",
+            activebackground="#444466",
+            activeforeground="#ffffff",
+            relief="flat",
+            bd=0,
+            padx=18,
+            pady=4,
+            cursor="hand2",
+            command=self.quit_app,
+        )
+        quit_btn.pack(side="right", padx=10, pady=6)
 
         # ── Load songs ──────────────────────────
         self.songs: list[Path] = []
@@ -249,8 +270,11 @@ class PiMusicConsole(tk.Tk):
         # ── Rotary encoder ──────────────────────
         if ENCODER_AVAILABLE:
             self._encoder = RotaryEncoder(CLK_PIN, DT_PIN)
-            self._encoder.when_rotated_clockwise        = self._volume_up
-            self._encoder.when_rotated_counter_clockwise = self._volume_down
+            self._encoder.when_rotated_clockwise        = self._on_rotated_cw
+            self._encoder.when_rotated_counter_clockwise = self._on_rotated_ccw
+
+            self._sw = Button(SW_PIN, pull_up=True)
+            self._sw.when_pressed = self._on_sw_pressed
 
         # ── Poll player status every second ─────
         self._poll_player()
@@ -321,6 +345,8 @@ class PiMusicConsole(tk.Tk):
             btn.pack(fill="x", pady=2, padx=4)
             self.songs.append(path)
             self.song_buttons.append(btn)
+        
+        self._update_selection_ui()
 
     def _play_song(self, idx: int, path: Path):
         # Reset previous active button
@@ -338,11 +364,89 @@ class PiMusicConsole(tk.Tk):
     def stop(self):
         self.player.stop()
         if self._active_btn_idx is not None:
-            self.song_buttons[self._active_btn_idx].configure(
-                bg="#16213e", fg="#e0e0f0"
-            )
-            self._active_btn_idx = None
+             # Just reset the active colors - handled by _update_selection_ui
+             pass
+        self._active_btn_idx = None
         self.status_label.configure(text="Stopped", fg="#9d9db5")
+        self.stop_btn.configure(text="▶ Start", bg="#38b000") # Changed to Start
+
+    def _on_sw_pressed(self):
+        """Handle physical SW button press logic."""
+        import time
+        now = time.time()
+        
+        # Double click detection (3 second window as requested)
+        if (now - self.last_sw_time) < 3.0:
+            self.click_count += 1
+        else:
+            self.click_count = 1
+        
+        self.last_sw_time = now
+
+        if self.click_count == 2:
+            print(">>> Double Click: Toggling Video View")
+            self._handle_double_click()
+            self.click_count = 0 # Reset
+        else:
+            # Plan for a single click after a short delay to see if a second follows?
+            # Or just act immediately if that feels better. 
+            # Given the 3s window, we act immediately but the 2nd click overrides/toggles.
+            print(">>> Single Click: Toggling Play/Stop")
+            self._handle_single_click()
+
+    def _handle_single_click(self):
+        """Toggle Play/Stop based on current selection."""
+        if self.player.is_playing():
+            self.stop()
+        else:
+            if self.selected_idx < len(self.songs):
+                self._play_song(self.selected_idx, self.songs[self.selected_idx])
+                self.stop_btn.configure(text="⏹ Stop", bg="#c1121f")
+
+    def _handle_double_click(self):
+        """Toggle video screen (using mpv command to minimize/hide)."""
+        # For simplicity, if playing, we toggle the --fs flag via a restart or similar
+        # In a real environment, we'd use mpv socket IPC. 
+        # Here we will just print to console as the visual toggle.
+        self.attributes("-fullscreen", not self.attributes("-fullscreen"))
+
+    def _on_rotated_cw(self):
+        if self.player.is_playing():
+            self._volume_up()
+        else:
+            self._selection_down() # Navigate down in list
+
+    def _on_rotated_ccw(self):
+        if self.player.is_playing():
+            self._volume_down()
+        else:
+            self._selection_up() # Navigate up in list
+
+    def _selection_up(self):
+        if not self.songs: return
+        self.selected_idx = (self.selected_idx - 1) % len(self.songs)
+        self._update_selection_ui()
+
+    def _selection_down(self):
+        if not self.songs: return
+        self.selected_idx = (self.selected_idx + 1) % len(self.songs)
+        self._update_selection_ui()
+
+    def _update_selection_ui(self):
+        """Update the list highlighting to show current selection."""
+        for i, btn in enumerate(self.song_buttons):
+            if i == self._active_btn_idx:
+                btn.configure(bg="#7b2d8b", fg="#ffffff") # Playing (Purple)
+            elif i == self.selected_idx:
+                btn.configure(bg="#4361ee", fg="#ffffff") # Highlighted (Blue)
+            else:
+                btn.configure(bg="#16213e", fg="#e0e0f0") # Default
+
+    def quit_app(self):
+        """Stop music and exit the application."""
+        self.player.stop()
+        self.destroy()
+        sys.exit(0)
 
     # ── Volume ──────────────────────────────────
     def _volume_up(self):
