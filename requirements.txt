@@ -2,3 +2,4 @@ evdev
 numpy
 pillow
 flask
+mutagen
