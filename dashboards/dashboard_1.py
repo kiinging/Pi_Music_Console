@@ -190,6 +190,16 @@ def stop():
     send_mpv_command(["stop"])
     return jsonify({"status": "Stopped"})
 
+@app.route("/api/pause", methods=["POST"])
+def pause():
+    send_mpv_command(["set", "pause", "yes"])
+    return jsonify({"status": "Paused"})
+
+@app.route("/api/resume", methods=["POST"])
+def resume():
+    send_mpv_command(["set", "pause", "no"])
+    return jsonify({"status": "Resumed"})
+
 @app.route("/api/volume", methods=["GET", "POST"])
 def volume_api():
     if request.method == "POST":

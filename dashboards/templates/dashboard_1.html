@@ -235,8 +235,10 @@
         </div>
 
         <div class="controls">
+            <button class="btn-circle" style="background: var(--success); color: black;" onclick="resumeMusic()" title="Resume">▶</button>
+            <button class="btn-circle" onclick="pauseMusic()" title="Pause">⏸</button>
             <button class="btn-circle" onclick="stopMusic()" title="Stop">⏹</button>
-            <button class="btn-circle" style="background: var(--accent)" onclick="refreshList()" title="Refresh">🔄</button>
+            <button class="btn-circle" style="background: rgba(255,255,255,0.05)" onclick="refreshList()" title="Refresh">🔄</button>
         </div>
 
         <div class="volume-container">
@@ -297,6 +299,8 @@
                 const data = await response.json();
                 if (data.status === 'success') {
                     updateNowPlaying(data.track);
+                    // Reset UI if it was paused
+                    document.getElementById('playing-title').style.opacity = "1";
                 }
             } catch (err) {
                 alert("Failed to play track: " + err);
@@ -308,6 +312,17 @@
             document.getElementById('playing-title').innerText = "Stopped";
             document.getElementById('playing-artist').innerText = "";
             document.getElementById('playing-badges').innerHTML = "";
+            document.getElementById('playing-title').style.opacity = "1";
+        }
+
+        async function pauseMusic() {
+            await fetch('/api/pause', { method: 'POST' });
+            document.getElementById('playing-title').style.opacity = "0.5";
+        }
+
+        async function resumeMusic() {
+            await fetch('/api/resume', { method: 'POST' });
+            document.getElementById('playing-title').style.opacity = "1";
         }
 
         function refreshList() {
