@@ -106,7 +106,7 @@ def index():
 def list_songs():
     """List all supported music files with their metadata."""
     songs = []
-    extensions = ('.mp3', '.flac', '.wav', '.m4a', '.ogg')
+    extensions = ('.mp3', '.flac', '.wav', '.m4a', '.ogg', '.mp4')
     
     for root, _, files in os.walk(MUSIC_DIR):
         for file in files:
