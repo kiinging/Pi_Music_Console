@@ -359,3 +359,6 @@ sudo systemctl restart pi-music.service
 ---
 
 *Built for Curtin Electronic Fundamentals 2026 — Pi Music Console project.*
+
+
+https://learn.adafruit.com/adafruit-pcm5122-i2s-dac/raspberry-pi

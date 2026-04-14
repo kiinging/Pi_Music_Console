@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hi-Fi Dashboard 1</title>
+    <style>
+        :root {
+            --bg-color: #0d0d12;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --text-color: #e0e0e0;
+            --accent-color: #7b2d8b;
+            --accent-glow: rgba(123, 45, 139, 0.4);
+            --stop-color: #c1121f;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            padding: 3rem;
+            border-radius: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+            width: 80%;
+            max-width: 400px;
+        }
+
+        h1 {
+            font-weight: 300;
+            letter-spacing: 2px;
+            margin-bottom: 2rem;
+            color: #b39ddb;
+        }
+
+        .btn {
+            background: none;
+            border: none;
+            color: white;
+            padding: 20px;
+            width: 100%;
+            margin: 10px 0;
+            border-radius: 1rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .btn-play {
+            background: linear-gradient(135deg, #7b2d8b 0%, #3d2c8d 100%);
+            box-shadow: 0 4px 15px var(--accent-glow);
+        }
+
+        .btn-play:active {
+            transform: scale(0.95);
+        }
+
+        .btn-stop {
+            background: linear-gradient(135deg, #c1121f 0%, #780001 100%);
+            box-shadow: 0 4px 15px rgba(193, 18, 31, 0.3);
+        }
+
+        .btn-stop:active {
+            transform: scale(0.95);
+        }
+
+        .status {
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            color: #888;
+            height: 1.2rem;
+        }
+
+        /* Smartphone adaptation */
+        @media (max-width: 600px) {
+            .container {
+                width: 90%;
+                padding: 2rem;
+            }
+            .btn {
+                padding: 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>HI-FI DASHBOARD 1</h1>
+        
+        <button class="btn btn-play" onclick="control('play')">
+            <span>▶</span> PLAY MUSIC
+        </button>
+
+        <button class="btn btn-stop" onclick="control('stop')">
+            <span>⏹</span> STOP
+        </button>
+
+        <div id="status" class="status">Ready</div>
+    </div>
+
+    <script>
+        function control(action) {
+            const statusEl = document.getElementById('status');
+            statusEl.innerText = action === 'play' ? 'Attempting to play...' : 'Stopping...';
+            
+            fetch('/' + action)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        statusEl.innerText = 'Error: ' + data.error;
+                        statusEl.style.color = '#ff6b6b';
+                    } else {
+                        statusEl.innerText = data.status || 'Success';
+                        statusEl.style.color = '#888';
+                    }
+                })
+                .catch(err => {
+                    statusEl.innerText = 'Connection Error';
+                    statusEl.style.color = '#ff6b6b';
+                });
+        }
+    </script>
+</body>
+</html>
