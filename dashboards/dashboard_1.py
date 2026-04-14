@@ -17,9 +17,45 @@ app = Flask(__name__)
 IPC_SOCKET = "/tmp/mpvsocket"
 MUSIC_DIR = os.path.expanduser("~/Music")
 
-# Ensure Music directory exists for testing
-if not os.path.exists(MUSIC_DIR):
-    os.makedirs(MUSIC_DIR, exist_ok=True)
+def detect_mixer():
+    """Attempt to find a working ALSA mixer name (Digital, Master, or Playback)."""
+    for name in ["Digital", "Master", "Playback", "HDMI"]:
+        try:
+            subprocess.check_output(["amixer", "get", name], stderr=subprocess.DEVNULL)
+            return name
+        except subprocess.CalledProcessError:
+            continue
+    return "Master"
+
+MIXER_NAME = detect_mixer()
+
+def get_current_volume():
+    """Read current ALSA volume (0-100)."""
+    try:
+        out = subprocess.check_output(
+            ["amixer", "get", MIXER_NAME], stderr=subprocess.DEVNULL
+        ).decode()
+        for line in out.splitlines():
+            if "%" in line:
+                start = line.index("[") + 1
+                end = line.index("%")
+                return int(line[start:end])
+    except Exception:
+        pass
+    return 50
+
+def set_system_volume(value):
+    """Set ALSA volume."""
+    value = max(0, min(100, int(value)))
+    try:
+        subprocess.run(
+            ["amixer", "set", MIXER_NAME, f"{value}%"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        return value
+    except Exception:
+        return None
 
 def send_mpv_command(command_list):
     """Send a JSON IPC command to the running mpv process."""
@@ -106,7 +142,7 @@ def index():
 def list_songs():
     """List all supported music files with their metadata."""
     songs = []
-    extensions = ('.mp3', '.flac', '.wav', '.m4a', '.ogg', '.mp4')
+    extensions = ('.mp3', '.flac', '.wav', '.m4a', '.ogg', '.mp4', '.mkv')
     
     for root, _, files in os.walk(MUSIC_DIR):
         for file in files:
@@ -153,6 +189,15 @@ def play_song():
 def stop():
     send_mpv_command(["stop"])
     return jsonify({"status": "Stopped"})
+
+@app.route("/api/volume", methods=["GET", "POST"])
+def volume_api():
+    if request.method == "POST":
+        val = request.json.get("volume")
+        new_val = set_system_volume(val)
+        return jsonify({"volume": new_val})
+    else:
+        return jsonify({"volume": get_current_volume()})
 
 if __name__ == "__main__":
     start_mpv()

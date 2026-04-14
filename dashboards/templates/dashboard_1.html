@@ -119,6 +119,45 @@
             transform: scale(0.9);
         }
 
+        /* Volume Control */
+        .volume-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 2rem;
+            padding: 0 2rem;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        #volume-slider {
+            flex-grow: 1;
+            -webkit-appearance: none;
+            height: 4px;
+            background: var(--glass-border);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        #volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--accent-glow);
+            border: 2px solid white;
+        }
+
+        #volume-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem;
+            width: 40px;
+            color: var(--text-dim);
+        }
+
         /* Track List */
         .track-list-container {
             flex-grow: 1;
@@ -199,6 +238,12 @@
             <button class="btn-circle" onclick="stopMusic()" title="Stop">⏹</button>
             <button class="btn-circle" style="background: var(--accent)" onclick="refreshList()" title="Refresh">🔄</button>
         </div>
+
+        <div class="volume-container">
+            <span>🔊</span>
+            <input type="range" id="volume-slider" min="0" max="100" value="50" oninput="updateVolume(this.value)">
+            <span id="volume-value">50%</span>
+        </div>
     </section>
 
     <div class="track-list-container">
@@ -211,6 +256,8 @@
     <script>
         async function fetchSongs() {
             try {
+                // Also fetch volume on load
+                fetchVolume();
                 const response = await fetch('/api/songs');
                 const songs = await response.json();
                 renderTracks(songs);
@@ -289,6 +336,28 @@
                 const kbps = Math.round(parseInt(tech.bit_rate) / 1000);
                 badges.innerHTML += `<span class="badge">${kbps} kbps</span>`;
             }
+        }
+
+        async function fetchVolume() {
+            const response = await fetch('/api/volume');
+            const data = await response.json();
+            document.getElementById('volume-slider').value = data.volume;
+            document.getElementById('volume-value').innerText = data.volume + '%';
+        }
+
+        let volumeTimeout;
+        async function updateVolume(val) {
+            document.getElementById('volume-value').innerText = val + '%';
+            
+            // Debounce to avoid flooding the server while sliding
+            clearTimeout(volumeTimeout);
+            volumeTimeout = setTimeout(async () => {
+                await fetch('/api/volume', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ volume: val })
+                });
+            }, 50);
         }
 
         // Initial Load
