@@ -27,14 +27,18 @@ sudo apt install -y \
     python3-lgpio \
     liblgpio-dev \
     python3-evdev \
-    python3-smbus
+    python3-smbus \
+    xorg \
+    openbox \
+    xinit \
+    x11-xserver-utils
 
 echo "[2/4] Creating Python virtual environment..."
 
 cd "$REPO_DIR"
 
 if [ ! -d "venv" ]; then
-    python3 -m venv venv
+    python3 -m venv --system-site-packages venv
 fi
 
 source venv/bin/activate
@@ -51,7 +55,22 @@ echo "[3/4] Configuring hardware permissions..."
 sudo groupadd -f gpio
 sudo usermod -a -G gpio,audio,video,input,render "$USER_NAME"
 
-echo "[4/4] Done!"
+mkdir -p "$HOME_DIR/Music"
+
+echo "[4/4] Installing systemd service..."
+
+SERVICE_FILE="/etc/systemd/system/pi-music.service"
+sudo cp "$REPO_DIR/pi-music.service" "$SERVICE_FILE"
+
+# Replace placeholders with actual user and paths
+sudo sed -i "s|/home/pizza|$HOME_DIR|g" "$SERVICE_FILE"
+sudo sed -i "s|User=pizza|User=$USER_NAME|g" "$SERVICE_FILE"
+sudo sed -i "s|Group=pizza|Group=$USER_NAME|g" "$SERVICE_FILE"
+
+sudo systemctl daemon-reload
+sudo systemctl enable pi-music.service
+
+echo "[5/5] Done!"
 
 echo ""
 echo "Reboot required:"
