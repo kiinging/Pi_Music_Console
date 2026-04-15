@@ -136,6 +136,7 @@ def start_mpv():
         "mpv",
         "--idle",
         "--input-ipc-server=" + IPC_SOCKET,
+        "--ao=alsa",        # Use ALSA directly — skips PipeWire (avoids pw.conf warnings)
         "--no-terminal"
     ])
     time.sleep(1)
