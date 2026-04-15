@@ -3,6 +3,7 @@ import socket
 import json
 import subprocess
 import time
+import logging
 from flask import Flask, render_template, jsonify, request
 from pathlib import Path
 
@@ -12,6 +13,13 @@ except ImportError:
     File = None
 
 app = Flask(__name__)
+
+# ── Suppress noisy /api/status poll from logs ─────────────────────────────
+class _SuppressStatusFilter(logging.Filter):
+    def filter(self, record):
+        return '/api/status' not in record.getMessage()
+
+logging.getLogger('werkzeug').addFilter(_SuppressStatusFilter())
 
 # Configuration
 IPC_SOCKET = "/tmp/mpvsocket"
@@ -259,4 +267,4 @@ def volume_api():
 
 if __name__ == "__main__":
     start_mpv()
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=False)

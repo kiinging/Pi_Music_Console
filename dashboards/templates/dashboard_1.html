@@ -481,7 +481,7 @@
                     document.getElementById('seek-total').innerText   = formatTime(data.duration);
                 } catch (e) { /* socket not ready yet */ }
             }
-            setTimeout(pollStatus, 1000);
+            setTimeout(pollStatus, 2000);
         }
 
         pollStatus();
