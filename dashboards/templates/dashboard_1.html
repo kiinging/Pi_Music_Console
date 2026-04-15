@@ -255,6 +255,37 @@
             margin-right: 8px;
         }
 
+        /* Media Tabs */
+        .media-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 1rem 0;
+        }
+        
+        .tab-btn {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            color: var(--text-dim);
+            padding: 8px 24px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--accent);
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+        
+        .tab-btn:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
         /* Scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
@@ -307,18 +338,33 @@
     </section>
 
     <div class="track-list-container">
+        <div class="media-tabs">
+            <button class="tab-btn active" onclick="switchTab('music')">Music</button>
+            <button class="tab-btn" onclick="switchTab('video')">Video</button>
+        </div>
         <div id="track-list" class="track-list">
             <!-- Tracks injected here -->
-            <div style="text-align:center; padding: 2rem; color: var(--text-dim)">Loading Music Library...</div>
+            <div style="text-align:center; padding: 2rem; color: var(--text-dim)">Loading Media Library...</div>
         </div>
     </div>
 
     <script>
+        let currentMediaType = 'music';
+
+        function switchTab(type) {
+            currentMediaType = type;
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            refreshList();
+        }
+
         async function fetchSongs() {
             try {
                 // Also fetch volume on load
                 fetchVolume();
-                const response = await fetch('/api/songs');
+                const response = await fetch(`/api/songs?type=${currentMediaType}`);
                 const songs = await response.json();
                 renderTracks(songs);
             } catch (err) {
@@ -329,12 +375,12 @@
         function renderTracks(songs) {
             const container = document.getElementById('track-list');
             if (songs.length === 0) {
-                container.innerHTML = `<div style="text-align:center; padding: 2rem;">No music found in ~/Music</div>`;
+                container.innerHTML = `<div style="text-align:center; padding: 2rem;">No ${currentMediaType} found</div>`;
                 return;
             }
 
             container.innerHTML = songs.map(song => `
-                <div class="track-item" onclick="playTrack('${song.path.replace(/'/g, "\\'")}')">
+                <div class="track-item" onclick="playTrack('${song.path.replace(/'/g, "\\'")}', '${song.type}')">
                     <div class="track-info">
                         <span class="track-item-title">${song.title}</span>
                         <span class="track-item-sub">
@@ -346,13 +392,13 @@
             `).join('');
         }
 
-        async function playTrack(path) {
-            console.log("Playing:", path);
+        async function playTrack(path, type) {
+            console.log("Playing:", path, type);
             try {
                 const response = await fetch('/api/play', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ path: path })
+                    body: JSON.stringify({ path: path, type: type || currentMediaType })
                 });
                 const data = await response.json();
                 if (data.status === 'success') {

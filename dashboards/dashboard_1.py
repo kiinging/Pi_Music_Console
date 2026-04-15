@@ -24,6 +24,9 @@ logging.getLogger('werkzeug').addFilter(_SuppressStatusFilter())
 # Configuration
 IPC_SOCKET = "/tmp/mpvsocket"
 MUSIC_DIR = os.path.expanduser("~/Music")
+VIDEO_DIR = os.path.expanduser("~/video")
+if not os.path.exists(VIDEO_DIR) and os.path.exists(os.path.expanduser("~/Videos")):
+    VIDEO_DIR = os.path.expanduser("~/Videos")
 
 def detect_mixer():
     """Attempt to find a working ALSA mixer name (Digital, Master, or Playback)."""
@@ -195,27 +198,32 @@ def index():
 
 @app.route("/api/songs")
 def list_songs():
-    """List all supported music files with their metadata."""
-    songs = []
-    extensions = ('.mp3', '.flac', '.wav', '.m4a', '.ogg', '.mp4', '.mkv')
+    """List all supported media files with their metadata."""
+    media_type = request.args.get('type', 'music')
+    base_dir = VIDEO_DIR if media_type == 'video' else MUSIC_DIR
     
-    for root, _, files in os.walk(MUSIC_DIR):
-        for file in files:
-            if file.lower().endswith(extensions):
-                full_path = os.path.join(root, file)
-                rel_path = os.path.relpath(full_path, MUSIC_DIR)
-                
-                meta = get_track_metadata(full_path)
-                tech = get_audio_details(full_path)
-                
-                songs.append({
-                    "path": rel_path,
-                    "filename": file,
-                    "title": meta["title"],
-                    "artist": meta["artist"],
-                    "album": meta["album"],
-                    "tech": tech
-                })
+    songs = []
+    extensions = ('.mp3', '.flac', '.wav', '.m4a', '.ogg', '.mp4', '.mkv', '.avi', '.mov', '.webm')
+    
+    if os.path.exists(base_dir):
+        for root, _, files in os.walk(base_dir):
+            for file in files:
+                if file.lower().endswith(extensions):
+                    full_path = os.path.join(root, file)
+                    rel_path = os.path.relpath(full_path, base_dir)
+                    
+                    meta = get_track_metadata(full_path)
+                    tech = get_audio_details(full_path)
+                    
+                    songs.append({
+                        "path": rel_path,
+                        "type": media_type,
+                        "filename": file,
+                        "title": meta["title"],
+                        "artist": meta["artist"],
+                        "album": meta["album"],
+                        "tech": tech
+                    })
     
     return jsonify(songs)
 
@@ -223,10 +231,14 @@ def list_songs():
 def play_song():
     data = request.json
     song_path = data.get("path")
+    media_type = data.get("type", "music")
+    
+    base_dir = VIDEO_DIR if media_type == 'video' else MUSIC_DIR
+    
     if not song_path:
         return jsonify({"error": "No song path provided"}), 400
     
-    full_path = os.path.join(MUSIC_DIR, song_path)
+    full_path = os.path.join(base_dir, song_path)
     if not os.path.exists(full_path):
         return jsonify({"error": "File not found"}), 404
     
