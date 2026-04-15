@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# Kill ALL child processes (e.g. Flask) when this script exits or crashes.
+# This prevents "port 5000 already in use" on systemd restart.
+trap "kill 0" EXIT
+
 # Get the script directory
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$REPO_DIR"

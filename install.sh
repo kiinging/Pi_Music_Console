@@ -68,20 +68,20 @@ sudo usermod -a -G gpio,audio,video,input,render "$USER_NAME"
 
 mkdir -p "$HOME_DIR/Music"
 
-# echo "[4/4] Installing systemd service..."
-# 
-# SERVICE_FILE="/etc/systemd/system/pi-music.service"
-# sudo cp "$REPO_DIR/pi-music.service" "$SERVICE_FILE"
-# 
-# # Replace placeholders with actual user and paths
-# sudo sed -i "s|/home/pizza|$HOME_DIR|g" "$SERVICE_FILE"
-# sudo sed -i "s|User=pizza|User=$USER_NAME|g" "$SERVICE_FILE"
-# sudo sed -i "s|Group=pizza|Group=$USER_NAME|g" "$SERVICE_FILE"
-# 
-# sudo systemctl daemon-reload
-# sudo systemctl enable pi-music.service
+echo "[4/4] Installing systemd service..."
 
-echo "[4/4] Done! (Service auto-start disabled for now)"
+SERVICE_FILE="/etc/systemd/system/pi-music.service"
+sudo cp "$REPO_DIR/pi-music.service" "$SERVICE_FILE"
+
+# Replace placeholders with actual user and paths
+sudo sed -i "s|/home/pizza|$HOME_DIR|g" "$SERVICE_FILE"
+sudo sed -i "s|User=pizza|User=$USER_NAME|g" "$SERVICE_FILE"
+sudo sed -i "s|Group=pizza|Group=$USER_NAME|g" "$SERVICE_FILE"
+
+sudo systemctl daemon-reload
+sudo systemctl enable pi-music.service
+
+echo "[4/4] Done! Service installed and enabled."
 
 echo ""
 echo "Reboot required:"

@@ -158,6 +158,52 @@
             color: var(--text-dim);
         }
 
+        /* Seek Bar */
+        .seek-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 1rem;
+            padding: 0 2rem;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        #seek-slider {
+            flex-grow: 1;
+            -webkit-appearance: none;
+            height: 4px;
+            background: var(--glass-border);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        #seek-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid var(--accent);
+            box-shadow: 0 0 8px var(--accent-glow);
+            transition: transform 0.1s;
+        }
+
+        #seek-slider:active::-webkit-slider-thumb {
+            transform: scale(1.3);
+        }
+
+        .seek-time {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            white-space: nowrap;
+            min-width: 38px;
+        }
+
         /* Track List */
         .track-list-container {
             flex-grow: 1;
@@ -245,6 +291,18 @@
             <span>🔊</span>
             <input type="range" id="volume-slider" min="0" max="100" value="50" oninput="updateVolume(this.value)">
             <span id="volume-value">50%</span>
+        </div>
+
+        <!-- Seek Bar -->
+        <div class="seek-container">
+            <span class="seek-time" id="seek-current">0:00</span>
+            <input type="range" id="seek-slider" min="0" max="100" value="0"
+                   onmousedown="seekDragging=true"
+                   ontouchstart="seekDragging=true"
+                   onmouseup="onSeekRelease()"
+                   ontouchend="onSeekRelease()"
+                   oninput="updateSeekDisplay(this.value)">
+            <span class="seek-time" id="seek-total">0:00</span>
         </div>
     </section>
 
@@ -377,6 +435,56 @@
 
         // Initial Load
         window.onload = fetchSongs;
+
+        // ── Seek Slider ────────────────────────────────
+        let seekDragging = false;
+        let currentDuration = 0;
+
+        function formatTime(secs) {
+            if (!secs || isNaN(secs)) return '0:00';
+            const m = Math.floor(secs / 60);
+            const s = Math.floor(secs % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function updateSeekDisplay(sliderVal) {
+            // Called while dragging — just update the current time label
+            const pos = (sliderVal / 100) * currentDuration;
+            document.getElementById('seek-current').innerText = formatTime(pos);
+        }
+
+        async function onSeekRelease() {
+            seekDragging = false;
+            const slider = document.getElementById('seek-slider');
+            const position = (slider.value / 100) * currentDuration;
+            await fetch('/api/seek', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ position: position })
+            });
+        }
+
+        async function pollStatus() {
+            if (!seekDragging) {
+                try {
+                    const res  = await fetch('/api/status');
+                    const data = await res.json();
+                    currentDuration = data.duration || 0;
+
+                    const slider = document.getElementById('seek-slider');
+                    const pct = currentDuration > 0
+                        ? (data.position / currentDuration) * 100
+                        : 0;
+
+                    slider.value = pct;
+                    document.getElementById('seek-current').innerText = formatTime(data.position);
+                    document.getElementById('seek-total').innerText   = formatTime(data.duration);
+                } catch (e) { /* socket not ready yet */ }
+            }
+            setTimeout(pollStatus, 1000);
+        }
+
+        pollStatus();
     </script>
 </body>
 </html>

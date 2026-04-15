@@ -1,7 +1,7 @@
 [Unit]
 Description=Pi Music Console – Touchscreen Music Player
-After=multi-user.target sound.target
-Wants=sound.target
+After=graphical.target sound.target
+Wants=graphical.target sound.target
 
 [Service]
 # Run as the auto-login user

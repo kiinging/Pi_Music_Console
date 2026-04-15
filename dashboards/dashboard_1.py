@@ -58,7 +58,7 @@ def set_system_volume(value):
         return None
 
 def send_mpv_command(command_list):
-    """Send a JSON IPC command to the running mpv process."""
+    """Send a JSON IPC command to the running mpv process (fire and forget)."""
     if not os.path.exists(IPC_SOCKET):
         return {"error": "mpv socket not found. Is mpv running?"}
     
@@ -71,6 +71,30 @@ def send_mpv_command(command_list):
         return {"status": "success"}
     except Exception as e:
         return {"error": str(e)}
+
+def send_mpv_query(command_list):
+    """Send a JSON IPC command and read back mpv's response (for get_property)."""
+    if not os.path.exists(IPC_SOCKET):
+        return None
+    try:
+        client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        client.settimeout(1.0)
+        client.connect(IPC_SOCKET)
+        payload = json.dumps({"command": command_list}) + "\n"
+        client.send(payload.encode("utf-8"))
+        response = b""
+        while True:
+            chunk = client.recv(4096)
+            if not chunk:
+                break
+            response += chunk
+            if b"\n" in response:
+                break
+        client.close()
+        data = json.loads(response.decode("utf-8").strip())
+        return data.get("data")
+    except Exception:
+        return None
 
 def start_mpv():
     """Start mpv in the background if it's not already running."""
@@ -189,6 +213,30 @@ def play_song():
 def stop():
     send_mpv_command(["stop"])
     return jsonify({"status": "Stopped"})
+
+@app.route("/api/status")
+def status():
+    """Return current playback position and total duration for the seek slider."""
+    position = send_mpv_query(["get_property", "time-pos"])
+    duration = send_mpv_query(["get_property", "duration"])
+    paused   = send_mpv_query(["get_property", "pause"])
+    return jsonify({
+        "position": round(position, 2) if isinstance(position, (int, float)) else 0,
+        "duration": round(duration, 2) if isinstance(duration, (int, float)) else 0,
+        "paused":   paused if isinstance(paused, bool) else True,
+    })
+
+@app.route("/api/seek", methods=["POST"])
+def seek():
+    """Seek to an absolute position in seconds."""
+    data = request.json
+    position = data.get("position", 0)
+    try:
+        position = float(position)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid position"}), 400
+    result = send_mpv_command(["seek", position, "absolute"])
+    return jsonify(result)
 
 @app.route("/api/pause", methods=["POST"])
 def pause():
