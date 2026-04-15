@@ -13,6 +13,8 @@ import os
 import subprocess
 import threading
 import time
+import socket
+import json
 from pathlib import Path
 from flask import Flask, jsonify, render_template_string, request
 
@@ -87,11 +89,29 @@ class Player:
                     "--ao=alsa",         # ALSA audio output
                     "--really-quiet",
                     "--no-terminal",
+                    "--input-ipc-server=/tmp/mpv-music_player",
                     str(path),
                 ],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
+
+    def pause(self):
+        with self._lock:
+            self._send_ipc(["set_property", "pause", True])
+
+    def resume(self):
+        with self._lock:
+            self._send_ipc(["set_property", "pause", False])
+
+    def _send_ipc(self, command: list):
+        try:
+            client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            client.connect("/tmp/mpv-music_player")
+            client.send((json.dumps({"command": command}) + "\n").encode())
+            client.close()
+        except Exception:
+            pass
 
     def stop(self):
         with self._lock:
@@ -328,16 +348,43 @@ HTML = """
   .btn:active { transform: scale(0.96); }
 
   .btn-stop  { background: var(--red);    color: #fff; }
-  .btn-vol   { background: var(--card);   color: var(--text); border: 1px solid var(--border); }
-  .btn-vol:hover { border-color: var(--accent2); }
+  .btn-action { background: var(--accent); color: #fff; }
+  .btn-action:hover { background: var(--accent2); }
 
   .vol-display {
     margin-left: auto;
     font-size: 1rem;
     font-weight: 700;
     color: var(--accent2);
-    min-width: 60px;
+    min-width: 50px;
     text-align: right;
+  }
+
+  input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent2);
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+  }
+  .volume-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 1.5rem;
+    width: 100%;
+    max-width: 500px;
   }
 
   /* ── Song list ── */
@@ -397,10 +444,6 @@ HTML = """
 
 <header>
   <div class="logo">🎵 <span>Pi Music Console</span></div>
-  <div class="stats">
-    <div class="pill" id="stat-temp">🌡️ –°C</div>
-    <div class="pill" id="stat-cpu">🧠 –%</div>
-  </div>
 </header>
 
 <div id="now-playing-bar" class="idle">
@@ -409,12 +452,14 @@ HTML = """
 </div>
 
 <div class="controls">
+  <button class="btn btn-action" onclick="resumeMusic()" title="Play">▶ Play</button>
+  <button class="btn btn-action" onclick="pauseMusic()" title="Pause">⏸ Pause</button>
   <button class="btn btn-stop" onclick="stopMusic()">⏹ Stop</button>
-  <button class="btn btn-vol" onclick="changeVol(-10)">🔉 −10</button>
-  <button class="btn btn-vol" onclick="changeVol(-5)">− 5</button>
-  <button class="btn btn-vol" onclick="changeVol(5)">+ 5</button>
-  <button class="btn btn-vol" onclick="changeVol(10)">🔊 +10</button>
-  <div class="vol-display" id="vol-display">🔊 –%</div>
+</div>
+<div class="controls volume-controls">
+  <span style="font-size:1.2rem">🔉</span>
+  <input type="range" id="volume-slider" min="0" max="100" value="50" oninput="setVolumeUI(this.value)" onchange="sendVolume(this.value)">
+  <div class="vol-display" id="vol-display">50%</div>
 </div>
 
 <div class="section-title">Library — {{ count }} file{{ 's' if count != 1 else '' }}</div>
@@ -468,14 +513,28 @@ async function stopMusic() {
   showToast('⏹ Stopped');
 }
 
-async function changeVol(delta) {
-  const r = await fetch('/volume', {
+async function pauseMusic() {
+  await fetch('/pause', {method: 'POST'});
+  showToast('⏸ Paused');
+}
+
+async function resumeMusic() {
+  await fetch('/resume', {method: 'POST'});
+  showToast('▶ Resumed');
+}
+
+function setVolumeUI(val) {
+  document.getElementById('vol-display').textContent = val + '%';
+}
+
+async function sendVolume(val) {
+  const r = await fetch('/volume_set', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({delta})
+    body: JSON.stringify({volume: val})
   });
   const d = await r.json();
-  document.getElementById('vol-display').textContent = '🔊 ' + d.volume + '%';
+  document.getElementById('vol-display').textContent = d.volume + '%';
   showToast('Volume: ' + d.volume + '%');
 }
 
@@ -512,9 +571,12 @@ async function pollStatus() {
   try {
     const r = await fetch('/status');
     const d = await r.json();
-    document.getElementById('vol-display').textContent = '🔊 ' + d.volume + '%';
-    document.getElementById('stat-temp').textContent = '🌡️ ' + d.temp + '°C';
-    document.getElementById('stat-cpu').textContent  = '🧠 ' + d.cpu + '%';
+    document.getElementById('vol-display').textContent = d.volume + '%';
+    
+    // Only update slider if not dragging it actively (to prevent jumping)
+    if (!document.getElementById('volume-slider').matches(':active')) {
+        document.getElementById('volume-slider').value = d.volume;
+    }
 
     if (d.playing !== currentFile) {
       currentFile = d.playing;
@@ -549,37 +611,29 @@ def stop():
     player.stop()
     return jsonify(ok=True)
 
-@app.route("/volume", methods=["POST"])
-def volume_route():
+@app.route("/pause", methods=["POST"])
+def pause_route():
+    player.pause()
+    return jsonify(ok=True)
+
+@app.route("/resume", methods=["POST"])
+def resume_route():
+    player.resume()
+    return jsonify(ok=True)
+
+@app.route("/volume_set", methods=["POST"])
+def volume_set_route():
     global volume
-    delta = int(request.json.get("delta", 0))
-    volume = set_volume(volume + delta)
+    val = int(request.json.get("volume", 50))
+    volume = set_volume(val)
     return jsonify(volume=volume)
 
 @app.route("/status")
 def status():
-    # CPU temp
-    temp = "?"
-    try:
-        with open("/sys/class/thermal/thermal_zone0/temp") as f:
-            temp = f"{int(f.read()) / 1000:.1f}"
-    except Exception:
-        pass
-
-    # CPU load
-    cpu = "?"
-    try:
-        load1, _, _ = os.getloadavg()
-        cpu = f"{(load1 / 4.0) * 100:.0f}"
-    except Exception:
-        pass
-
     current = player.current
     return jsonify(
         playing=current.name if current else None,
         volume=volume,
-        temp=temp,
-        cpu=cpu,
     )
 
 # ─────────────────────────────────────────────────────────────
