@@ -81,7 +81,11 @@ def send_mpv_command(command_list):
         return {"error": str(e)}
 
 def send_mpv_query(command_list):
-    """Send a JSON IPC command and read back mpv's response (for get_property)."""
+    """Send a JSON IPC command and read back mpv's response (for get_property).
+    mpv may emit async event lines before the actual command response, so we
+    read line-by-line and skip anything with an 'event' key.
+    Command responses always carry an 'error' key (value 'success' when OK).
+    """
     if not os.path.exists(IPC_SOCKET):
         return None
     try:
@@ -90,17 +94,35 @@ def send_mpv_query(command_list):
         client.connect(IPC_SOCKET)
         payload = json.dumps({"command": command_list}) + "\n"
         client.send(payload.encode("utf-8"))
-        response = b""
+
+        buf = b""
         while True:
-            chunk = client.recv(4096)
-            if not chunk:
-                break
-            response += chunk
-            if b"\n" in response:
+            try:
+                chunk = client.recv(4096)
+                if not chunk:
+                    break
+                buf += chunk
+                # Process every complete line in the buffer
+                while b"\n" in buf:
+                    line, buf = buf.split(b"\n", 1)
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        msg = json.loads(line.decode("utf-8"))
+                    except json.JSONDecodeError:
+                        continue
+                    # Skip async event notifications from mpv
+                    if "event" in msg:
+                        continue
+                    # This is our command response
+                    if "error" in msg:
+                        client.close()
+                        return msg.get("data")
+            except socket.timeout:
                 break
         client.close()
-        data = json.loads(response.decode("utf-8").strip())
-        return data.get("data")
+        return None
     except Exception:
         return None
 
@@ -267,4 +289,4 @@ def volume_api():
 
 if __name__ == "__main__":
     start_mpv()
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    app.run(host="0.0.0.0", port=5000, debug=False, threaded=True)
