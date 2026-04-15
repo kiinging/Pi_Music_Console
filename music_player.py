@@ -23,7 +23,33 @@ from flask import Flask, jsonify, render_template_string, request
 # ─────────────────────────────────────────────────────────────
 MUSIC_FOLDER  = Path.home() / "Music"
 VOLUME_STEP   = 5          # % per encoder click
-SUPPORTED_EXT = (".mp4", ".mp3", ".flac", ".wav", ".ogg", ".m4a", ".aac")
+SUPPORTED_EXT = (".mp4", ".mp3", ".flac", ".wav", ".ogg", ".m4a", ".aac", ".mkv", ".avi", ".webm", ".mov")
+
+def get_audio_details(file_path):
+    """Use ffprobe to get technical details (sample rate, bit depth)."""
+    try:
+        cmd = [
+            "ffprobe", "-v", "error", "-show_entries", "stream=codec_type,sample_rate,bits_per_sample,channels:format=format_name,bit_rate,duration",
+            "-of", "json", file_path
+        ]
+        result = subprocess.check_output(cmd, timeout=3).decode("utf-8")
+        data = json.loads(result)
+        
+        streams = data.get("streams", [])
+        audio_stream = next((s for s in streams if s.get("codec_type") == "audio"), {})
+        fmt = data.get("format", {})
+        
+        return {
+            "sample_rate": audio_stream.get("sample_rate"),
+            "bit_depth": audio_stream.get("bits_per_sample"),
+            "channels": audio_stream.get("channels"),
+            "format": fmt.get("format_name"),
+            "bit_rate": fmt.get("bit_rate"),
+            "duration": float(fmt.get("duration", 0) if fmt.get("duration") else 0)
+        }
+    except Exception:
+        return {}
+
 ALSA_MIXER    = "Digital"  # PCM5122 default; falls back to Master
 WEB_PORT      = 5000
 
@@ -104,6 +130,37 @@ class Player:
         with self._lock:
             self._send_ipc(["set_property", "pause", False])
 
+    def seek(self, position: float):
+        with self._lock:
+            self._send_ipc(["seek", position, "absolute"])
+
+    def get_property(self, prop_name: str):
+        try:
+            client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            client.settimeout(1.0)
+            client.connect("/tmp/mpv-music_player")
+            client.send((json.dumps({"command": ["get_property", prop_name]}) + "\n").encode())
+            
+            buf = b""
+            while True:
+                chunk = client.recv(4096)
+                if not chunk: break
+                buf += chunk
+                while b"\n" in buf:
+                    line, buf = buf.split(b"\n", 1)
+                    if not line: continue
+                    try:
+                        msg = json.loads(line.decode("utf-8"))
+                        if "error" in msg and "event" not in msg:
+                            client.close()
+                            return msg.get("data")
+                    except Exception:
+                        pass
+            client.close()
+        except Exception:
+            pass
+        return None
+
     def _send_ipc(self, command: list):
         try:
             client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -145,12 +202,22 @@ player       = Player()
 volume       = get_volume()
 selected_idx = 0   # cursor for rotary encoder navigation
 
-def scan_music() -> list[Path]:
+def scan_music() -> list[dict]:
     if not MUSIC_FOLDER.exists():
         return []
-    return sorted(
-        f for f in MUSIC_FOLDER.iterdir() if f.suffix.lower() in SUPPORTED_EXT
-    )
+        
+    songs = []
+    for f in sorted(MUSIC_FOLDER.iterdir()):
+        if f.suffix.lower() in SUPPORTED_EXT:
+            tech = get_audio_details(str(f))
+            songs.append({
+                "path": f,
+                "name": f.name,
+                "stem": f.stem,
+                "suffix": f.suffix,
+                "tech": tech
+            })
+    return songs
 
 # ─────────────────────────────────────────────────────────────
 # Rotary Encoder (optional — silently skipped on dev PC)
@@ -204,7 +271,7 @@ def _setup_encoder():
             else:
                 songs = scan_music()
                 if songs and selected_idx < len(songs):
-                    player.play(songs[selected_idx])
+                    player.play(songs[selected_idx]["path"])
 
     encoder.when_rotated_clockwise         = on_cw
     encoder.when_rotated_counter_clockwise = on_ccw
@@ -456,6 +523,18 @@ HTML = """
   <button class="btn btn-action" onclick="pauseMusic()" title="Pause">⏸ Pause</button>
   <button class="btn btn-stop" onclick="stopMusic()">⏹ Stop</button>
 </div>
+
+<!-- Seek Bar -->
+<div class="seek-container" style="display:flex; align-items:center; gap:12px; padding: 0 1.5rem; max-width: 500px; margin-bottom: 0.5rem; margin-top: 1rem;">
+  <span id="seek-current" style="font-size:0.85rem; font-weight:600; color:var(--muted); min-width:40px;">0:00</span>
+  <input type="range" id="seek-slider" min="0" max="100" value="0"
+         onmousedown="window.seekDragging=true"
+         ontouchstart="window.seekDragging=true"
+         onmouseup="onSeekRelease()"
+         ontouchend="onSeekRelease()"
+         oninput="updateSeekDisplay(this.value)">
+  <span id="seek-total" style="font-size:0.85rem; font-weight:600; color:var(--muted); min-width:40px;">0:00</span>
+</div>
 <div class="controls volume-controls">
   <span style="font-size:1.2rem">🔉</span>
   <input type="range" id="volume-slider" min="0" max="100" value="50" oninput="setVolumeUI(this.value)" onchange="sendVolume(this.value)">
@@ -467,9 +546,14 @@ HTML = """
   {% if songs %}
     {% for song in songs %}
     <div class="song-item" id="song-{{ loop.index0 }}" onclick="playSong('{{ song.name | e }}')">
-      <span class="song-icon">{% if song.suffix in ['.mp4', '.m4a'] %}🎬{% else %}🎵{% endif %}</span>
-      <span class="song-name">{{ song.stem }}</span>
-      <span class="song-ext">{{ song.suffix[1:].upper() }}</span>
+      <span class="song-icon">{% if song.suffix in ['.mp4', '.m4a', '.mkv', '.avi', '.mov', '.webm'] %}🎬{% else %}🎵{% endif %}</span>
+      <span class="song-name">
+        {{ song.stem }}
+        {% set techStr = "" %}
+        {% if song.tech.sample_rate %}{% set techStr = techStr ~ (song.tech.sample_rate|int / 1000)|round(1) ~ "kHz" %}{% endif %}
+        {% if song.tech.bit_rate %}{% set techStr = techStr ~ (" • " if techStr else "") ~ (song.tech.bit_rate|int / 1000)|round ~ "kbps" %}{% endif %}
+        {% if techStr %}<br><span style="font-size:0.75rem; color:var(--green)">{{ (song.tech.format or 'UNK') | upper }} • {{ techStr }}</span>{% else %}<br><span style="font-size:0.75rem; color:var(--muted)">{{ (song.tech.format or 'UNK') | upper }}</span>{% endif %}
+      </span>
     </div>
     {% endfor %}
   {% else %}
@@ -484,6 +568,31 @@ HTML = """
 
 <script>
 let currentFile = null;
+window.seekDragging = false;
+let currentDuration = 0;
+
+function formatTime(secs) {
+    if (!secs || isNaN(secs)) return '0:00';
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+}
+
+function updateSeekDisplay(sliderVal) {
+    const pos = (sliderVal / 100) * currentDuration;
+    document.getElementById('seek-current').textContent = formatTime(pos);
+}
+
+async function onSeekRelease() {
+    window.seekDragging = false;
+    const slider = document.getElementById('seek-slider');
+    const position = (slider.value / 100) * currentDuration;
+    await fetch('/seek', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ position: position })
+    });
+}
 
 function showToast(msg) {
   const t = document.getElementById('toast');
@@ -582,6 +691,17 @@ async function pollStatus() {
       currentFile = d.playing;
       updateUI(d.playing);
     }
+    
+    currentDuration = d.duration || 0;
+    if (!window.seekDragging) {
+        document.getElementById('seek-total').textContent = formatTime(d.duration);
+        document.getElementById('seek-current').textContent = formatTime(d.position);
+        if (d.duration > 0) {
+            document.getElementById('seek-slider').value = (d.position / d.duration) * 100;
+        } else {
+            document.getElementById('seek-slider').value = 0;
+        }
+    }
   } catch(e) {}
   setTimeout(pollStatus, 2000);
 }
@@ -628,12 +748,26 @@ def volume_set_route():
     volume = set_volume(val)
     return jsonify(volume=volume)
 
+@app.route("/seek", methods=["POST"])
+def seek_route():
+    position = request.json.get("position", 0)
+    try:
+        position = float(position)
+    except (TypeError, ValueError):
+        return jsonify(error="Invalid position"), 400
+    player.seek(position)
+    return jsonify(ok=True)
+
 @app.route("/status")
 def status():
     current = player.current
+    duration = player.get_property("duration") if current else 0
+    position = player.get_property("time-pos") if current else 0
     return jsonify(
         playing=current.name if current else None,
         volume=volume,
+        duration=round(float(duration), 2) if duration else 0,
+        position=round(float(position), 2) if position else 0,
     )
 
 # ─────────────────────────────────────────────────────────────
