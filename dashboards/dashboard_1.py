@@ -148,25 +148,28 @@ def get_audio_details(file_path):
     """Use ffprobe to get technical details (sample rate, bit depth)."""
     try:
         cmd = [
-            "ffprobe", "-v", "error", "-select_streams", "a:0",
-            "-show_entries", "stream=sample_rate,bits_per_sample,channels:format=format_name,bit_rate,duration",
+            "ffprobe", "-v", "error", "-show_entries", "stream=codec_type,sample_rate,bits_per_sample,channels:format=format_name,bit_rate,duration",
             "-of", "json", file_path
         ]
-        result = subprocess.check_output(cmd).decode("utf-8")
+        # use a 3-second timeout so it doesn't hang forever on bad files
+        result = subprocess.check_output(cmd, timeout=3).decode("utf-8")
         data = json.loads(result)
         
-        stream = data.get("streams", [{}])[0]
+        streams = data.get("streams", [])
+        # Find the first audio stream to show audio tech specs
+        audio_stream = next((s for s in streams if s.get("codec_type") == "audio"), {})
         fmt = data.get("format", {})
         
         return {
-            "sample_rate": stream.get("sample_rate"),
-            "bit_depth": stream.get("bits_per_sample"),
-            "channels": stream.get("channels"),
+            "sample_rate": audio_stream.get("sample_rate"),
+            "bit_depth": audio_stream.get("bits_per_sample"),
+            "channels": audio_stream.get("channels"),
             "format": fmt.get("format_name"),
             "bit_rate": fmt.get("bit_rate"),
-            "duration": float(fmt.get("duration", 0))
+            "duration": float(fmt.get("duration", 0) if fmt.get("duration") else 0)
         }
-    except Exception:
+    except Exception as e:
+        print(f"ffprobe error: {e}")
         return {}
 
 def get_track_metadata(file_path):

@@ -328,8 +328,8 @@
         <div class="seek-container">
             <span class="seek-time" id="seek-current">0:00</span>
             <input type="range" id="seek-slider" min="0" max="100" value="0"
-                   onmousedown="seekDragging=true"
-                   ontouchstart="seekDragging=true"
+                   onmousedown="window.seekDragging=true"
+                   ontouchstart="window.seekDragging=true"
                    onmouseup="onSeekRelease()"
                    ontouchend="onSeekRelease()"
                    oninput="updateSeekDisplay(this.value)">
@@ -379,17 +379,24 @@
                 return;
             }
 
-            container.innerHTML = songs.map(song => `
+            container.innerHTML = songs.map(song => {
+                let techStr = '';
+                if (song.tech.sample_rate) techStr += (parseInt(song.tech.sample_rate) / 1000) + 'kHz ';
+                if (song.tech.bit_rate) techStr += Math.round(parseInt(song.tech.bit_rate) / 1000) + 'kbps';
+                if (techStr) techStr = ' • <span style="color:var(--success); font-size: 0.75rem;">' + techStr + '</span>';
+
+                return `
                 <div class="track-item" onclick="playTrack('${song.path.replace(/'/g, "\\'")}', '${song.type}')">
                     <div class="track-info">
                         <span class="track-item-title">${song.title}</span>
                         <span class="track-item-sub">
                             <span class="format-tag">${(song.tech.format || 'UNK').toUpperCase()}</span>
-                            ${song.artist} • ${song.album}
+                            ${song.artist} • ${song.album}${techStr}
                         </span>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         async function playTrack(path, type) {
@@ -483,7 +490,7 @@
         window.onload = fetchSongs;
 
         // ── Seek Slider ────────────────────────────────
-        let seekDragging = false;
+        window.seekDragging = false;
         let currentDuration = 0;
 
         function formatTime(secs) {
@@ -500,7 +507,7 @@
         }
 
         async function onSeekRelease() {
-            seekDragging = false;
+            window.seekDragging = false;
             const slider = document.getElementById('seek-slider');
             const position = (slider.value / 100) * currentDuration;
             await fetch('/api/seek', {
@@ -511,7 +518,7 @@
         }
 
         async function pollStatus() {
-            if (!seekDragging) {
+            if (!window.seekDragging) {
                 try {
                     const res  = await fetch('/api/status');
                     const data = await res.json();
