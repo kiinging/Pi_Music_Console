@@ -1,9 +1,20 @@
 #!/usr/bin/env bash
 set -e
 
+# Detect the real user even if run with sudo
+if [ "$EUID" -ne 0 ]; then
+  echo "ERROR: Please run as root (use: sudo bash install.sh)"
+  exit 1
+fi
+
+USER_NAME="${SUDO_USER:-$(whoami)}"
+if [ "$USER_NAME" == "root" ]; then
+    echo "ERROR: You are running as root directly. Please run as your normal user with sudo."
+    exit 1
+fi
+
+HOME_DIR=$(getent passwd "$USER_NAME" | cut -d: -f6)
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
-USER_NAME="$(whoami)"
-HOME_DIR="/home/$USER_NAME"
 
 echo ""
 echo "=== Pi Music Console Dependency Installer ==="
@@ -57,20 +68,20 @@ sudo usermod -a -G gpio,audio,video,input,render "$USER_NAME"
 
 mkdir -p "$HOME_DIR/Music"
 
-echo "[4/4] Installing systemd service..."
+# echo "[4/4] Installing systemd service..."
+# 
+# SERVICE_FILE="/etc/systemd/system/pi-music.service"
+# sudo cp "$REPO_DIR/pi-music.service" "$SERVICE_FILE"
+# 
+# # Replace placeholders with actual user and paths
+# sudo sed -i "s|/home/pizza|$HOME_DIR|g" "$SERVICE_FILE"
+# sudo sed -i "s|User=pizza|User=$USER_NAME|g" "$SERVICE_FILE"
+# sudo sed -i "s|Group=pizza|Group=$USER_NAME|g" "$SERVICE_FILE"
+# 
+# sudo systemctl daemon-reload
+# sudo systemctl enable pi-music.service
 
-SERVICE_FILE="/etc/systemd/system/pi-music.service"
-sudo cp "$REPO_DIR/pi-music.service" "$SERVICE_FILE"
-
-# Replace placeholders with actual user and paths
-sudo sed -i "s|/home/pizza|$HOME_DIR|g" "$SERVICE_FILE"
-sudo sed -i "s|User=pizza|User=$USER_NAME|g" "$SERVICE_FILE"
-sudo sed -i "s|Group=pizza|Group=$USER_NAME|g" "$SERVICE_FILE"
-
-sudo systemctl daemon-reload
-sudo systemctl enable pi-music.service
-
-echo "[5/5] Done!"
+echo "[4/4] Done! (Service auto-start disabled for now)"
 
 echo ""
 echo "Reboot required:"
