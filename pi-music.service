@@ -1,29 +1,23 @@
 [Unit]
-Description=Pi Music Console – Touchscreen Music Player
-After=graphical.target sound.target
-Wants=graphical.target sound.target
+Description=Pi Music Console – Flask Web Controller
+After=network.target sound.target
+Wants=network.target sound.target
 
 [Service]
-# Run as the auto-login user
 User=pizza
 Group=pizza
 
-# Set the display so Tkinter can reach the framebuffer / X server
-Environment=DISPLAY=:0
-Environment=XAUTHORITY=/home/pizza/.Xauthority
 Environment=HOME=/home/pizza
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-WorkingDirectory=/home/pizza
+WorkingDirectory=/home/pizza/Pi_Music_Console
 
-# Use the kiosk launcher to handle both X and the Python app
-ExecStart=/usr/bin/bash /home/pizza/Pi_Music_Console/start_kiosk.sh
+# Run Flask web controller (no X server needed)
+ExecStart=/home/pizza/Pi_Music_Console/venv/bin/python3 /home/pizza/Pi_Music_Console/music_player.py
 
-# Restart automatically if it crashes
 Restart=always
 RestartSec=5
 
-# Logging
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=pi-music

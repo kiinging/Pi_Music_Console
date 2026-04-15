@@ -1,106 +1,93 @@
 #!/usr/bin/env python3
 """
-#  Touchscreen music player for Raspberry Pi 5 (RPi OS Bookworm)
-#  - Scans ~/music for audio files
-#  - Touch-to-play with large buttons (800x480)
-#  - Rotary encoder via gpiozero (CLK=GPIO17, DT=GPIO27)
-#  - Audio output through PCM5122 DAC (hifiberry-dac overlay)
+Pi Music Console — Flask Web Controller
+========================================
+- Scans ~/Music for audio/video files
+- mpv plays directly to HDMI (no X server needed)
+- Control from any phone/browser at http://<pi-ip>:5000
+- Rotary encoder: volume (while playing) / track select (while stopped)
+- GPIO pins: CLK=17, DT=27, SW=22  (BCM numbering)
 """
 
 import os
-import sys
 import subprocess
 import threading
-import tkinter as tk
-from tkinter import font as tkfont
+import time
 from pathlib import Path
+from flask import Flask, jsonify, render_template_string, request
 
-# music_player.py
-
-# ──────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
 # Configuration
-# ──────────────────────────────────────────────
-MUSIC_FOLDER = Path.home() / "Music"
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 480
-VOLUME_STEP = 5          # % per encoder click
+# ─────────────────────────────────────────────────────────────
+MUSIC_FOLDER  = Path.home() / "Music"
+VOLUME_STEP   = 5          # % per encoder click
 SUPPORTED_EXT = (".mp4", ".mp3", ".flac", ".wav", ".ogg", ".m4a", ".aac")
+ALSA_MIXER    = "Digital"  # PCM5122 default; falls back to Master
+WEB_PORT      = 5000
 
-# ALSA mixer name – PCM5122 often uses 'Digital' or 'Playback'
-# We will attempt to auto-detect this in __init__
-ALSA_MIXER = "Digital"
-
-# GPIO pins for rotary encoder (BCM numbering)
 CLK_PIN = 17
 DT_PIN  = 27
 SW_PIN  = 22
 
-# ──────────────────────────────────────────────
-# Rotary encoder – import gpiozero only on Pi
-# ──────────────────────────────────────────────
-ENCODER_AVAILABLE = False
-try:
-    from gpiozero import RotaryEncoder, Button
-    ENCODER_AVAILABLE = True
-except (ImportError, Exception):
-    pass   # Running on dev PC – encoder silently disabled
+# ─────────────────────────────────────────────────────────────
+# ALSA volume helpers
+# ─────────────────────────────────────────────────────────────
+def _detect_mixer() -> str:
+    for name in [ALSA_MIXER, "Master", "Playback", "PCM"]:
+        try:
+            subprocess.check_output(["amixer", "get", name], stderr=subprocess.DEVNULL)
+            return name
+        except subprocess.CalledProcessError:
+            continue
+    return "Master"
 
+MIXER = _detect_mixer()
 
-def get_volume(mixer_name: str) -> int:
-    """Read current ALSA volume (0-100)."""
+def get_volume() -> int:
     try:
-        out = subprocess.check_output(
-            ["amixer", "get", mixer_name], stderr=subprocess.DEVNULL
-        ).decode()
+        out = subprocess.check_output(["amixer", "get", MIXER],
+                                      stderr=subprocess.DEVNULL).decode()
         for line in out.splitlines():
             if "%" in line:
-                start = line.index("[") + 1
-                end   = line.index("%")
-                return int(line[start:end])
+                return int(line[line.index("[") + 1 : line.index("%")])
     except Exception:
         pass
     return 50
 
-
-def set_volume(mixer_name: str, value: int) -> int:
-    """Clamp and set ALSA volume, return actual value."""
+def set_volume(value: int) -> int:
     value = max(0, min(100, value))
     try:
-        subprocess.run(
-            ["amixer", "set", mixer_name, f"{value}%"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+        subprocess.run(["amixer", "set", MIXER, f"{value}%"],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception:
         pass
     return value
 
-
-# ──────────────────────────────────────────────
-# Music Player (mpv subprocess)
-# ──────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# mpv Player (no display server — uses KMS/DRM directly)
+# ─────────────────────────────────────────────────────────────
 class Player:
     def __init__(self):
         self._proc: subprocess.Popen | None = None
-        self._current: str | None = None
+        self._current: Path | None = None
         self._lock = threading.Lock()
 
     @property
-    def current(self) -> str | None:
+    def current(self) -> Path | None:
         return self._current
 
-    def play(self, path: str):
+    def play(self, path: Path):
         with self._lock:
             self._stop_internal()
             self._current = path
             self._proc = subprocess.Popen(
                 [
                     "mpv",
-                    "--fs",             # Fullscreen for videos
-                    "--ontop",          # Stay on top of GUI
-                    "--audio-device=alsa",
+                    "--vo=drm",          # Direct framebuffer — no X needed
+                    "--ao=alsa",         # ALSA audio output
                     "--really-quiet",
-                    path,
+                    "--no-terminal",
+                    str(path),
                 ],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
@@ -115,7 +102,7 @@ class Player:
         if self._proc and self._proc.poll() is None:
             self._proc.terminate()
             try:
-                self._proc.wait(timeout=2)
+                self._proc.wait(timeout=3)
             except subprocess.TimeoutExpired:
                 self._proc.kill()
         self._proc = None
@@ -124,390 +111,482 @@ class Player:
         with self._lock:
             return self._proc is not None and self._proc.poll() is None
 
+    def poll(self):
+        """Call periodically — clears state when mpv finishes naturally."""
+        with self._lock:
+            if self._proc and self._proc.poll() is not None:
+                self._proc = None
+                self._current = None
 
-# ──────────────────────────────────────────────
-# GUI
-# ──────────────────────────────────────────────
-class PiMusicConsole(tk.Tk):
-    def __init__(self):
-        super().__init__()
+# ─────────────────────────────────────────────────────────────
+# App State
+# ─────────────────────────────────────────────────────────────
+player       = Player()
+volume       = get_volume()
+selected_idx = 0   # cursor for rotary encoder navigation
 
-        # ── Hardware / App State ────────────────
-        self.player = Player()
-        self.selected_idx = 0
-        self.last_sw_time = 0
-        self.click_count = 0
+def scan_music() -> list[Path]:
+    if not MUSIC_FOLDER.exists():
+        return []
+    return sorted(
+        f for f in MUSIC_FOLDER.iterdir() if f.suffix.lower() in SUPPORTED_EXT
+    )
 
-        # ── Volume / Mixer setup ────────────────
-        self.mixer = self._detect_mixer()
-        self.volume = get_volume(self.mixer)
+# ─────────────────────────────────────────────────────────────
+# Rotary Encoder (optional — silently skipped on dev PC)
+# ─────────────────────────────────────────────────────────────
+def _setup_encoder():
+    global volume, selected_idx
+    try:
+        from gpiozero import RotaryEncoder, Button
+    except Exception:
+        return  # Not on Pi or gpiozero not installed
 
-        # ── Window setup ────────────────────────
-        self.title("Pi Music Console")
-        self.geometry(f"{SCREEN_WIDTH}x{SCREEN_HEIGHT}")
-        self.resizable(False, False)
-        self.configure(bg="#0f0f1a")
-        # Remove window decorations for fullscreen kiosk feel
-        self.attributes("-fullscreen", True)
+    encoder = RotaryEncoder(CLK_PIN, DT_PIN, max_steps=0)
+    sw      = Button(SW_PIN, pull_up=True)
+    _last_press = [0.0]
+    _press_count = [0]
 
-        # ── Fonts ───────────────────────────────
-        title_font  = tkfont.Font(family="DejaVu Sans", size=18, weight="bold")
-        song_font   = tkfont.Font(family="DejaVu Sans", size=14)
-        btn_font    = tkfont.Font(family="DejaVu Sans", size=16, weight="bold")
-        status_font = tkfont.Font(family="DejaVu Sans", size=12)
-        vol_font    = tkfont.Font(family="DejaVu Sans", size=13, weight="bold")
+    def on_cw():
+        global volume, selected_idx
+        if player.is_playing():
+            volume = set_volume(volume + VOLUME_STEP)
+        else:
+            songs = scan_music()
+            if songs:
+                selected_idx = (selected_idx + 1) % len(songs)
 
-        # ── Header ──────────────────────────────
-        header_frame = tk.Frame(self, bg="#1a1a2e", height=55)
-        header_frame.pack(fill="x")
-        header_frame.pack_propagate(False)
+    def on_ccw():
+        global volume, selected_idx
+        if player.is_playing():
+            volume = set_volume(volume - VOLUME_STEP)
+        else:
+            songs = scan_music()
+            if songs:
+                selected_idx = (selected_idx - 1) % len(songs)
 
-        tk.Label(
-            header_frame,
-            text="🎵  Pi Music Console",
-            font=title_font,
-            fg="#e0aaff",
-            bg="#1a1a2e",
-        ).pack(side="left", padx=18, pady=10)
-
-        # Volume display (top-right)
-        self.vol_label = tk.Label(
-            header_frame,
-            text=f"🔊 {self.volume}%",
-            font=vol_font,
-            fg="#c77dff",
-            bg="#1a1a2e",
-        )
-        self.vol_label.pack(side="right", padx=18, pady=10)
-
-        # System Status (Dashboard)
-        self.sys_label = tk.Label(
-            header_frame,
-            text="🌡️ --°C  |  🧠 --%",
-            font=status_font,
-            fg="#9d9db5",
-            bg="#1a1a2e",
-        )
-        self.sys_label.pack(side="right", padx=30, pady=10)
-
-        # ── Song list (scrollable) ───────────────
-        list_frame = tk.Frame(self, bg="#0f0f1a")
-        list_frame.pack(fill="both", expand=True, padx=8, pady=(6, 0))
-
-        canvas = tk.Canvas(list_frame, bg="#0f0f1a", highlightthickness=0)
-        scrollbar = tk.Scrollbar(list_frame, orient="vertical", command=canvas.yview)
-        self.song_frame = tk.Frame(canvas, bg="#0f0f1a")
-
-        self.song_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all")),
-        )
-        canvas.create_window((0, 0), window=self.song_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        # Touch scroll support
-        canvas.bind("<ButtonPress-1>", self._on_touch_start)
-        canvas.bind("<B1-Motion>", self._on_touch_drag)
-        self._touch_y = 0
-        self._canvas = canvas
-
-        # ── Status bar ──────────────────────────
-        status_frame = tk.Frame(self, bg="#1a1a2e", height=50)
-        status_frame.pack(fill="x", side="bottom")
-        status_frame.pack_propagate(False)
-
-        self.status_label = tk.Label(
-            status_frame,
-            text="Select a song to play",
-            font=status_font,
-            fg="#9d9db5",
-            bg="#1a1a2e",
-        )
-        self.status_label.pack(side="left", padx=14, pady=6)
-
-        self.stop_btn = tk.Button(
-            status_frame,
-            text="⏹ Stop",
-            font=btn_font,
-            fg="#ffffff",
-            bg="#c1121f",
-            activebackground="#9d0208",
-            activeforeground="#ffffff",
-            relief="flat",
-            bd=0,
-            padx=18,
-            pady=4,
-            cursor="hand2",
-            command=self.stop,
-        )
-        self.stop_btn.pack(side="right", padx=10, pady=6)
-
-        quit_btn = tk.Button(
-            status_frame,
-            text="🚪 Quit",
-            font=btn_font,
-            fg="#ffffff",
-            bg="#2a2a40",
-            activebackground="#444466",
-            activeforeground="#ffffff",
-            relief="flat",
-            bd=0,
-            padx=18,
-            pady=4,
-            cursor="hand2",
-            command=self.quit_app,
-        )
-        quit_btn.pack(side="right", padx=10, pady=6)
-
-        # ── Load songs ──────────────────────────
-        self.songs: list[Path] = []
-        self.song_buttons: list[tk.Button] = []
-        self._active_btn_idx: int | None = None
-        self._load_songs()
-
-        # ── Rotary encoder ──────────────────────
-        if ENCODER_AVAILABLE:
-            self._encoder = RotaryEncoder(CLK_PIN, DT_PIN)
-            self._encoder.when_rotated_clockwise        = self._on_rotated_cw
-            self._encoder.when_rotated_counter_clockwise = self._on_rotated_ccw
-
-            self._sw = Button(SW_PIN, pull_up=True)
-            self._sw.when_pressed = self._on_sw_pressed
-
-        # ── Poll player status every second ─────
-        self._poll_player()
-
-        # ── Dashboard update ────────────────────
-        self._update_dashboard()
-
-    def _detect_mixer(self) -> str:
-        """Attempt to find a working ALSA mixer name (Digital, Master, or Playback)."""
-        for name in [ALSA_MIXER, "Master", "Playback", "HDMI"]:
-            try:
-                subprocess.check_output(["amixer", "get", name], stderr=subprocess.DEVNULL)
-                return name
-            except subprocess.CalledProcessError:
-                continue
-        return "Master"  # Fallback
-
-    # ── Song loading ────────────────────────────
-    def _load_songs(self):
-        for w in self.song_frame.winfo_children():
-            w.destroy()
-        self.songs.clear()
-        self.song_buttons.clear()
-        self._active_btn_idx = None
-
-        if not MUSIC_FOLDER.exists():
-            tk.Label(
-                self.song_frame,
-                text=f"⚠ Folder not found:\n{MUSIC_FOLDER}",
-                fg="#ffba08",
-                bg="#0f0f1a",
-                font=("DejaVu Sans", 13),
-                justify="left",
-            ).pack(padx=20, pady=30)
-            return
-
-        files = sorted(
-            [f for f in MUSIC_FOLDER.iterdir() if f.suffix.lower() in SUPPORTED_EXT]
-        )
-
-        if not files:
-            tk.Label(
-                self.song_frame,
-                text="No music files found in ~/music",
-                fg="#9d9db5",
-                bg="#0f0f1a",
-                font=("DejaVu Sans", 13),
-            ).pack(padx=20, pady=30)
-            return
-
-        for idx, path in enumerate(files):
-            display = path.stem  # filename without extension
-            btn = tk.Button(
-                self.song_frame,
-                text=f"  🎵  {display}",
-                font=("DejaVu Sans", 14),
-                fg="#e0e0f0",
-                bg="#16213e",
-                activebackground="#3d2c8d",
-                activeforeground="#ffffff",
-                relief="flat",
-                bd=0,
-                anchor="w",
-                height=2,
-                cursor="hand2",
-                command=lambda i=idx, p=path: self._play_song(i, p),
-            )
-            btn.pack(fill="x", pady=2, padx=4)
-            self.songs.append(path)
-            self.song_buttons.append(btn)
-        
-        self._update_selection_ui()
-
-    def _play_song(self, idx: int, path: Path):
-        # Reset previous active button
-        if self._active_btn_idx is not None:
-            prev = self.song_buttons[self._active_btn_idx]
-            prev.configure(bg="#16213e", fg="#e0e0f0")
-
-        self._active_btn_idx = idx
-        self.song_buttons[idx].configure(bg="#7b2d8b", fg="#ffffff")
-
-        self.player.play(str(path))
-        short = (path.stem[:50] + "…") if len(path.stem) > 50 else path.stem
-        self.status_label.configure(text=f"▶  {short}", fg="#c77dff")
-
-    def stop(self):
-        self.player.stop()
-        if self._active_btn_idx is not None:
-             # Just reset the active colors - handled by _update_selection_ui
-             pass
-        self._active_btn_idx = None
-        self.status_label.configure(text="Stopped", fg="#9d9db5")
-        self.stop_btn.configure(text="▶ Start", bg="#38b000") # Changed to Start
-
-    def _on_sw_pressed(self):
-        """Handle physical SW button press logic."""
-        import time
+    def on_press():
         now = time.time()
-        
-        # Double click detection (3 second window as requested)
-        if (now - self.last_sw_time) < 3.0:
-            self.click_count += 1
+        if now - _last_press[0] < 3.0:
+            _press_count[0] += 1
         else:
-            self.click_count = 1
-        
-        self.last_sw_time = now
+            _press_count[0] = 1
+        _last_press[0] = now
 
-        if self.click_count == 2:
-            print(">>> Double Click: Toggling Video View")
-            self._handle_double_click()
-            self.click_count = 0 # Reset
+        if _press_count[0] >= 2:
+            _press_count[0] = 0
+            # Double-click: stop
+            player.stop()
         else:
-            # Plan for a single click after a short delay to see if a second follows?
-            # Or just act immediately if that feels better. 
-            # Given the 3s window, we act immediately but the 2nd click overrides/toggles.
-            print(">>> Single Click: Toggling Play/Stop")
-            self._handle_single_click()
-
-    def _handle_single_click(self):
-        """Toggle Play/Stop based on current selection."""
-        if self.player.is_playing():
-            self.stop()
-        else:
-            if self.selected_idx < len(self.songs):
-                self._play_song(self.selected_idx, self.songs[self.selected_idx])
-                self.stop_btn.configure(text="⏹ Stop", bg="#c1121f")
-
-    def _handle_double_click(self):
-        """Toggle video screen (using mpv command to minimize/hide)."""
-        # For simplicity, if playing, we toggle the --fs flag via a restart or similar
-        # In a real environment, we'd use mpv socket IPC. 
-        # Here we will just print to console as the visual toggle.
-        self.attributes("-fullscreen", not self.attributes("-fullscreen"))
-
-    def _on_rotated_cw(self):
-        if self.player.is_playing():
-            self._volume_up()
-        else:
-            self._selection_down() # Navigate down in list
-
-    def _on_rotated_ccw(self):
-        if self.player.is_playing():
-            self._volume_down()
-        else:
-            self._selection_up() # Navigate up in list
-
-    def _selection_up(self):
-        if not self.songs: return
-        self.selected_idx = (self.selected_idx - 1) % len(self.songs)
-        self._update_selection_ui()
-
-    def _selection_down(self):
-        if not self.songs: return
-        self.selected_idx = (self.selected_idx + 1) % len(self.songs)
-        self._update_selection_ui()
-
-    def _update_selection_ui(self):
-        """Update the list highlighting to show current selection."""
-        for i, btn in enumerate(self.song_buttons):
-            if i == self._active_btn_idx:
-                btn.configure(bg="#7b2d8b", fg="#ffffff") # Playing (Purple)
-            elif i == self.selected_idx:
-                btn.configure(bg="#4361ee", fg="#ffffff") # Highlighted (Blue)
+            # Single-click: play selected / toggle stop
+            if player.is_playing():
+                player.stop()
             else:
-                btn.configure(bg="#16213e", fg="#e0e0f0") # Default
+                songs = scan_music()
+                if songs and selected_idx < len(songs):
+                    player.play(songs[selected_idx])
 
-    def quit_app(self):
-        """Stop music and exit the application."""
-        self.player.stop()
-        self.destroy()
-        sys.exit(0)
+    encoder.when_rotated_clockwise         = on_cw
+    encoder.when_rotated_counter_clockwise = on_ccw
+    sw.when_pressed = on_press
 
-    # ── Volume ──────────────────────────────────
-    def _volume_up(self):
-        self.volume = set_volume(self.mixer, self.volume + VOLUME_STEP)
-        self._refresh_volume()
+def _poll_loop():
+    """Background thread — keeps player state fresh."""
+    while True:
+        player.poll()
+        time.sleep(1)
 
-    def _volume_down(self):
-        self.volume = set_volume(self.mixer, self.volume - VOLUME_STEP)
-        self._refresh_volume()
+# ─────────────────────────────────────────────────────────────
+# Flask Web UI
+# ─────────────────────────────────────────────────────────────
+app = Flask(__name__)
 
-    def _refresh_volume(self):
-        self.vol_label.configure(text=f"🔊 {self.volume}%")
+HTML = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎵 Pi Music Console</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
 
-    # ── Touch scroll ────────────────────────────
-    def _on_touch_start(self, event):
-        self._touch_y = event.y
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    def _on_touch_drag(self, event):
-        delta = self._touch_y - event.y
-        self._canvas.yview_scroll(int(delta / 5), "units")
-        self._touch_y = event.y
+  :root {
+    --bg:      #0d0d1a;
+    --surface: #161628;
+    --card:    #1e1e38;
+    --accent:  #7c3aed;
+    --accent2: #a855f7;
+    --green:   #22c55e;
+    --red:     #ef4444;
+    --text:    #e2e8f0;
+    --muted:   #7c7c9a;
+    --border:  #2d2d52;
+  }
 
-    # ── Player polling ──────────────────────────
-    def _poll_player(self):
-        """Detect when mpv finishes so the button resets."""
-        if self._active_btn_idx is not None and not self.player.is_playing():
-            # Song ended naturally
-            self.song_buttons[self._active_btn_idx].configure(
-                bg="#16213e", fg="#e0e0f0"
-            )
-            self._active_btn_idx = None
-            self.status_label.configure(text="Select a song to play", fg="#9d9db5")
-        # Reschedule
-        self.after(1000, self._poll_player)
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 2rem;
+  }
 
-    # ── Dashboard Update ────────────────────────
-    def _update_dashboard(self):
-        """Fetch system stats (temp and load) and update label."""
-        try:
-            # CPU Temp
-            temp_c = 0.0
-            if os.path.exists("/sys/class/thermal/thermal_zone0/temp"):
-                with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
-                    temp_milli = int(f.read().strip())
-                    temp_c = temp_milli / 1000.0
-            
-            # CPU Load (1 min avg)
-            load1, _, _ = os.getloadavg()
-            # Normalize to cores (Pi 5 has 4 cores)
-            load_pct = (load1 / 4.0) * 100
-            
-            self.sys_label.configure(text=f"🌡️ {temp_c:.1f}°C  |  🧠 {load_pct:.0f}%")
-        except Exception:
-             self.sys_label.configure(text="🌡️ ??°C  |  🧠 ??%")
-        
-        self.after(5000, self._update_dashboard)
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, #1a0533 0%, #0d0d1a 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+  }
 
+  .logo { font-size: 1.25rem; font-weight: 700; color: var(--accent2); }
+  .logo span { color: var(--text); }
 
-# ──────────────────────────────────────────────
+  .stats {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .stats .pill {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.25rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  /* ── Now playing bar ── */
+  #now-playing-bar {
+    background: linear-gradient(90deg, #2e1065, #1e1e38);
+    border-bottom: 1px solid var(--border);
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-height: 60px;
+    transition: background 0.4s;
+  }
+
+  #now-playing-bar.idle { background: var(--surface); }
+
+  .now-icon {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+    animation: spin 3s linear infinite;
+  }
+  .now-icon.paused { animation-play-state: paused; background: var(--muted); }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+
+  #now-title {
+    flex: 1;
+    font-weight: 600;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── Controls ── */
+  .controls {
+    padding: 1rem 1.5rem;
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    border: none;
+    border-radius: 0.6rem;
+    padding: 0.6rem 1.2rem;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s, opacity 0.2s;
+  }
+  .btn:active { transform: scale(0.96); }
+
+  .btn-stop  { background: var(--red);    color: #fff; }
+  .btn-vol   { background: var(--card);   color: var(--text); border: 1px solid var(--border); }
+  .btn-vol:hover { border-color: var(--accent2); }
+
+  .vol-display {
+    margin-left: auto;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--accent2);
+    min-width: 60px;
+    text-align: right;
+  }
+
+  /* ── Song list ── */
+  .section-title {
+    padding: 0.75rem 1.5rem 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  #song-list { padding: 0 1rem; }
+
+  .song-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 0.8rem 1rem;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, transform 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .song-item:active { transform: scale(0.98); }
+  .song-item:hover  { border-color: var(--accent); background: #23234a; }
+  .song-item.playing {
+    border-color: var(--accent2);
+    background: linear-gradient(90deg, #2e1065 0%, #1e1e38 100%);
+  }
+  .song-item.playing .song-icon { color: var(--accent2); }
+
+  .song-icon { font-size: 1.2rem; flex-shrink: 0; }
+  .song-name { font-size: 0.95rem; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .song-ext  { font-size: 0.7rem; color: var(--muted); background: var(--surface);
+               border: 1px solid var(--border); border-radius: 4px; padding: 0.1rem 0.4rem; flex-shrink: 0; }
+
+  .empty { text-align: center; color: var(--muted); padding: 3rem 1rem; font-size: 0.95rem; }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+    background: var(--accent); color: #fff;
+    padding: 0.6rem 1.4rem; border-radius: 999px;
+    font-size: 0.85rem; font-weight: 600;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 999;
+  }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🎵 <span>Pi Music Console</span></div>
+  <div class="stats">
+    <div class="pill" id="stat-temp">🌡️ –°C</div>
+    <div class="pill" id="stat-cpu">🧠 –%</div>
+  </div>
+</header>
+
+<div id="now-playing-bar" class="idle">
+  <div class="now-icon paused" id="disc-icon">💿</div>
+  <div id="now-title" style="color:var(--muted)">Nothing playing</div>
+</div>
+
+<div class="controls">
+  <button class="btn btn-stop" onclick="stopMusic()">⏹ Stop</button>
+  <button class="btn btn-vol" onclick="changeVol(-10)">🔉 −10</button>
+  <button class="btn btn-vol" onclick="changeVol(-5)">− 5</button>
+  <button class="btn btn-vol" onclick="changeVol(5)">+ 5</button>
+  <button class="btn btn-vol" onclick="changeVol(10)">🔊 +10</button>
+  <div class="vol-display" id="vol-display">🔊 –%</div>
+</div>
+
+<div class="section-title">Library — {{ count }} file{{ 's' if count != 1 else '' }}</div>
+<div id="song-list">
+  {% if songs %}
+    {% for song in songs %}
+    <div class="song-item" id="song-{{ loop.index0 }}" onclick="playSong('{{ song.name | e }}')">
+      <span class="song-icon">{% if song.suffix in ['.mp4', '.m4a'] %}🎬{% else %}🎵{% endif %}</span>
+      <span class="song-name">{{ song.stem }}</span>
+      <span class="song-ext">{{ song.suffix[1:].upper() }}</span>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty">
+      <p>📂 No music files found in <code>~/Music</code></p>
+      <p style="margin-top:0.5rem; font-size:0.8rem;">Copy .mp3 / .flac / .mp4 / .wav files there, then refresh.</p>
+    </div>
+  {% endif %}
+</div>
+
+<div id="toast"></div>
+
+<script>
+let currentFile = null;
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+async function playSong(filename) {
+  const r = await fetch('/play', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({filename})
+  });
+  const d = await r.json();
+  if (d.ok) {
+    currentFile = filename;
+    updateUI(filename);
+    showToast('▶ ' + filename);
+  }
+}
+
+async function stopMusic() {
+  await fetch('/stop', {method: 'POST'});
+  currentFile = null;
+  updateUI(null);
+  showToast('⏹ Stopped');
+}
+
+async function changeVol(delta) {
+  const r = await fetch('/volume', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({delta})
+  });
+  const d = await r.json();
+  document.getElementById('vol-display').textContent = '🔊 ' + d.volume + '%';
+  showToast('Volume: ' + d.volume + '%');
+}
+
+function updateUI(filename) {
+  const bar   = document.getElementById('now-playing-bar');
+  const title = document.getElementById('now-title');
+  const disc  = document.getElementById('disc-icon');
+
+  // Clear all highlights
+  document.querySelectorAll('.song-item').forEach(el => el.classList.remove('playing'));
+
+  if (filename) {
+    bar.classList.remove('idle');
+    title.textContent = filename;
+    title.style.color = '';
+    disc.classList.remove('paused');
+
+    // Highlight matching row
+    document.querySelectorAll('.song-item').forEach(el => {
+      if (el.onclick.toString().includes(filename.replace(/'/g, "\\'"))) {
+        el.classList.add('playing');
+      }
+    });
+  } else {
+    bar.classList.add('idle');
+    title.textContent = 'Nothing playing';
+    title.style.color = 'var(--muted)';
+    disc.classList.add('paused');
+  }
+}
+
+// Poll status every 2 seconds
+async function pollStatus() {
+  try {
+    const r = await fetch('/status');
+    const d = await r.json();
+    document.getElementById('vol-display').textContent = '🔊 ' + d.volume + '%';
+    document.getElementById('stat-temp').textContent = '🌡️ ' + d.temp + '°C';
+    document.getElementById('stat-cpu').textContent  = '🧠 ' + d.cpu + '%';
+
+    if (d.playing !== currentFile) {
+      currentFile = d.playing;
+      updateUI(d.playing);
+    }
+  } catch(e) {}
+  setTimeout(pollStatus, 2000);
+}
+
+pollStatus();
+</script>
+</body>
+</html>
+"""
+
+@app.route("/")
+def index():
+    songs = scan_music()
+    return render_template_string(HTML, songs=songs, count=len(songs))
+
+@app.route("/play", methods=["POST"])
+def play():
+    filename = request.json.get("filename", "")
+    path = MUSIC_FOLDER / filename
+    if path.exists() and path.suffix.lower() in SUPPORTED_EXT:
+        player.play(path)
+        return jsonify(ok=True, filename=filename)
+    return jsonify(ok=False, error="File not found"), 404
+
+@app.route("/stop", methods=["POST"])
+def stop():
+    player.stop()
+    return jsonify(ok=True)
+
+@app.route("/volume", methods=["POST"])
+def volume_route():
+    global volume
+    delta = int(request.json.get("delta", 0))
+    volume = set_volume(volume + delta)
+    return jsonify(volume=volume)
+
+@app.route("/status")
+def status():
+    # CPU temp
+    temp = "?"
+    try:
+        with open("/sys/class/thermal/thermal_zone0/temp") as f:
+            temp = f"{int(f.read()) / 1000:.1f}"
+    except Exception:
+        pass
+
+    # CPU load
+    cpu = "?"
+    try:
+        load1, _, _ = os.getloadavg()
+        cpu = f"{(load1 / 4.0) * 100:.0f}"
+    except Exception:
+        pass
+
+    current = player.current
+    return jsonify(
+        playing=current.name if current else None,
+        volume=volume,
+        temp=temp,
+        cpu=cpu,
+    )
+
+# ─────────────────────────────────────────────────────────────
 # Entry point
-# ──────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    app = PiMusicConsole()
-    app.mainloop()
+    _setup_encoder()
+    threading.Thread(target=_poll_loop, daemon=True).start()
+    print(f"Pi Music Console running → http://0.0.0.0:{WEB_PORT}")
+    app.run(host="0.0.0.0", port=WEB_PORT, debug=False, use_reloader=False)

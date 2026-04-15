@@ -1,5 +1,4 @@
-evdev
-numpy
-pillow
 flask
 mutagen
+evdev
+gpiozero

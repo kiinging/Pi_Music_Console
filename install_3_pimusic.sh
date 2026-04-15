@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # =============================================================================
-# STEP 3 of 3 — Pi Music App as a Systemd Service
+# STEP 2 of 2 — Pi Music App as a Systemd Service
 # =============================================================================
-# This installs the pi-music.service now that auto-login (Step 1) and X server
-# (Step 2) are confirmed working.
+# This installs the pi-music.service now that auto-login (Step 1) is confirmed.
+# No X server needed — mpv plays directly to HDMI via KMS/DRM.
 #
-# Prerequisite:  Steps 1 and 2 must be working and stable.
+# Prerequisite:  Step 1 (auto-login) must be working and stable.
 #
 # Run with:  sudo bash install_3_pimusic.sh
 # =============================================================================
@@ -35,7 +35,7 @@ echo ""
 # ── Install Python deps ───────────────────────────────────────────────────────
 echo "[1/4] Installing audio packages..."
 apt-get update -qq
-apt-get install -y alsa-utils mpv ffmpeg python3-pip python3-venv python3-tk \
+apt-get install -y alsa-utils mpv ffmpeg python3-pip python3-venv \
     python3-gpiozero python3-lgpio liblgpio-dev python3-evdev python3-smbus \
     i2c-tools git
 
