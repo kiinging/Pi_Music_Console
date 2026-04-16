@@ -130,6 +130,10 @@ class Player:
         with self._lock:
             self._send_ipc(["set_property", "pause", False])
 
+    def set_video(self, enabled: bool):
+        with self._lock:
+            self._send_ipc(["set_property", "vid", "auto" if enabled else "no"])
+
     def seek(self, position: float):
         with self._lock:
             self._send_ipc(["seek", position, "absolute"])
@@ -522,6 +526,7 @@ HTML = """
   <button class="btn btn-action" onclick="resumeMusic()" title="Play">▶ Play</button>
   <button class="btn btn-action" onclick="pauseMusic()" title="Pause">⏸ Pause</button>
   <button class="btn btn-stop" onclick="stopMusic()">⏹ Stop</button>
+  <button class="btn btn-action" id="btn-video" onclick="toggleVideo()" title="Toggle Video" style="background: var(--accent2);">📺 Video On</button>
 </div>
 
 <!-- Seek Bar -->
@@ -570,6 +575,30 @@ HTML = """
 let currentFile = null;
 window.seekDragging = false;
 let currentDuration = 0;
+let videoEnabled = true;
+
+function toggleVideo() {
+  videoEnabled = !videoEnabled;
+  fetch('/video_set', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({enabled: videoEnabled})
+  });
+  updateVideoButton();
+  showToast(videoEnabled ? '📺 Video On' : '📺 Video Off');
+}
+
+function updateVideoButton() {
+  const btn = document.getElementById('btn-video');
+  if (videoEnabled) {
+    btn.textContent = '📺 Video On';
+    btn.style.background = 'var(--accent2)';
+  } else {
+    btn.textContent = '📺 Video Off';
+    btn.style.background = 'var(--surface)';
+    btn.style.color = 'var(--text)';
+  }
+}
 
 function formatTime(secs) {
     if (!secs || isNaN(secs)) return '0:00';
@@ -692,6 +721,12 @@ async function pollStatus() {
       updateUI(d.playing);
     }
     
+    // Sync video toggle state
+    if (d.video_enabled !== undefined && d.video_enabled !== videoEnabled) {
+      videoEnabled = d.video_enabled;
+      updateVideoButton();
+    }
+    
     currentDuration = d.duration || 0;
     if (!window.seekDragging) {
         document.getElementById('seek-total').textContent = formatTime(d.duration);
@@ -741,6 +776,12 @@ def resume_route():
     player.resume()
     return jsonify(ok=True)
 
+@app.route("/video_set", methods=["POST"])
+def video_set_route():
+    enabled = request.json.get("enabled", True)
+    player.set_video(enabled)
+    return jsonify(ok=True)
+
 @app.route("/volume_set", methods=["POST"])
 def volume_set_route():
     global volume
@@ -763,11 +804,13 @@ def status():
     current = player.current
     duration = player.get_property("duration") if current else 0
     position = player.get_property("time-pos") if current else 0
+    vid = player.get_property("vid") if current else "auto"
     return jsonify(
         playing=current.name if current else None,
         volume=volume,
         duration=round(float(duration), 2) if duration else 0,
         position=round(float(position), 2) if position else 0,
+        video_enabled=(vid != "no"),
     )
 
 # ─────────────────────────────────────────────────────────────
