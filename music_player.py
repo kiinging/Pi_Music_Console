@@ -810,7 +810,7 @@ def status():
         volume=volume,
         duration=round(float(duration), 2) if duration else 0,
         position=round(float(position), 2) if position else 0,
-        video_enabled=(vid != "no"),
+        video_enabled=(str(vid).lower() not in ("no", "false")),
     )
 
 # ─────────────────────────────────────────────────────────────
