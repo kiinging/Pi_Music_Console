@@ -480,6 +480,7 @@ HTML = """
             <div class="song-meta">
               {{ (song.tech.format or 'UNKNOWN') | upper }}
               {% if song.tech.sample_rate %} • {{ (song.tech.sample_rate|int / 1000)|round(1) }}kHz{% endif %}
+              {% if song.tech.bit_rate %} • {{ (song.tech.bit_rate|int / 1000)|round }}kbps{% endif %}
             </div>
           </div>
         </div>
@@ -598,10 +599,11 @@ def cover(filename):
     if not path.exists():
         return jsonify(error="File not found"), 404
     try:
-        cmd = [
-            "ffmpeg", "-i", str(path), "-an", "-vframes", "1", 
-            "-c:v", "mjpeg", "-f", "image2", "pipe:1"
-        ]
+        cmd = ["ffmpeg"]
+        if path.suffix.lower() in ['.mkv', '.mp4', '.avi', '.mov', '.webm']:
+            cmd.extend(["-ss", "00:00:05"]) # Skip 5 seconds into the video to avoid black fade-in screens
+        cmd.extend(["-i", str(path), "-an", "-vframes", "1", "-c:v", "mjpeg", "-f", "image2", "pipe:1"])
+        
         pic_bytes = subprocess.check_output(cmd, stderr=subprocess.DEVNULL, timeout=2)
         if pic_bytes:
             return Response(pic_bytes, mimetype="image/jpeg", headers={"Cache-Control": "max-age=86400"})
