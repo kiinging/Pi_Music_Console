@@ -16,7 +16,7 @@ import time
 import socket
 import json
 from pathlib import Path
-from flask import Flask, jsonify, render_template_string, request
+from flask import Flask, jsonify, render_template_string, request, Response
 
 # ─────────────────────────────────────────────────────────────
 # Configuration
@@ -298,454 +298,297 @@ HTML = """
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎵 Pi Music Console</title>
+<title>HiFi Music Console</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;600&family=Inter:wght@400;600&display=swap');
 
   :root {
-    --bg:      #0d0d1a;
-    --surface: #161628;
-    --card:    #1e1e38;
-    --accent:  #7c3aed;
-    --accent2: #a855f7;
-    --green:   #22c55e;
-    --red:     #ef4444;
-    --text:    #e2e8f0;
-    --muted:   #7c7c9a;
-    --border:  #2d2d52;
+    --bg: #07070a;
+    --card: rgba(255, 255, 255, 0.05);
+    --border: rgba(255, 255, 255, 0.08);
+    --accent: #b388ff;
+    --accent-glow: rgba(179, 136, 255, 0.4);
+    --text-main: #e0e0f0;
+    --text-dim: #8a8a9a;
   }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   body {
+    background-color: var(--bg);
+    color: var(--text-main);
     font-family: 'Inter', sans-serif;
-    background: var(--bg);
-    color: var(--text);
+    display: flex;
+    flex-direction: column;
     min-height: 100vh;
-    padding-bottom: 2rem;
+    overflow-x: hidden;
   }
 
-  /* ── Header ── */
+  /* Dynamic Blur Background */
+  #bg-blur {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: -1;
+    background-size: cover;
+    background-position: center;
+    filter: blur(40px) brightness(0.4);
+    transition: background-image 1s ease-in-out;
+    opacity: 0.6;
+  }
+
+  /* Now Playing Header */
   header {
-    background: linear-gradient(135deg, #1a0533 0%, #0d0d1a 100%);
+    text-align: center;
+    padding: 2rem 1.5rem;
+    background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, transparent 100%);
+    backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border);
-    padding: 1rem 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    backdrop-filter: blur(12px);
   }
 
-  .logo { font-size: 1.25rem; font-weight: 700; color: var(--accent2); }
-  .logo span { color: var(--text); }
-
-  .stats {
-    display: flex;
-    gap: 1rem;
-    font-size: 0.8rem;
-    color: var(--muted);
-  }
-  .stats .pill {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 0.25rem 0.75rem;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
+  .cover-container {
+    width: 250px;
+    height: 250px;
+    margin: 0 auto 1.5rem;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    background: #111;
   }
 
-  /* ── Now playing bar ── */
-  #now-playing-bar {
-    background: linear-gradient(90deg, #2e1065, #1e1e38);
-    border-bottom: 1px solid var(--border);
-    padding: 0.75rem 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    min-height: 60px;
-    transition: background 0.4s;
-  }
-
-  #now-playing-bar.idle { background: var(--surface); }
-
-  .now-icon {
-    width: 36px; height: 36px;
-    background: var(--accent);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1rem;
-    flex-shrink: 0;
-    animation: spin 3s linear infinite;
-  }
-  .now-icon.paused { animation-play-state: paused; background: var(--muted); }
-
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to   { transform: rotate(360deg); }
+  #now-cover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: opacity 0.5s;
   }
 
   #now-title {
-    flex: 1;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.8rem;
     font-weight: 600;
-    font-size: 0.95rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    margin-bottom: 0.3rem;
   }
 
-  /* ── Controls ── */
-  .controls {
-    padding: 1rem 1.5rem;
-    display: flex;
-    gap: 0.75rem;
-    align-items: center;
-    flex-wrap: wrap;
+  .badges {
+    display: flex; justify-content: center; gap: 8px; margin-top: 10px;
   }
-
-  .btn {
-    border: none;
-    border-radius: 0.6rem;
-    padding: 0.6rem 1.2rem;
-    font-family: inherit;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.1s, opacity 0.2s;
+  .badge {
+    background: var(--card); border: 1px solid var(--border);
+    padding: 4px 10px; border-radius: 12px; font-size: 0.7rem; color: var(--text-dim);
   }
-  .btn:active { transform: scale(0.96); }
+  .badge.hires { border-color: #00e676; color: #00e676; }
 
-  .btn-stop  { background: var(--red);    color: #fff; }
-  .btn-action { background: var(--accent); color: #fff; }
-  .btn-action:hover { background: var(--accent2); }
-
-  .vol-display {
-    margin-left: auto;
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--accent2);
-    min-width: 50px;
-    text-align: right;
+  /* Controls */
+  .controls-row {
+    display: flex; justify-content: center; gap: 1rem; margin: 1.5rem 0;
   }
+  
+  .btn-circle {
+    width: 55px; height: 55px; border-radius: 50%;
+    background: var(--card); border: 1px solid var(--border);
+    color: white; font-size: 1.2rem;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-circle:hover { background: var(--accent); box-shadow: 0 0 20px var(--accent-glow); border-color: transparent; }
+  .btn-circle:active { transform: scale(0.9); }
+  
+  .btn-play { background: white; color: black; }
+  .btn-play:hover { background: #ddd; box-shadow: 0 0 20px rgba(255,255,255,0.4); }
 
+  /* Sliders */
+  .slider-container {
+    display: flex; align-items: center; gap: 12px;
+    max-width: 500px; margin: 0 auto 1rem; padding: 0 1.5rem;
+  }
+  
   input[type=range] {
-    flex: 1;
-    -webkit-appearance: none;
-    height: 6px;
-    background: var(--border);
-    border-radius: 3px;
-    outline: none;
+    flex: 1; -webkit-appearance: none; height: 4px; border-radius: 2px;
+    background: var(--border); outline: none;
   }
   input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: var(--accent2);
-    cursor: pointer;
-    box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; cursor: pointer; transition: transform 0.1s;
   }
-  .volume-controls {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.5rem 1.5rem;
-    width: 100%;
-    max-width: 500px;
+  input[type=range]:active::-webkit-slider-thumb { transform: scale(1.3); }
+  
+  .time-label, .vol-label { font-size: 0.8rem; color: var(--text-dim); min-width: 40px; }
+
+  /* Library */
+  .library { flex: 1; padding: 1.5rem; background: rgba(0,0,0,0.4); backdrop-filter: blur(20px); }
+  .lib-title { font-family: 'Outfit', sans-serif; font-size: 1.2rem; margin-bottom: 1rem; color: var(--text-main); }
+  
+  .song-row {
+    display: flex; align-items: center; padding: 0.8rem 1rem;
+    background: var(--card); border-radius: 8px; margin-bottom: 8px;
+    border: 1px solid transparent; cursor: pointer; transition: all 0.2s;
   }
+  .song-row:hover { background: rgba(255,255,255,0.1); border-color: var(--border); }
+  .song-row.active { border-color: var(--accent); background: rgba(179, 136, 255, 0.1); }
+  
+  .song-info { flex: 1; overflow: hidden; }
+  .song-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem; }
+  .song-meta { font-size: 0.75rem; color: var(--text-dim); margin-top: 3px; }
 
-  /* ── Song list ── */
-  .section-title {
-    padding: 0.75rem 1.5rem 0.4rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-
-  #song-list { padding: 0 1rem; }
-
-  .song-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 0.75rem;
-    padding: 0.8rem 1rem;
-    margin-bottom: 0.5rem;
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s, transform 0.15s;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .song-item:active { transform: scale(0.98); }
-  .song-item:hover  { border-color: var(--accent); background: #23234a; }
-  .song-item.playing {
-    border-color: var(--accent2);
-    background: linear-gradient(90deg, #2e1065 0%, #1e1e38 100%);
-  }
-  .song-item.playing .song-icon { color: var(--accent2); }
-
-  .song-icon { font-size: 1.2rem; flex-shrink: 0; }
-  .song-name { font-size: 0.95rem; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .song-ext  { font-size: 0.7rem; color: var(--muted); background: var(--surface);
-               border: 1px solid var(--border); border-radius: 4px; padding: 0.1rem 0.4rem; flex-shrink: 0; }
-
-  .empty { text-align: center; color: var(--muted); padding: 3rem 1rem; font-size: 0.95rem; }
-
-  /* ── Toast ── */
-  #toast {
-    position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
-    background: var(--accent); color: #fff;
-    padding: 0.6rem 1.4rem; border-radius: 999px;
-    font-size: 0.85rem; font-weight: 600;
-    opacity: 0; pointer-events: none;
-    transition: opacity 0.3s;
-    z-index: 999;
-  }
-  #toast.show { opacity: 1; }
 </style>
 </head>
 <body>
 
+<div id="bg-blur"></div>
+
 <header>
-  <div class="logo">🎵 <span>Pi Music Console</span></div>
+  <div class="cover-container">
+    <img id="now-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Cover Art">
+  </div>
+  <div id="now-title">Ready to Play</div>
+  <div class="badges" id="now-badges">
+    <span class="badge" id="badge-format">STANDBY</span>
+  </div>
+
+  <div class="slider-container" style="margin-top: 1.5rem;">
+    <span class="time-label" id="seek-current">0:00</span>
+    <input type="range" id="seek-slider" min="0" max="100" value="0"
+           onmousedown="window.seekDragging=true" ontouchstart="window.seekDragging=true"
+           onmouseup="onSeekRelease()" ontouchend="onSeekRelease()"
+           oninput="document.getElementById('seek-current').textContent=formatTime((this.value/100)*currentDuration)">
+    <span class="time-label" id="seek-total" style="text-align: right;">0:00</span>
+  </div>
+
+  <div class="controls-row">
+    <div class="btn-circle btn-play" onclick="resumeMusic()">▶</div>
+    <div class="btn-circle" onclick="pauseMusic()">⏸</div>
+    <div class="btn-circle" onclick="stopMusic()">⏹</div>
+  </div>
+
+  <div class="slider-container">
+    <span style="font-size: 1.2rem;">🔉</span>
+    <input type="range" id="volume-slider" min="0" max="100" value="50" style="margin: 0 10px;" oninput="setVolumeUI(this.value)" onchange="sendVolume(this.value)">
+    <span class="vol-label" id="vol-display">50%</span>
+  </div>
 </header>
 
-<div id="now-playing-bar" class="idle">
-  <div class="now-icon paused" id="disc-icon">💿</div>
-  <div id="now-title" style="color:var(--muted)">Nothing playing</div>
+<div class="library">
+  <div class="lib-title">My Collection</div>
+  <div id="song-list">
+    {% if songs %}
+      {% for song in songs %}
+        <div class="song-row" id="row-{{ loop.index }}" onclick="playSong('{{ song.name | e }}', this.id)">
+          <div class="song-info">
+            <div class="song-name">{{ song.stem }}</div>
+            <div class="song-meta">
+              {{ (song.tech.format or 'UNKNOWN') | upper }}
+              {% if song.tech.sample_rate %} • {{ (song.tech.sample_rate|int / 1000)|round(1) }}kHz{% endif %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div style="text-align:center; color: var(--text-dim); padding: 2rem;">No music found</div>
+    {% endif %}
+  </div>
 </div>
-
-<div class="controls">
-  <button class="btn btn-action" onclick="resumeMusic()" title="Play">▶ Play</button>
-  <button class="btn btn-action" onclick="pauseMusic()" title="Pause">⏸ Pause</button>
-  <button class="btn btn-stop" onclick="stopMusic()">⏹ Stop</button>
-  <button class="btn btn-action" id="btn-video" onclick="toggleVideo()" title="Toggle Video" style="background: var(--accent2);">📺 Video On</button>
-</div>
-
-<!-- Seek Bar -->
-<div class="seek-container" style="display:flex; align-items:center; gap:12px; padding: 0 1.5rem; max-width: 500px; margin-bottom: 0.5rem; margin-top: 1rem;">
-  <span id="seek-current" style="font-size:0.85rem; font-weight:600; color:var(--muted); min-width:40px;">0:00</span>
-  <input type="range" id="seek-slider" min="0" max="100" value="0"
-         onmousedown="window.seekDragging=true"
-         ontouchstart="window.seekDragging=true"
-         onmouseup="onSeekRelease()"
-         ontouchend="onSeekRelease()"
-         oninput="updateSeekDisplay(this.value)">
-  <span id="seek-total" style="font-size:0.85rem; font-weight:600; color:var(--muted); min-width:40px;">0:00</span>
-</div>
-<div class="controls volume-controls">
-  <span style="font-size:1.2rem">🔉</span>
-  <input type="range" id="volume-slider" min="0" max="100" value="50" oninput="setVolumeUI(this.value)" onchange="sendVolume(this.value)">
-  <div class="vol-display" id="vol-display">50%</div>
-</div>
-
-<div class="section-title">Library — {{ count }} file{{ 's' if count != 1 else '' }}</div>
-<div id="song-list">
-  {% if songs %}
-    {% for song in songs %}
-    <div class="song-item" id="song-{{ loop.index0 }}" onclick="playSong('{{ song.name | e }}')">
-      <span class="song-icon">{% if song.suffix in ['.mp4', '.m4a', '.mkv', '.avi', '.mov', '.webm'] %}🎬{% else %}🎵{% endif %}</span>
-      <span class="song-name">
-        {{ song.stem }}
-        {% set techStr = "" %}
-        {% if song.tech.sample_rate %}{% set techStr = techStr ~ (song.tech.sample_rate|int / 1000)|round(1) ~ "kHz" %}{% endif %}
-        {% if song.tech.bit_rate %}{% set techStr = techStr ~ (" • " if techStr else "") ~ (song.tech.bit_rate|int / 1000)|round ~ "kbps" %}{% endif %}
-        {% if techStr %}<br><span style="font-size:0.75rem; color:var(--green)">{{ (song.tech.format or 'UNK') | upper }} • {{ techStr }}</span>{% else %}<br><span style="font-size:0.75rem; color:var(--muted)">{{ (song.tech.format or 'UNK') | upper }}</span>{% endif %}
-      </span>
-    </div>
-    {% endfor %}
-  {% else %}
-    <div class="empty">
-      <p>📂 No music files found in <code>~/Music</code></p>
-      <p style="margin-top:0.5rem; font-size:0.8rem;">Copy .mp3 / .flac / .mp4 / .wav files there, then refresh.</p>
-    </div>
-  {% endif %}
-</div>
-
-<div id="toast"></div>
 
 <script>
 let currentFile = null;
 window.seekDragging = false;
 let currentDuration = 0;
-let videoEnabled = true;
 
-function toggleVideo() {
-  videoEnabled = !videoEnabled;
-  fetch('/video_set', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({enabled: videoEnabled})
-  });
-  updateVideoButton();
-  showToast(videoEnabled ? '📺 Video On' : '📺 Video Off');
+function formatTime(s) {
+  if (!s || isNaN(s)) return '0:00';
+  let m = Math.floor(s/60);
+  let sec = Math.floor(s%60).toString().padStart(2,'0');
+  return m+':'+sec;
 }
 
-function updateVideoButton() {
-  const btn = document.getElementById('btn-video');
-  if (videoEnabled) {
-    btn.textContent = '📺 Video On';
-    btn.style.background = 'var(--accent2)';
-  } else {
-    btn.textContent = '📺 Video Off';
-    btn.style.background = 'var(--surface)';
-    btn.style.color = 'var(--text)';
-  }
+async function playSong(filename, rowId) {
+  await fetch('/play', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({filename}) });
+  updateUI(filename);
 }
-
-function formatTime(secs) {
-    if (!secs || isNaN(secs)) return '0:00';
-    const m = Math.floor(secs / 60);
-    const s = Math.floor(secs % 60).toString().padStart(2, '0');
-    return `${m}:${s}`;
-}
-
-function updateSeekDisplay(sliderVal) {
-    const pos = (sliderVal / 100) * currentDuration;
-    document.getElementById('seek-current').textContent = formatTime(pos);
-}
-
+async function stopMusic() { await fetch('/stop', {method:'POST'}); updateUI(null); }
+async function pauseMusic() { await fetch('/pause', {method:'POST'}); }
+async function resumeMusic() { await fetch('/resume', {method:'POST'}); }
 async function onSeekRelease() {
-    window.seekDragging = false;
-    const slider = document.getElementById('seek-slider');
-    const position = (slider.value / 100) * currentDuration;
-    await fetch('/seek', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ position: position })
-    });
+  window.seekDragging = false;
+  let pos = (document.getElementById('seek-slider').value / 100) * currentDuration;
+  await fetch('/seek', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({position: pos}) });
 }
 
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2000);
-}
-
-async function playSong(filename) {
-  const r = await fetch('/play', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({filename})
-  });
-  const d = await r.json();
-  if (d.ok) {
-    currentFile = filename;
-    updateUI(filename);
-    showToast('▶ ' + filename);
-  }
-}
-
-async function stopMusic() {
-  await fetch('/stop', {method: 'POST'});
-  currentFile = null;
-  updateUI(null);
-  showToast('⏹ Stopped');
-}
-
-async function pauseMusic() {
-  await fetch('/pause', {method: 'POST'});
-  showToast('⏸ Paused');
-}
-
-async function resumeMusic() {
-  await fetch('/resume', {method: 'POST'});
-  showToast('▶ Resumed');
-}
-
-function setVolumeUI(val) {
-  document.getElementById('vol-display').textContent = val + '%';
-}
-
-async function sendVolume(val) {
-  const r = await fetch('/volume_set', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({volume: val})
-  });
-  const d = await r.json();
-  document.getElementById('vol-display').textContent = d.volume + '%';
-  showToast('Volume: ' + d.volume + '%');
+function setVolumeUI(v) { document.getElementById('vol-display').textContent = v + '%'; }
+async function sendVolume(v) {
+  let r = await fetch('/volume_set', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({volume: v}) });
+  let d = await r.json();
+  setVolumeUI(d.volume);
 }
 
 function updateUI(filename) {
-  const bar   = document.getElementById('now-playing-bar');
-  const title = document.getElementById('now-title');
-  const disc  = document.getElementById('disc-icon');
-
-  // Clear all highlights
-  document.querySelectorAll('.song-item').forEach(el => el.classList.remove('playing'));
-
-  if (filename) {
-    bar.classList.remove('idle');
-    title.textContent = filename;
-    title.style.color = '';
-    disc.classList.remove('paused');
-
-    // Highlight matching row
-    document.querySelectorAll('.song-item').forEach(el => {
-      if (el.onclick.toString().includes(filename.replace(/'/g, "\\'"))) {
-        el.classList.add('playing');
-      }
+  document.querySelectorAll('.song-row').forEach(e => e.classList.remove('active'));
+  
+  if(filename) {
+    document.getElementById('now-title').textContent = filename;
+    document.getElementById('badge-format').textContent = 'PLAYING';
+    
+    let coverUrl = '/api/cover/' + encodeURIComponent(filename) + '?t=' + Date.now();
+    document.getElementById('now-cover').src = coverUrl;
+    document.getElementById('bg-blur').style.backgroundImage = `url('${coverUrl}')`;
+    
+    // Highlight library
+    document.querySelectorAll('.song-row').forEach(e => {
+      if(e.onclick.toString().includes(filename.replace(/'/g, "\'"))) e.classList.add('active');
     });
   } else {
-    bar.classList.add('idle');
-    title.textContent = 'Nothing playing';
-    title.style.color = 'var(--muted)';
-    disc.classList.add('paused');
+    document.getElementById('now-title').textContent = "Ready to Play";
+    document.getElementById('badge-format').textContent = 'STANDBY';
+    document.getElementById('now-cover').src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+    document.getElementById('bg-blur').style.backgroundImage = "none";
   }
 }
 
-// Poll status every 2 seconds
-async function pollStatus() {
+async function poll() {
   try {
-    const r = await fetch('/status');
-    const d = await r.json();
-    document.getElementById('vol-display').textContent = d.volume + '%';
-    
-    // Only update slider if not dragging it actively (to prevent jumping)
-    if (!document.getElementById('volume-slider').matches(':active')) {
-        document.getElementById('volume-slider').value = d.volume;
+    let r = await fetch('/status');
+    let d = await r.json();
+    setVolumeUI(d.volume);
+    if(!document.getElementById('volume-slider').matches(':active')) {
+      document.getElementById('volume-slider').value = d.volume;
     }
-
-    if (d.playing !== currentFile) {
+    
+    if(d.playing !== currentFile) {
       currentFile = d.playing;
       updateUI(d.playing);
     }
     
-    // Sync video toggle state
-    if (d.video_enabled !== undefined && d.video_enabled !== videoEnabled) {
-      videoEnabled = d.video_enabled;
-      updateVideoButton();
-    }
-    
     currentDuration = d.duration || 0;
-    if (!window.seekDragging) {
-        document.getElementById('seek-total').textContent = formatTime(d.duration);
-        document.getElementById('seek-current').textContent = formatTime(d.position);
-        if (d.duration > 0) {
-            document.getElementById('seek-slider').value = (d.position / d.duration) * 100;
-        } else {
-            document.getElementById('seek-slider').value = 0;
-        }
+    if(!window.seekDragging && currentDuration > 0) {
+      document.getElementById('seek-total').textContent = formatTime(currentDuration);
+      document.getElementById('seek-current').textContent = formatTime(d.position);
+      document.getElementById('seek-slider').value = (d.position / currentDuration) * 100;
     }
   } catch(e) {}
-  setTimeout(pollStatus, 2000);
+  setTimeout(poll, 1500);
 }
-
-pollStatus();
+poll();
 </script>
 </body>
 </html>
 """
+
+@app.route("/api/cover/<path:filename>")
+def cover(filename):
+    path = MUSIC_FOLDER / filename
+    if not path.exists():
+        return jsonify(error="File not found"), 404
+    try:
+        cmd = [
+            "ffmpeg", "-i", str(path), "-an", "-vframes", "1", 
+            "-c:v", "mjpeg", "-f", "image2", "pipe:1"
+        ]
+        pic_bytes = subprocess.check_output(cmd, stderr=subprocess.DEVNULL, timeout=2)
+        if pic_bytes:
+            return Response(pic_bytes, mimetype="image/jpeg", headers={"Cache-Control": "max-age=86400"})
+    except Exception:
+        pass
+    transparent_gif = b'GIF89a\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;'
+    return Response(transparent_gif, mimetype="image/gif", headers={"Cache-Control": "max-age=86400"})
 
 @app.route("/")
 def index():
