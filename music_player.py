@@ -451,7 +451,7 @@ HTML = """
   <div id="song-list">
     {% if songs %}
       {% for song in songs %}
-        <div class="song-row" id="row-{{ loop.index }}" onclick="playSong('{{ song.name | e }}', this.id)">
+        <div class="song-row" id="row-{{ loop.index }}" data-filename="{{ song.name | e }}" onclick="playSong(this.getAttribute('data-filename'), this.id)">
           <div class="song-info">
             <div class="song-name">{{ song.stem }}</div>
             <div class="song-meta">
@@ -524,9 +524,7 @@ function updateUI(filename) {
     
     // Highlight library and update dynamic tech badge
     document.querySelectorAll('.song-row').forEach(e => {
-      // Must double-slash escape quotes inside templates 
-      const cleanFileName = filename.replace(/'/g, "\'");
-      if(e.onclick.toString().includes(cleanFileName)) {
+      if(e.getAttribute('data-filename') === filename) {
           e.classList.add('active');
           let meta = e.querySelector('.song-meta');
           if(meta) {
