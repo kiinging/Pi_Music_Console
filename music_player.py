@@ -555,6 +555,15 @@ async function poll() {
       updateUI(d.playing);
     }
     
+    if(d.playing) {
+      let badge = document.getElementById('badge-format');
+      if (d.paused) {
+          badge.innerHTML = badge.innerHTML.replace('▶ PLAYING', '⏸ PAUSED').replace('var(--accent)', '#8a8a9a');
+      } else {
+          badge.innerHTML = badge.innerHTML.replace('⏸ PAUSED', '▶ PLAYING').replace('#8a8a9a', 'var(--accent)');
+      }
+    }
+    
     if(d.video_enabled !== undefined && d.video_enabled !== videoEnabled) {
       videoEnabled = d.video_enabled;
       updateVideoButton();
@@ -652,12 +661,14 @@ def status():
     duration = player.get_property("duration") if current else 0
     position = player.get_property("time-pos") if current else 0
     vid = player.get_property("vid") if current else "auto"
+    paused = player.get_property("pause") if current else False
     return jsonify(
         playing=current.name if current else None,
         volume=volume,
         duration=round(float(duration), 2) if duration else 0,
         position=round(float(position), 2) if position else 0,
         video_enabled=(str(vid).lower() not in ("no", "false")),
+        paused=bool(paused)
     )
 
 # ─────────────────────────────────────────────────────────────
