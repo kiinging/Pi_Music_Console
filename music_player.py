@@ -294,10 +294,11 @@ app = Flask(__name__)
 
 HTML = """
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" translate="no">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google" content="notranslate">
 <title>HiFi Music Console</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;600&family=Inter:wght@400;600&display=swap');
@@ -364,7 +365,7 @@ HTML = """
 
   #now-title {
     font-family: 'Outfit', sans-serif;
-    font-size: 1.8rem;
+    font-size: 1.2rem; /* Reduced to match library, slightly larger for emphasis */
     font-weight: 600;
     margin-bottom: 0.3rem;
   }
@@ -458,6 +459,7 @@ HTML = """
     <div class="btn-circle btn-play" onclick="resumeMusic()">▶</div>
     <div class="btn-circle" onclick="pauseMusic()">⏸</div>
     <div class="btn-circle" onclick="stopMusic()">⏹</div>
+    <div class="btn-circle" id="btn-video" onclick="toggleVideo()" style="background: var(--accent); font-size: 1.4rem;" title="Toggle Video">📺</div>
   </div>
 
   <div class="slider-container">
@@ -492,6 +494,19 @@ HTML = """
 let currentFile = null;
 window.seekDragging = false;
 let currentDuration = 0;
+let videoEnabled = true;
+
+function toggleVideo() {
+  videoEnabled = !videoEnabled;
+  fetch('/video_set', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({enabled: videoEnabled}) });
+  updateVideoButton();
+}
+
+function updateVideoButton() {
+  let btn = document.getElementById('btn-video');
+  if(videoEnabled) { btn.style.background = 'var(--accent)'; btn.style.opacity = '1'; }
+  else { btn.style.background = 'transparent'; btn.style.opacity = '0.5'; }
+}
 
 function formatTime(s) {
   if (!s || isNaN(s)) return '0:00';
@@ -555,6 +570,11 @@ async function poll() {
     if(d.playing !== currentFile) {
       currentFile = d.playing;
       updateUI(d.playing);
+    }
+    
+    if(d.video_enabled !== undefined && d.video_enabled !== videoEnabled) {
+      videoEnabled = d.video_enabled;
+      updateVideoButton();
     }
     
     currentDuration = d.duration || 0;
