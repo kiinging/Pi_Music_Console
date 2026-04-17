@@ -332,42 +332,23 @@ HTML = """
     z-index: -1;
     background-size: cover;
     background-position: center;
-    filter: blur(40px) brightness(0.4);
-    transition: background-image 1s ease-in-out;
-    opacity: 0.6;
+    transition: background 1s ease-in-out;
   }
 
   /* Now Playing Header */
   header {
     text-align: center;
-    padding: 2rem 1.5rem;
+    padding: 3rem 1.5rem 2rem;
     background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, transparent 100%);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border);
   }
 
-  .cover-container {
-    width: 250px;
-    height: 250px;
-    margin: 0 auto 1.5rem;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    background: #111;
-  }
-
-  #now-cover {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: opacity 0.5s;
-  }
-
   #now-title {
     font-family: 'Outfit', sans-serif;
-    font-size: 1.2rem; /* Reduced to match library, slightly larger for emphasis */
+    font-size: 1.2rem;
     font-weight: 600;
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.5rem;
   }
 
   .badges {
@@ -375,9 +356,8 @@ HTML = """
   }
   .badge {
     background: var(--card); border: 1px solid var(--border);
-    padding: 4px 10px; border-radius: 12px; font-size: 0.7rem; color: var(--text-dim);
+    padding: 6px 14px; border-radius: 12px; font-size: 0.75rem; color: var(--text-dim);
   }
-  .badge.hires { border-color: #00e676; color: #00e676; }
 
   /* Controls */
   .controls-row {
@@ -438,9 +418,6 @@ HTML = """
 <div id="bg-blur"></div>
 
 <header>
-  <div class="cover-container">
-    <img id="now-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Cover Art">
-  </div>
   <div id="now-title">Ready to Play</div>
   <div class="badges" id="now-badges">
     <span class="badge" id="badge-format">STANDBY</span>
@@ -543,19 +520,24 @@ function updateUI(filename) {
     document.getElementById('now-title').textContent = filename;
     document.getElementById('badge-format').textContent = 'PLAYING';
     
-    let coverUrl = '/api/cover/' + encodeURIComponent(filename) + '?t=' + Date.now();
-    document.getElementById('now-cover').src = coverUrl;
-    document.getElementById('bg-blur').style.backgroundImage = `url('${coverUrl}')`;
+    document.getElementById('bg-blur').style.background = 'radial-gradient(circle at 50% 50%, rgba(179,136,255,0.15) 0%, transparent 100%)';
     
-    // Highlight library
+    // Highlight library and update dynamic tech badge
     document.querySelectorAll('.song-row').forEach(e => {
-      if(e.onclick.toString().includes(filename.replace(/'/g, "\'"))) e.classList.add('active');
+      // Must double-slash escape quotes inside templates 
+      const cleanFileName = filename.replace(/'/g, "\'");
+      if(e.onclick.toString().includes(cleanFileName)) {
+          e.classList.add('active');
+          let meta = e.querySelector('.song-meta');
+          if(meta) {
+              document.getElementById('badge-format').innerHTML = '<span style="color:var(--accent)">▶ PLAYING</span> • ' + meta.innerHTML;
+          }
+      }
     });
   } else {
     document.getElementById('now-title').textContent = "Ready to Play";
     document.getElementById('badge-format').textContent = 'STANDBY';
-    document.getElementById('now-cover').src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-    document.getElementById('bg-blur').style.backgroundImage = "none";
+    document.getElementById('bg-blur').style.background = "none";
   }
 }
 
