@@ -437,8 +437,6 @@ HTML = """
     <div class="btn-circle" onclick="pauseMusic()">⏸</div>
     <div class="btn-circle" onclick="stopMusic()">⏹</div>
     <div class="btn-circle" id="btn-video" onclick="toggleVideo()" style="background: var(--accent); font-size: 1.4rem;" title="Toggle Video">📺</div>
-    <div class="btn-circle" onclick="adjustBrightness(-15)" style="font-size: 1.2rem; margin-left: 10px;" title="Dim Screen">🔅</div>
-    <div class="btn-circle" onclick="adjustBrightness(15)" style="font-size: 1.2rem;" title="Brighten Screen">🔆</div>
   </div>
 
   <div class="slider-container">
@@ -486,10 +484,6 @@ function updateVideoButton() {
   let btn = document.getElementById('btn-video');
   if(videoEnabled) { btn.style.background = 'var(--accent)'; btn.style.opacity = '1'; }
   else { btn.style.background = 'transparent'; btn.style.opacity = '0.5'; }
-}
-
-function adjustBrightness(change) {
-  fetch('/brightness', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({change: change}) });
 }
 
 function formatTime(s) {
@@ -640,32 +634,6 @@ def resume_route():
 def video_set_route():
     enabled = request.json.get("enabled", True)
     player.set_video(enabled)
-    return jsonify(ok=True)
-
-def set_backlight(change_percent=10):
-    try:
-        paths = list(Path("/sys/class/backlight").glob("*/brightness"))
-        if not paths: return False
-        
-        b_file = paths[0]
-        max_file = b_file.parent / "max_brightness"
-        
-        with open(b_file, "r") as f: current = int(f.read().strip())
-        with open(max_file, "r") as f: maximum = int(f.read().strip())
-        
-        new_val = current + int(maximum * (change_percent / 100.0))
-        new_val = max(0, min(maximum, new_val))
-        
-        os.system(f"echo {new_val} | sudo tee {b_file}")
-        return True
-    except Exception as e:
-        print(f"Backlight error: {e}")
-        return False
-
-@app.route("/brightness", methods=["POST"])
-def brightness_route():
-    change = float(request.json.get("change", 0))
-    set_backlight(change)
     return jsonify(ok=True)
 
 @app.route("/volume_set", methods=["POST"])
