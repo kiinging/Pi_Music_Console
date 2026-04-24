@@ -316,11 +316,21 @@ def status():
     position = send_mpv_query(["get_property", "time-pos"])
     duration = send_mpv_query(["get_property", "duration"])
     paused   = send_mpv_query(["get_property", "pause"])
+    vid      = send_mpv_query(["get_property", "vid"])
     return jsonify({
         "position": round(position, 2) if isinstance(position, (int, float)) else 0,
         "duration": round(duration, 2) if isinstance(duration, (int, float)) else 0,
         "paused":   paused if isinstance(paused, bool) else True,
+        "video_enabled": (str(vid).lower() not in ("no", "false", "none")),
     })
+
+@app.route("/api/video/toggle", methods=["POST"])
+def video_toggle():
+    current_vid = send_mpv_query(["get_property", "vid"])
+    is_enabled = (str(current_vid).lower() not in ("no", "false", "none"))
+    new_state = "no" if is_enabled else "auto"
+    send_mpv_command(["set_property", "vid", new_state])
+    return jsonify({"video_enabled": new_state == "auto"})
 
 @app.route("/api/seek", methods=["POST"])
 def seek():

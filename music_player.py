@@ -443,25 +443,9 @@ HTML = """
   }
   .time-label, .vol-label { font-size: 0.8rem; color: var(--text-dim); }
   
-  /* Smart Toggle */
-  .smart-toggle {
-    display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px;
-    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim);
+  .controls-group {
+    display: flex; gap: 10px; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 40px; border: 1px solid var(--border);
   }
-  .switch {
-    position: relative; display: inline-block; width: 34px; height: 18px;
-  }
-  .switch input { opacity: 0; width: 0; height: 0; }
-  .slider {
-    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-    background-color: #333; transition: .4s; border-radius: 34px;
-  }
-  .slider:before {
-    position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px;
-    background-color: white; transition: .4s; border-radius: 50%;
-  }
-  input:checked + .slider { background-color: var(--accent); }
-  input:checked + .slider:before { transform: translateX(16px); }
 
   /* Library */
   .library { flex: 1; padding: 1.5rem; background: rgba(0,0,0,0.4); backdrop-filter: blur(20px); }
@@ -486,13 +470,6 @@ HTML = """
 <div id="bg-blur"></div>
 
 <header>
-  <div class="smart-toggle">
-    <span>SMART MODE</span>
-    <label class="switch">
-      <input type="checkbox" id="smart-toggle" onchange="toggleSmart()">
-      <span class="slider"></span>
-    </label>
-  </div>
   <div id="now-title">Ready to Play</div>
   <div class="badges" id="now-badges">
     <span class="badge" id="badge-format">STANDBY</span>
@@ -508,10 +485,15 @@ HTML = """
   </div>
 
   <div class="controls-row">
-    <div class="btn-circle btn-play" onclick="resumeMusic()">▶</div>
-    <div class="btn-circle" onclick="pauseMusic()">⏸</div>
-    <div class="btn-circle" onclick="stopMusic()">⏹</div>
-    <div class="btn-circle" id="btn-video" onclick="toggleVideo()" style="background: var(--accent); font-size: 1.4rem;" title="Toggle Video">📺</div>
+    <div class="controls-group">
+      <div class="btn-circle btn-play" onclick="resumeMusic()">▶</div>
+      <div class="btn-circle" onclick="pauseMusic()">⏸</div>
+      <div class="btn-circle" onclick="stopMusic()">⏹</div>
+    </div>
+    <div class="controls-group">
+      <div class="btn-circle" id="btn-video" onclick="toggleVideo()" style="font-size: 1.4rem;" title="Toggle Video (ON/OFF)">📺</div>
+      <div class="btn-circle" id="btn-smart" onclick="toggleSmart()" style="font-size: 1.4rem;" title="Toggle Smart Mode (ON/OFF)">🧠</div>
+    </div>
   </div>
 
   <div class="vol-row">
@@ -621,7 +603,16 @@ function updateUI(filename) {
 }
 
 async function toggleSmart() {
-  await fetch('/api/smart/toggle', { method:'POST' });
+  let res = await fetch('/api/smart/toggle', { method:'POST' });
+  let data = await res.json();
+  updateSmartButton(data.running);
+}
+
+function updateSmartButton(isRunning) {
+  let btn = document.getElementById('btn-smart');
+  if(!btn) return;
+  if(isRunning) { btn.style.background = 'var(--accent)'; btn.style.opacity = '1'; }
+  else { btn.style.background = 'transparent'; btn.style.opacity = '0.5'; }
 }
 
 async function poll() {
@@ -633,7 +624,8 @@ async function poll() {
     // Also poll smart status
     let sr = await fetch('/api/smart/status');
     let sd = await sr.json();
-    document.getElementById('smart-toggle').checked = sd.running;
+    updateSmartButton(sd.running);
+    updateVideoButton(d.video_enabled);
     
     if(d.playing !== currentFile) {
       currentFile = d.playing;

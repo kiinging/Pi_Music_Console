@@ -182,70 +182,14 @@
             font-weight: 600;
         }
 
-        /* Smart Toggle Switch */
-        .smart-control {
-            position: absolute;
-            top: 2rem;
-            right: 2rem;
+        .controls-group {
             display: flex;
             align-items: center;
             gap: 10px;
             background: var(--glass);
-            padding: 8px 16px;
-            border-radius: 20px;
+            padding: 6px;
+            border-radius: 40px;
             border: 1px solid var(--glass-border);
-            z-index: 10;
-        }
-
-        .smart-label {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--text-dim);
-            font-weight: 600;
-        }
-
-        .toggle-switch {
-            position: relative;
-            width: 40px;
-            height: 20px;
-        }
-
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: rgba(255,255,255,0.1);
-            transition: .4s;
-            border-radius: 20px;
-        }
-
-        .toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 14px;
-            width: 14px;
-            left: 3px;
-            bottom: 3px;
-            background-color: var(--text-dim);
-            transition: .4s;
-            border-radius: 50%;
-        }
-
-        input:checked + .toggle-slider {
-            background-color: var(--success);
-            box-shadow: 0 0 10px rgba(0, 245, 212, 0.3);
-        }
-
-        input:checked + .toggle-slider:before {
-            transform: translateX(20px);
-            background-color: white;
         }
 
         /* Seek Bar */
@@ -393,14 +337,6 @@
 </head>
 <body>
 
-    <div class="smart-control" title="Enable Voice AI Features">
-        <span class="smart-label" id="smart-status-text">Smart Off</span>
-        <label class="toggle-switch">
-            <input type="checkbox" id="smart-toggle" onchange="toggleSmartMode()">
-            <span class="toggle-slider"></span>
-        </label>
-    </div>
-
     <section class="now-playing">
         <h1 id="playing-title" class="track-title">Select a Track</h1>
         <div id="playing-artist" class="track-artist">Ready to Play</div>
@@ -410,9 +346,17 @@
         </div>
 
         <div class="controls">
-            <button class="btn-circle" style="background: var(--success); color: black;" onclick="resumeMusic()" title="Resume">▶</button>
-            <button class="btn-circle" onclick="pauseMusic()" title="Pause">⏸</button>
-            <button class="btn-circle" onclick="stopMusic()" title="Stop">⏹</button>
+            <div class="controls-group">
+                <button class="btn-circle" style="background: var(--success); color: black;" onclick="resumeMusic()" title="Resume">▶</button>
+                <button class="btn-circle" onclick="pauseMusic()" title="Pause">⏸</button>
+                <button class="btn-circle" onclick="stopMusic()" title="Stop">⏹</button>
+            </div>
+
+            <div class="controls-group">
+                <button class="btn-circle" id="btn-screen" onclick="toggleScreen()" title="Toggle Screen (ON/OFF)">📺</button>
+                <button class="btn-circle" id="btn-smart" onclick="toggleSmartMode()" title="Toggle Smart Mode (ON/OFF)">🧠</button>
+            </div>
+            
             <button class="btn-circle" style="background: rgba(255,255,255,0.05)" onclick="refreshList()" title="Refresh">🔄</button>
         </div>
 
@@ -609,11 +553,46 @@
             }
         }
 
+        async function toggleScreen() {
+            try {
+                const res = await fetch('/api/video/toggle', { method: 'POST' });
+                const data = await res.json();
+                updateScreenUI(data.video_enabled);
+            } catch (e) {
+                console.error("Failed to toggle screen:", e);
+            }
+        }
+
         function updateSmartUI(isRunning) {
-            document.getElementById('smart-toggle').checked = isRunning;
-            const text = document.getElementById('smart-status-text');
-            text.innerText = isRunning ? "Smart On" : "Smart Off";
-            text.style.color = isRunning ? "var(--success)" : "var(--text-dim)";
+            const btn = document.getElementById('btn-smart');
+            if (!btn) return;
+            if (isRunning) {
+                btn.style.background = "var(--success)";
+                btn.style.boxShadow = "0 0 15px rgba(0, 245, 212, 0.3)";
+                btn.style.borderColor = "transparent";
+                btn.style.opacity = "1";
+            } else {
+                btn.style.background = "var(--glass)";
+                btn.style.boxShadow = "none";
+                btn.style.borderColor = "var(--glass-border)";
+                btn.style.opacity = "0.5";
+            }
+        }
+
+        function updateScreenUI(isEnabled) {
+            const btn = document.getElementById('btn-screen');
+            if (!btn) return;
+            if (isEnabled) {
+                btn.style.background = "var(--accent)";
+                btn.style.boxShadow = "0 0 15px var(--accent-glow)";
+                btn.style.borderColor = "transparent";
+                btn.style.opacity = "1";
+            } else {
+                btn.style.background = "var(--glass)";
+                btn.style.boxShadow = "none";
+                btn.style.borderColor = "var(--glass-border)";
+                btn.style.opacity = "0.5";
+            }
         }
 
         async function fetchSmartStatus() {
@@ -673,6 +652,10 @@
                     slider.value = pct;
                     document.getElementById('seek-current').innerText = formatTime(data.position);
                     document.getElementById('seek-total').innerText   = formatTime(data.duration);
+                    
+                    if (data.video_enabled !== undefined) {
+                        updateScreenUI(data.video_enabled);
+                    }
                 } catch (e) { /* socket not ready yet */ }
             }
             setTimeout(pollStatus, 2000);
