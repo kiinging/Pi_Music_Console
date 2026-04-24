@@ -82,8 +82,8 @@ def get_volume() -> int:
             if "%" in line:
                 hw_val = int(line[line.index("[") + 1 : line.index("%")])
                 # Inverse Log mapping: slider = log10(HW/100 * (10^L - 1) + 1) / L * 100
-                # Using L=2 for a natural 40dB audio taper
-                L = 2
+                # Using L=1.2 for better compatibility with Class A amps & low-sens speakers
+                L = 1.2
                 slider_val = round((math.log10((hw_val / 100) * (10**L - 1) + 1) / L) * 100)
                 return max(0, min(100, slider_val))
     except Exception:
@@ -94,7 +94,7 @@ def set_volume(slider_val: int) -> int:
     """Set ALSA volume using a logarithmic (audio) mapping."""
     slider_val = max(0, min(100, slider_val))
     # Log mapping: HW = (10^(L * slider/100) - 1) / (10^L - 1) * 100
-    L = 2
+    L = 1.2
     hw_val = int(((10**(L * slider_val / 100) - 1) / (10**L - 1)) * 100)
     
     try:
