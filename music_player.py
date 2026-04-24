@@ -389,30 +389,21 @@ HTML = """
   .btn-play { background: white; color: black; }
   .btn-play:hover { background: #ddd; box-shadow: 0 0 20px rgba(255,255,255,0.4); }
 
-  /* RK27 Knob Styling */
-  .knob-container {
-    position: relative; width: 100px; height: 120px;
-    margin: 0 auto; display: flex; flex-direction: column; align-items: center;
+  /* Volume Slider Styling */
+  .vol-row {
+    display: flex; align-items: center; gap: 10px; margin: 1rem auto;
+    max-width: 300px; background: var(--card); padding: 8px 15px;
+    border-radius: 20px; border: 1px solid var(--border);
   }
-  .knob-wrapper {
-    position: relative; width: 80px; height: 80px;
-    background: #1a1a1f; border-radius: 50%;
-    box-shadow: inset 0 2px 5px rgba(255,255,255,0.05), 0 5px 15px rgba(0,0,0,0.5);
-    display: flex; align-items: center; justify-content: center;
-    cursor: ns-resize; touch-action: none; border: 1px solid var(--border);
+  #vol-slider {
+    flex: 1; -webkit-appearance: none; height: 4px;
+    background: rgba(255,255,255,0.1); border-radius: 2px;
+    outline: none; cursor: pointer;
   }
-  .knob {
-    position: relative; width: 64px; height: 64px;
-    background: linear-gradient(135deg, #3c3c44 0%, #1a1a1f 100%);
-    border-radius: 50%; border: 2px solid #333;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.1);
-    transition: transform 0.1s ease-out;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .knob-indicator {
-    position: absolute; top: 8px;
-    width: 3px; height: 10px; background: var(--accent);
-    border-radius: 2px; box-shadow: 0 0 8px var(--accent-glow);
+  #vol-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px;
+    background: var(--accent); border-radius: 50%;
+    cursor: pointer; box-shadow: 0 0 8px var(--accent-glow);
   }
   .time-label, .vol-label { font-size: 0.8rem; color: var(--text-dim); }
 
@@ -460,13 +451,10 @@ HTML = """
     <div class="btn-circle" id="btn-video" onclick="toggleVideo()" style="background: var(--accent); font-size: 1.4rem;" title="Toggle Video">📺</div>
   </div>
 
-  <div class="knob-container">
-    <div class="knob-wrapper" id="knob-wrapper">
-      <div class="knob" id="volume-knob">
-        <div class="knob-indicator"></div>
-      </div>
-    </div>
-    <span class="vol-label" id="vol-display">50%</span>
+  <div class="vol-row">
+    <span class="vol-label">🔊</span>
+    <input type="range" id="vol-slider" min="0" max="100" value="50" oninput="sendVolume(this.value)">
+    <span class="vol-label" id="vol-display" style="min-width: 40px; text-align: right;">50%</span>
   </div>
 </header>
 
@@ -531,62 +519,17 @@ async function onSeekRelease() {
 }
 
 let currentVolume = 50;
-const volumeKnob = document.getElementById('volume-knob');
-const knobWrapper = document.getElementById('knob-wrapper');
-
-function setKnobRotation(val) {
-  const rotation = (val / 100) * 270 - 135;
-  volumeKnob.style.transform = `rotate(${rotation}deg)`;
-  document.getElementById('vol-display').textContent = Math.round(val) + '%';
-}
 
 function setVolumeUI(v) { 
   currentVolume = v;
-  setKnobRotation(v);
+  document.getElementById('vol-slider').value = v;
+  document.getElementById('vol-display').textContent = Math.round(v) + '%';
 }
 
 async function sendVolume(v) {
-  let r = await fetch('/volume_set', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({volume: v}) });
-  let d = await r.json();
-  setVolumeUI(d.volume);
+  document.getElementById('vol-display').textContent = v + '%';
+  await fetch('/volume_set', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({volume: v}) });
 }
-
-// Knob Drag Logic
-let isDragging = false;
-let startY = 0;
-let startVol = 0;
-
-function startDrag(e) {
-  isDragging = true;
-  startY = e.clientY || (e.touches && e.touches[0].clientY);
-  startVol = currentVolume;
-  knobWrapper.style.borderColor = 'var(--accent)';
-}
-
-function doDrag(e) {
-  if (!isDragging) return;
-  const y = e.clientY || (e.touches && e.touches[0].clientY);
-  const delta = startY - y;
-  const newVol = Math.max(0, Math.min(100, startVol + delta / 1.5));
-  if (Math.round(newVol) !== Math.round(currentVolume)) {
-    currentVolume = newVol;
-    setKnobRotation(currentVolume);
-    sendVolume(currentVolume);
-  }
-  if (e.cancelable) e.preventDefault();
-}
-
-function endDrag() {
-  isDragging = false;
-  knobWrapper.style.borderColor = 'var(--border)';
-}
-
-knobWrapper.addEventListener('mousedown', startDrag);
-window.addEventListener('mousemove', doDrag);
-window.addEventListener('mouseup', endDrag);
-knobWrapper.addEventListener('touchstart', startDrag, { passive: false });
-window.addEventListener('touchmove', doDrag, { passive: false });
-window.addEventListener('touchend', endDrag);
 
 function updateUI(filename) {
   document.querySelectorAll('.song-row').forEach(e => e.classList.remove('active'));
@@ -619,9 +562,6 @@ async function poll() {
     let r = await fetch('/status');
     let d = await r.json();
     setVolumeUI(d.volume);
-    if(!isDragging) {
-      setVolumeUI(d.volume);
-    }
     
     if(d.playing !== currentFile) {
       currentFile = d.playing;
