@@ -4,6 +4,7 @@ import json
 import subprocess
 import time
 import logging
+import math
 from flask import Flask, render_template, jsonify, request
 from pathlib import Path
 
@@ -41,7 +42,7 @@ def detect_mixer():
 MIXER_NAME = detect_mixer()
 
 def get_current_volume():
-    """Read current ALSA volume (0-100)."""
+    """Read current ALSA volume and convert back to perceptual slider value (0-100)."""
     try:
         out = subprocess.check_output(
             ["amixer", "get", MIXER_NAME], stderr=subprocess.DEVNULL
@@ -50,21 +51,30 @@ def get_current_volume():
             if "%" in line:
                 start = line.index("[") + 1
                 end = line.index("%")
-                return int(line[start:end])
+                hw_val = int(line[start:end])
+                # Inverse Log mapping: slider = log10(HW/100 * (10^L - 1) + 1) / L * 100
+                # Using L=2 for a natural 40dB audio taper
+                L = 2
+                slider_val = round((math.log10((hw_val / 100) * (10**L - 1) + 1) / L) * 100)
+                return max(0, min(100, slider_val))
     except Exception:
         pass
     return 50
 
-def set_system_volume(value):
-    """Set ALSA volume."""
-    value = max(0, min(100, int(value)))
+def set_system_volume(slider_val):
+    """Set ALSA volume using a logarithmic (audio) mapping."""
+    slider_val = max(0, min(100, int(slider_val)))
+    # Log mapping: HW = (10^(L * slider/100) - 1) / (10^L - 1) * 100
+    L = 2
+    hw_val = int(((10**(L * slider_val / 100) - 1) / (10**L - 1)) * 100)
+    
     try:
         subprocess.run(
-            ["amixer", "set", MIXER_NAME, f"{value}%"],
+            ["amixer", "set", MIXER_NAME, f"{hw_val}%"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        return value
+        return slider_val
     except Exception:
         return None
 

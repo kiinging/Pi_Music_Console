@@ -14,6 +14,7 @@ import subprocess
 import threading
 import time
 import socket
+import math
 import json
 from pathlib import Path
 from flask import Flask, jsonify, render_template_string, request, Response
@@ -72,24 +73,35 @@ def _detect_mixer() -> str:
 MIXER = _detect_mixer()
 
 def get_volume() -> int:
+    """Read current ALSA volume and convert back to perceptual slider value (0-100)."""
     try:
         out = subprocess.check_output(["amixer", "get", MIXER],
                                       stderr=subprocess.DEVNULL).decode()
         for line in out.splitlines():
             if "%" in line:
-                return int(line[line.index("[") + 1 : line.index("%")])
+                hw_val = int(line[line.index("[") + 1 : line.index("%")])
+                # Inverse Log mapping: slider = log10(HW/100 * (10^L - 1) + 1) / L * 100
+                # Using L=2 for a natural 40dB audio taper
+                L = 2
+                slider_val = round((math.log10((hw_val / 100) * (10**L - 1) + 1) / L) * 100)
+                return max(0, min(100, slider_val))
     except Exception:
         pass
     return 50
 
-def set_volume(value: int) -> int:
-    value = max(0, min(100, value))
+def set_volume(slider_val: int) -> int:
+    """Set ALSA volume using a logarithmic (audio) mapping."""
+    slider_val = max(0, min(100, slider_val))
+    # Log mapping: HW = (10^(L * slider/100) - 1) / (10^L - 1) * 100
+    L = 2
+    hw_val = int(((10**(L * slider_val / 100) - 1) / (10**L - 1)) * 100)
+    
     try:
-        subprocess.run(["amixer", "set", MIXER, f"{value}%"],
+        subprocess.run(["amixer", "set", MIXER, f"{hw_val}%"],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception:
         pass
-    return value
+    return slider_val
 
 # ─────────────────────────────────────────────────────────────
 # mpv Player (no display server — uses KMS/DRM directly)
@@ -377,23 +389,32 @@ HTML = """
   .btn-play { background: white; color: black; }
   .btn-play:hover { background: #ddd; box-shadow: 0 0 20px rgba(255,255,255,0.4); }
 
-  /* Sliders */
-  .slider-container {
-    display: flex; align-items: center; gap: 12px;
-    max-width: 500px; margin: 0 auto 1rem; padding: 0 1.5rem;
+  /* RK27 Knob Styling */
+  .knob-container {
+    position: relative; width: 100px; height: 120px;
+    margin: 0 auto; display: flex; flex-direction: column; align-items: center;
   }
-  
-  input[type=range] {
-    flex: 1; -webkit-appearance: none; height: 4px; border-radius: 2px;
-    background: var(--border); outline: none;
+  .knob-wrapper {
+    position: relative; width: 80px; height: 80px;
+    background: #1a1a1f; border-radius: 50%;
+    box-shadow: inset 0 2px 5px rgba(255,255,255,0.05), 0 5px 15px rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+    cursor: ns-resize; touch-action: none; border: 1px solid var(--border);
   }
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
-    background: #fff; cursor: pointer; transition: transform 0.1s;
+  .knob {
+    position: relative; width: 64px; height: 64px;
+    background: linear-gradient(135deg, #3c3c44 0%, #1a1a1f 100%);
+    border-radius: 50%; border: 2px solid #333;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.1);
+    transition: transform 0.1s ease-out;
+    display: flex; align-items: center; justify-content: center;
   }
-  input[type=range]:active::-webkit-slider-thumb { transform: scale(1.3); }
-  
-  .time-label, .vol-label { font-size: 0.8rem; color: var(--text-dim); min-width: 40px; }
+  .knob-indicator {
+    position: absolute; top: 8px;
+    width: 3px; height: 10px; background: var(--accent);
+    border-radius: 2px; box-shadow: 0 0 8px var(--accent-glow);
+  }
+  .time-label, .vol-label { font-size: 0.8rem; color: var(--text-dim); }
 
   /* Library */
   .library { flex: 1; padding: 1.5rem; background: rgba(0,0,0,0.4); backdrop-filter: blur(20px); }
@@ -439,9 +460,12 @@ HTML = """
     <div class="btn-circle" id="btn-video" onclick="toggleVideo()" style="background: var(--accent); font-size: 1.4rem;" title="Toggle Video">📺</div>
   </div>
 
-  <div class="slider-container">
-    <span style="font-size: 1.2rem;">🔉</span>
-    <input type="range" id="volume-slider" min="0" max="100" value="50" style="margin: 0 10px;" oninput="setVolumeUI(this.value)" onchange="sendVolume(this.value)">
+  <div class="knob-container">
+    <div class="knob-wrapper" id="knob-wrapper">
+      <div class="knob" id="volume-knob">
+        <div class="knob-indicator"></div>
+      </div>
+    </div>
     <span class="vol-label" id="vol-display">50%</span>
   </div>
 </header>
@@ -506,12 +530,63 @@ async function onSeekRelease() {
   await fetch('/seek', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({position: pos}) });
 }
 
-function setVolumeUI(v) { document.getElementById('vol-display').textContent = v + '%'; }
+let currentVolume = 50;
+const volumeKnob = document.getElementById('volume-knob');
+const knobWrapper = document.getElementById('knob-wrapper');
+
+function setKnobRotation(val) {
+  const rotation = (val / 100) * 270 - 135;
+  volumeKnob.style.transform = `rotate(${rotation}deg)`;
+  document.getElementById('vol-display').textContent = Math.round(val) + '%';
+}
+
+function setVolumeUI(v) { 
+  currentVolume = v;
+  setKnobRotation(v);
+}
+
 async function sendVolume(v) {
   let r = await fetch('/volume_set', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({volume: v}) });
   let d = await r.json();
   setVolumeUI(d.volume);
 }
+
+// Knob Drag Logic
+let isDragging = false;
+let startY = 0;
+let startVol = 0;
+
+function startDrag(e) {
+  isDragging = true;
+  startY = e.clientY || (e.touches && e.touches[0].clientY);
+  startVol = currentVolume;
+  knobWrapper.style.borderColor = 'var(--accent)';
+}
+
+function doDrag(e) {
+  if (!isDragging) return;
+  const y = e.clientY || (e.touches && e.touches[0].clientY);
+  const delta = startY - y;
+  const newVol = Math.max(0, Math.min(100, startVol + delta / 1.5));
+  if (Math.round(newVol) !== Math.round(currentVolume)) {
+    currentVolume = newVol;
+    setKnobRotation(currentVolume);
+    sendVolume(currentVolume);
+  }
+  if (e.cancelable) e.preventDefault();
+}
+
+function endDrag() {
+  isDragging = false;
+  knobWrapper.style.borderColor = 'var(--border)';
+}
+
+knobWrapper.addEventListener('mousedown', startDrag);
+window.addEventListener('mousemove', doDrag);
+window.addEventListener('mouseup', endDrag);
+knobWrapper.addEventListener('touchstart', startDrag, { passive: false });
+window.addEventListener('touchmove', doDrag, { passive: false });
+window.addEventListener('touchend', endDrag);
 
 function updateUI(filename) {
   document.querySelectorAll('.song-row').forEach(e => e.classList.remove('active'));
@@ -544,8 +619,8 @@ async function poll() {
     let r = await fetch('/status');
     let d = await r.json();
     setVolumeUI(d.volume);
-    if(!document.getElementById('volume-slider').matches(':active')) {
-      document.getElementById('volume-slider').value = d.volume;
+    if(!isDragging) {
+      setVolumeUI(d.volume);
     }
     
     if(d.playing !== currentFile) {
