@@ -16,6 +16,7 @@ import time
 import socket
 import math
 import json
+import sys
 from pathlib import Path
 from flask import Flask, jsonify, render_template_string, request, Response
 
@@ -218,6 +219,41 @@ player       = Player()
 volume       = get_volume()
 selected_idx = 0   # cursor for rotary encoder navigation
 
+class SmartVoiceManager:
+    def __init__(self):
+        self.proc = None
+        self.script_path = Path(__file__).parent / "smart_voice_unit" / "voice_controller.py"
+
+    def is_running(self):
+        return self.proc is not None and self.proc.poll() is None
+
+    def start(self):
+        if not self.is_running() and self.script_path.exists():
+            try:
+                self.proc = subprocess.Popen(
+                    [sys.executable, str(self.script_path)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    cwd=str(self.script_path.parent)
+                )
+                return True
+            except Exception as e:
+                print(f"Failed to start voice controller: {e}")
+        return False
+
+    def stop(self):
+        if self.is_running():
+            self.proc.terminate()
+            try:
+                self.proc.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
+            self.proc = None
+            return True
+        return False
+
+smart_manager = SmartVoiceManager()
+
 def scan_music() -> list[dict]:
     if not MUSIC_FOLDER.exists():
         return []
@@ -406,6 +442,26 @@ HTML = """
     cursor: pointer; box-shadow: 0 0 8px var(--accent-glow);
   }
   .time-label, .vol-label { font-size: 0.8rem; color: var(--text-dim); }
+  
+  /* Smart Toggle */
+  .smart-toggle {
+    display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px;
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim);
+  }
+  .switch {
+    position: relative; display: inline-block; width: 34px; height: 18px;
+  }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #333; transition: .4s; border-radius: 34px;
+  }
+  .slider:before {
+    position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px;
+    background-color: white; transition: .4s; border-radius: 50%;
+  }
+  input:checked + .slider { background-color: var(--accent); }
+  input:checked + .slider:before { transform: translateX(16px); }
 
   /* Library */
   .library { flex: 1; padding: 1.5rem; background: rgba(0,0,0,0.4); backdrop-filter: blur(20px); }
@@ -430,6 +486,13 @@ HTML = """
 <div id="bg-blur"></div>
 
 <header>
+  <div class="smart-toggle">
+    <span>SMART MODE</span>
+    <label class="switch">
+      <input type="checkbox" id="smart-toggle" onchange="toggleSmart()">
+      <span class="slider"></span>
+    </label>
+  </div>
   <div id="now-title">Ready to Play</div>
   <div class="badges" id="now-badges">
     <span class="badge" id="badge-format">STANDBY</span>
@@ -557,11 +620,20 @@ function updateUI(filename) {
   }
 }
 
+async function toggleSmart() {
+  await fetch('/api/smart/toggle', { method:'POST' });
+}
+
 async function poll() {
   try {
     let r = await fetch('/status');
     let d = await r.json();
     setVolumeUI(d.volume);
+    
+    // Also poll smart status
+    let sr = await fetch('/api/smart/status');
+    let sd = await sr.json();
+    document.getElementById('smart-toggle').checked = sd.running;
     
     if(d.playing !== currentFile) {
       currentFile = d.playing;
@@ -683,6 +755,18 @@ def status():
         video_enabled=(str(vid).lower() not in ("no", "false")),
         paused=bool(paused)
     )
+
+@app.route("/api/smart/status")
+def smart_status():
+    return jsonify(running=smart_manager.is_running())
+
+@app.route("/api/smart/toggle", methods=["POST"])
+def smart_toggle():
+    if smart_manager.is_running():
+        smart_manager.stop()
+    else:
+        smart_manager.start()
+    return jsonify(running=smart_manager.is_running())
 
 # ─────────────────────────────────────────────────────────────
 # Entry point

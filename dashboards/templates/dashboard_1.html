@@ -182,6 +182,72 @@
             font-weight: 600;
         }
 
+        /* Smart Toggle Switch */
+        .smart-control {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--glass);
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            z-index: 10;
+        }
+
+        .smart-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            font-weight: 600;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 40px;
+            height: 20px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(255,255,255,0.1);
+            transition: .4s;
+            border-radius: 20px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--text-dim);
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: var(--success);
+            box-shadow: 0 0 10px rgba(0, 245, 212, 0.3);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+            background-color: white;
+        }
+
         /* Seek Bar */
         .seek-container {
             display: flex;
@@ -326,6 +392,14 @@
     </style>
 </head>
 <body>
+
+    <div class="smart-control" title="Enable Voice AI Features">
+        <span class="smart-label" id="smart-status-text">Smart Off</span>
+        <label class="toggle-switch">
+            <input type="checkbox" id="smart-toggle" onchange="toggleSmartMode()">
+            <span class="toggle-slider"></span>
+        </label>
+    </div>
 
     <section class="now-playing">
         <h1 id="playing-title" class="track-title">Select a Track</h1>
@@ -525,8 +599,36 @@
             }, 50);
         }
 
+        async function toggleSmartMode() {
+            try {
+                const res = await fetch('/api/smart/toggle', { method: 'POST' });
+                const data = await res.json();
+                updateSmartUI(data.running);
+            } catch (e) {
+                console.error("Failed to toggle smart mode:", e);
+            }
+        }
+
+        function updateSmartUI(isRunning) {
+            document.getElementById('smart-toggle').checked = isRunning;
+            const text = document.getElementById('smart-status-text');
+            text.innerText = isRunning ? "Smart On" : "Smart Off";
+            text.style.color = isRunning ? "var(--success)" : "var(--text-dim)";
+        }
+
+        async function fetchSmartStatus() {
+            try {
+                const res = await fetch('/api/smart/status');
+                const data = await res.json();
+                updateSmartUI(data.running);
+            } catch(e) {}
+        }
+
         // Initial Load
-        window.onload = fetchSongs;
+        window.onload = () => {
+            fetchSongs();
+            fetchSmartStatus();
+        };
 
         // ── Seek Slider ────────────────────────────────
         window.seekDragging = false;

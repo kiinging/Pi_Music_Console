@@ -5,8 +5,9 @@ import subprocess
 import time
 import logging
 import math
-from flask import Flask, render_template, jsonify, request
+import sys
 from pathlib import Path
+from flask import Flask, render_template, jsonify, request
 
 try:
     from mutagen import File
@@ -21,6 +22,45 @@ class _SuppressStatusFilter(logging.Filter):
         return '/api/status' not in record.getMessage()
 
 logging.getLogger('werkzeug').addFilter(_SuppressStatusFilter())
+
+class SmartVoiceManager:
+    def __init__(self):
+        self.proc = None
+        # Look in current dir, then parent
+        base = Path(__file__).parent
+        self.script_path = base / "smart_voice_unit" / "voice_controller.py"
+        if not self.script_path.exists():
+            self.script_path = base.parent / "smart_voice_unit" / "voice_controller.py"
+
+    def is_running(self):
+        return self.proc is not None and self.proc.poll() is None
+
+    def start(self):
+        if not self.is_running() and self.script_path.exists():
+            try:
+                self.proc = subprocess.Popen(
+                    [sys.executable, str(self.script_path)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    cwd=str(self.script_path.parent)
+                )
+                return True
+            except Exception as e:
+                print(f"Failed to start voice controller: {e}")
+        return False
+
+    def stop(self):
+        if self.is_running():
+            self.proc.terminate()
+            try:
+                self.proc.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
+            self.proc = None
+            return True
+        return False
+
+smart_manager = SmartVoiceManager()
 
 # Configuration
 IPC_SOCKET = "/tmp/mpvsocket"
@@ -312,6 +352,18 @@ def volume_api():
         return jsonify({"volume": new_val})
     else:
         return jsonify({"volume": get_current_volume()})
+
+@app.route("/api/smart/status")
+def smart_status():
+    return jsonify(running=smart_manager.is_running())
+
+@app.route("/api/smart/toggle", methods=["POST"])
+def smart_toggle():
+    if smart_manager.is_running():
+        smart_manager.stop()
+    else:
+        smart_manager.start()
+    return jsonify(running=smart_manager.is_running())
 
 if __name__ == "__main__":
     start_mpv()
