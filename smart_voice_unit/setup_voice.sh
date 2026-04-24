@@ -16,12 +16,12 @@ echo "--- Downloading Offline AI Models ---"
 mkdir -p models && cd models
 
 # Keyword Spotting (KWS)
-if [ ! -d "sherpa-onnx-kws-zipformer-gigaspeech-2024-01-07" ]; then
+if [ ! -d "sherpa-onnx-kws-zipformer-gigaspeech"* ]; then
     echo "Downloading KWS Model (this may take a minute)..."
-    wget --show-progress https://github.com/k2-fsa/sherpa-onnx/releases/download/kws-models/sherpa-onnx-kws-zipformer-gigaspeech-2024-01-07.tar.bz2
-    if [ -f "sherpa-onnx-kws-zipformer-gigaspeech-2024-01-07.tar.bz2" ]; then
-        tar xf sherpa-onnx-kws-zipformer-gigaspeech-2024-01-07.tar.bz2
-        rm sherpa-onnx-kws-zipformer-gigaspeech-2024-01-07.tar.bz2
+    wget --show-progress https://github.com/k2-fsa/sherpa-onnx/releases/download/kws-models/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01.tar.bz2
+    if [ -f "sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01.tar.bz2" ]; then
+        tar xf sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01.tar.bz2
+        rm sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01.tar.bz2
     else
         echo "[!] Error: KWS Model download failed."
         exit 1

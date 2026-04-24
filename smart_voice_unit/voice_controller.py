@@ -32,7 +32,8 @@ MUSIC_DIR = Path.home() / "Music"
 # Model Paths (Relative to script)
 VOICE_UNIT_DIR = Path(__file__).parent
 MODELS_DIR = VOICE_UNIT_DIR / "models"
-KWS_DIR = MODELS_DIR / "sherpa-onnx-kws-zipformer-gigaspeech-2024-01-07"
+# Dynamically find the KWS directory (it may have different date suffixes)
+KWS_DIR = next(MODELS_DIR.glob("sherpa-onnx-kws-zipformer-gigaspeech*"), MODELS_DIR / "sherpa-onnx-kws-zipformer-gigaspeech")
 ASR_DIR = MODELS_DIR / "sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20"
 
 def get_kws_config():
