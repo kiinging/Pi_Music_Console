@@ -37,7 +37,17 @@ KWS_DIR = next(MODELS_DIR.glob("sherpa-onnx-kws-zipformer-gigaspeech*"), MODELS_
 ASR_DIR = MODELS_DIR / "sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20"
 
 def get_kws_config():
-    return sherpa_onnx.KeywordSpotterConfig(
+    # Handle API differences in sherpa-onnx versions (Online vs Base Config)
+    if hasattr(sherpa_onnx, 'KeywordSpotterConfig'):
+        KwsConfig = sherpa_onnx.KeywordSpotterConfig
+    elif hasattr(sherpa_onnx, 'OnlineKeywordSpotterConfig'):
+        KwsConfig = sherpa_onnx.OnlineKeywordSpotterConfig
+    else:
+        # Debugging: show what IS available if we can't find the config
+        print(f"[!] API Error: sherpa_onnx has no KWS config class. Available: {[a for a in dir(sherpa_onnx) if 'Config' in a]}")
+        sys.exit(1)
+
+    return KwsConfig(
         feat_config=sherpa_onnx.FeatureConfig(sample_rate=16000, feature_dim=80),
         model_config=sherpa_onnx.OnlineModelConfig(
             transducer=sherpa_onnx.OnlineTransducerModelConfig(
