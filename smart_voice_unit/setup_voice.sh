@@ -1,5 +1,6 @@
 #!/bin/bash
 # setup_voice.sh - Dedicated setup for the Smart Voice Unit
+set -e
 
 # 1. Install System Dependencies
 echo "--- Installing PortAudio & Dependencies ---"
@@ -16,27 +17,39 @@ echo "--- Downloading Offline AI Models ---"
 mkdir -p models && cd models
 
 # Keyword Spotting (KWS)
-if [ ! -d "sherpa-onnx-kws-zipformer-gigaspeech"* ]; then
+KWS_MODEL="sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01"
+if [ ! -d "$KWS_MODEL" ]; then
     echo "Downloading KWS Model (this may take a minute)..."
-    wget --show-progress https://github.com/k2-fsa/sherpa-onnx/releases/download/kws-models/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01.tar.bz2
-    if [ -f "sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01.tar.bz2" ]; then
-        tar xf sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01.tar.bz2
-        rm sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01.tar.bz2
+    URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/kws-models/${KWS_MODEL}.tar.bz2"
+    wget -c --show-progress "$URL"
+    
+    echo "Extracting KWS Model..."
+    if tar xf "${KWS_MODEL}.tar.bz2"; then
+        rm "${KWS_MODEL}.tar.bz2"
     else
-        echo "[!] Error: KWS Model download failed."
+        echo "[!] Error: KWS Model extraction failed. The file may be corrupted."
+        rm -f "${KWS_MODEL}.tar.bz2"*
         exit 1
     fi
 fi
 
 # Streaming ASR (Speech-to-Text)
-if [ ! -d "sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20" ]; then
+ASR_MODEL="sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20"
+if [ ! -d "$ASR_MODEL" ]; then
     echo "Downloading ASR Model (this may take a minute)..."
-    wget --show-progress https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20.tar.bz2
-    if [ -f "sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20.tar.bz2" ]; then
-        tar xf sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20.tar.bz2
-        rm sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20.tar.bz2
+    URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/${ASR_MODEL}.tar.bz2"
+    
+    # Use wget -c to resume, but handle the case where the file exists but is corrupted
+    # and wget might create .1, .2 files. We prefer resuming the original file.
+    wget -c --show-progress "$URL"
+    
+    echo "Extracting ASR Model..."
+    if tar xf "${ASR_MODEL}.tar.bz2"; then
+        rm "${ASR_MODEL}.tar.bz2"
     else
-        echo "[!] Error: ASR Model download failed."
+        echo "[!] Error: ASR Model extraction failed. Deleting partial file and retrying might be necessary."
+        # Clean up partial files to avoid .1, .2 mess
+        rm -f "${ASR_MODEL}.tar.bz2"*
         exit 1
     fi
 fi
@@ -47,3 +60,4 @@ echo "----------------------------------------"
 echo "Setup Complete! Smart Voice Unit is ready."
 echo "To start listening: python3 voice_controller.py"
 echo "----------------------------------------"
+
