@@ -19,6 +19,17 @@ from pathlib import Path
 # Try to import optional AI libraries
 try:
     import sherpa_onnx
+    # Support for newer sherpa-onnx submodule structure
+    try:
+        import sherpa_onnx.keyword_spotter as kws_mod
+    except ImportError:
+        kws_mod = sherpa_onnx
+    
+    try:
+        import sherpa_onnx.online_recognizer as asr_mod
+    except ImportError:
+        asr_mod = sherpa_onnx
+
     from rapidfuzz import process, fuzz
 except ImportError:
     print("[!] Error: missing dependencies. Please run './setup_voice.sh' first.")
@@ -37,14 +48,11 @@ KWS_DIR = next(MODELS_DIR.glob("sherpa-onnx-kws-zipformer-gigaspeech*"), MODELS_
 ASR_DIR = MODELS_DIR / "sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20"
 
 def get_kws_config():
-    # Handle API differences in sherpa-onnx versions (Online vs Base Config)
-    if hasattr(sherpa_onnx, 'KeywordSpotterConfig'):
-        KwsConfig = sherpa_onnx.KeywordSpotterConfig
-    elif hasattr(sherpa_onnx, 'OnlineKeywordSpotterConfig'):
-        KwsConfig = sherpa_onnx.OnlineKeywordSpotterConfig
-    else:
-        # Debugging: show what IS available if we can't find the config
-        print(f"[!] API Error: sherpa_onnx has no KWS config class. Available: {[a for a in dir(sherpa_onnx) if 'Config' in a]}")
+    KwsConfig = getattr(kws_mod, 'KeywordSpotterConfig', 
+                getattr(kws_mod, 'OnlineKeywordSpotterConfig', None))
+    
+    if KwsConfig is None:
+        print(f"[!] API Error: KeywordSpotterConfig not found in {kws_mod}. Available: {dir(kws_mod)}")
         sys.exit(1)
 
     return KwsConfig(
@@ -63,7 +71,12 @@ def get_kws_config():
     )
 
 def get_asr_config():
-    return sherpa_onnx.OnlineRecognizerConfig(
+    AsrConfig = getattr(asr_mod, 'OnlineRecognizerConfig', None)
+    if AsrConfig is None:
+        print(f"[!] API Error: OnlineRecognizerConfig not found in {asr_mod}")
+        sys.exit(1)
+
+    return AsrConfig(
         feat_config=sherpa_onnx.FeatureConfig(sample_rate=16000, feature_dim=80),
         model_config=sherpa_onnx.OnlineModelConfig(
             transducer=sherpa_onnx.OnlineTransducerModelConfig(
@@ -95,8 +108,11 @@ class VoiceAssistant:
         with open(VOICE_UNIT_DIR / "keywords.txt", "w") as f:
             f.write(f"{WAKE_WORD} :1.5 #0.45\n")
             
-        self.kws = sherpa_onnx.KeywordSpotter(get_kws_config())
-        self.recognizer = sherpa_onnx.OnlineRecognizer(get_asr_config())
+        KwsClass = getattr(kws_mod, 'KeywordSpotter', None)
+        AsrClass = getattr(asr_mod, 'OnlineRecognizer', None)
+        
+        self.kws = KwsClass(get_kws_config())
+        self.recognizer = AsrClass(get_asr_config())
         
         self.kws_stream = self.kws.create_stream()
         self.pa = pyaudio.PyAudio()
