@@ -230,10 +230,9 @@ class SmartVoiceManager:
     def start(self):
         if not self.is_running() and self.script_path.exists():
             try:
+                # Enable logs to show up in journalctl for debugging
                 self.proc = subprocess.Popen(
                     [sys.executable, str(self.script_path)],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
                     cwd=str(self.script_path.parent)
                 )
                 return True
