@@ -93,8 +93,8 @@ def get_current_volume():
                 end = line.index("%")
                 hw_val = int(line[start:end])
                 # Inverse Log mapping: slider = log10(HW/100 * (10^L - 1) + 1) / L * 100
-                # Using L=1.2 for better compatibility with Class A amps & low-sens speakers
-                L = 1.2
+                # L=0.5 gives a gentle curve so the full slider range is audible on the IQaudIO DAC
+                L = 0.5
                 slider_val = round((math.log10((hw_val / 100) * (10**L - 1) + 1) / L) * 100)
                 return max(0, min(100, slider_val))
     except Exception:
@@ -105,7 +105,8 @@ def set_system_volume(slider_val):
     """Set ALSA volume using a logarithmic (audio) mapping."""
     slider_val = max(0, min(100, int(slider_val)))
     # Log mapping: HW = (10^(L * slider/100) - 1) / (10^L - 1) * 100
-    L = 1.2
+    # L=0.5 gives a gentle curve so the full slider range is audible on the IQaudIO DAC
+    L = 0.5
     hw_val = int(((10**(L * slider_val / 100) - 1) / (10**L - 1)) * 100)
     
     try:
