@@ -1,0 +1,4 @@
+flask
+mutagen
+evdev
+gpiozero

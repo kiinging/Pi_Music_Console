@@ -1,0 +1,26 @@
+[Unit]
+Description=Pi Music Console – Flask Web Controller
+After=network.target sound.target
+Wants=network.target sound.target
+
+[Service]
+User=pizza
+Group=pizza
+
+Environment=HOME=/home/pizza
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+WorkingDirectory=/home/pizza/Pi_Music_Console
+
+# Run Flask web controller (no X server needed)
+ExecStart=/home/pizza/Pi_Music_Console/venv/bin/python3 /home/pizza/Pi_Music_Console/music_player.py
+
+Restart=always
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pi-music
+
+[Install]
+WantedBy=multi-user.target

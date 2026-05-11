@@ -1,0 +1,4 @@
+# AI models
+*.onnx
+models/
+smart_voice_unit/models/

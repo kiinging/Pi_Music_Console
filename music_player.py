@@ -1,0 +1,1125 @@
+#!/usr/bin/env python3
+"""
+Pi Music Console — Flask Web Controller
+========================================
+- Scans ~/Music for audio/video files
+- mpv plays directly to HDMI (no X server needed)
+- Control from any phone/browser at http://<pi-ip>:5000
+- Rotary encoder: volume (while playing) / track select (while stopped)
+- GPIO pins: CLK=17, DT=27, SW=22  (BCM numbering)
+"""
+
+import os
+import subprocess
+import threading
+import time
+import socket
+import math
+import json
+import sys
+from pathlib import Path
+from flask import Flask, jsonify, render_template_string, request, Response
+
+# ─────────────────────────────────────────────────────────────
+# Configuration
+# ─────────────────────────────────────────────────────────────
+MUSIC_FOLDER  = Path.home() / "Music"
+VOLUME_STEP   = 5          # % per encoder click
+SUPPORTED_EXT = (".mp4", ".mp3", ".flac", ".wav", ".ogg", ".m4a", ".aac", ".mkv", ".avi", ".webm", ".mov")
+
+def get_audio_details(file_path):
+    """Use ffprobe to get technical details (sample rate, bit depth)."""
+    try:
+        cmd = [
+            "ffprobe", "-v", "error", "-show_entries", "stream=codec_type,sample_rate,bits_per_sample,channels:format=format_name,bit_rate,duration",
+            "-of", "json", file_path
+        ]
+        result = subprocess.check_output(cmd, timeout=3).decode("utf-8")
+        data = json.loads(result)
+        
+        streams = data.get("streams", [])
+        audio_stream = next((s for s in streams if s.get("codec_type") == "audio"), {})
+        fmt = data.get("format", {})
+        
+        return {
+            "sample_rate": audio_stream.get("sample_rate"),
+            "bit_depth": audio_stream.get("bits_per_sample"),
+            "channels": audio_stream.get("channels"),
+            "format": fmt.get("format_name"),
+            "bit_rate": fmt.get("bit_rate"),
+            "duration": float(fmt.get("duration", 0) if fmt.get("duration") else 0)
+        }
+    except Exception:
+        return {}
+
+ALSA_MIXER    = "Digital"  # PCM5122 default; falls back to Master
+WEB_PORT      = 5000
+
+CLK_PIN = 17
+DT_PIN  = 27
+SW_PIN  = 22
+
+# ─────────────────────────────────────────────────────────────
+# ALSA volume helpers
+# ─────────────────────────────────────────────────────────────
+def _detect_mixer() -> str:
+    for name in [ALSA_MIXER, "Master", "Playback", "PCM"]:
+        try:
+            subprocess.check_output(["amixer", "get", name], stderr=subprocess.DEVNULL)
+            return name
+        except subprocess.CalledProcessError:
+            continue
+    return "Master"
+
+MIXER = _detect_mixer()
+
+def get_volume() -> int:
+    """Read current ALSA volume and convert back to perceptual slider value (0-100)."""
+    try:
+        out = subprocess.check_output(["amixer", "get", MIXER],
+                                      stderr=subprocess.DEVNULL).decode()
+        for line in out.splitlines():
+            if "%" in line:
+                hw_val = int(line[line.index("[") + 1 : line.index("%")])
+                # Inverse Log mapping: slider = log10(HW/100 * (10^L - 1) + 1) / L * 100
+                # Using L=1.2 for better compatibility with Class A amps & low-sens speakers
+                L = 1.2
+                slider_val = round((math.log10((hw_val / 100) * (10**L - 1) + 1) / L) * 100)
+                return max(0, min(100, slider_val))
+    except Exception:
+        pass
+    return 50
+
+def set_volume(slider_val: int) -> int:
+    """Set ALSA volume using a logarithmic (audio) mapping."""
+    slider_val = max(0, min(100, slider_val))
+    # Log mapping: HW = (10^(L * slider/100) - 1) / (10^L - 1) * 100
+    L = 1.2
+    hw_val = int(((10**(L * slider_val / 100) - 1) / (10**L - 1)) * 100)
+    
+    try:
+        subprocess.run(["amixer", "set", MIXER, f"{hw_val}%"],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
+    return slider_val
+
+# ─────────────────────────────────────────────────────────────
+# mpv Player (no display server — uses KMS/DRM directly)
+# ─────────────────────────────────────────────────────────────
+class Player:
+    def __init__(self):
+        self._proc: subprocess.Popen | None = None
+        self._current: Path | None = None
+        self._lock = threading.Lock()
+
+    @property
+    def current(self) -> Path | None:
+        return self._current
+
+    def play(self, path: Path):
+        with self._lock:
+            self._stop_internal()
+            self._current = path
+            self._proc = subprocess.Popen(
+                [
+                    "mpv",
+                    "--vo=drm",          # Direct framebuffer — no X needed
+                    "--ao=alsa",         # ALSA audio output
+                    "--really-quiet",
+                    "--no-terminal",
+                    "--input-ipc-server=/tmp/mpv-music_player",
+                    str(path),
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+    def pause(self):
+        with self._lock:
+            self._send_ipc(["set_property", "pause", True])
+
+    def resume(self):
+        with self._lock:
+            self._send_ipc(["set_property", "pause", False])
+
+    def set_video(self, enabled: bool):
+        with self._lock:
+            self._send_ipc(["set_property", "vid", "auto" if enabled else "no"])
+
+    def seek(self, position: float):
+        with self._lock:
+            self._send_ipc(["seek", position, "absolute"])
+
+    def get_property(self, prop_name: str):
+        try:
+            client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            client.settimeout(1.0)
+            client.connect("/tmp/mpv-music_player")
+            client.send((json.dumps({"command": ["get_property", prop_name]}) + "\n").encode())
+            
+            buf = b""
+            while True:
+                chunk = client.recv(4096)
+                if not chunk: break
+                buf += chunk
+                while b"\n" in buf:
+                    line, buf = buf.split(b"\n", 1)
+                    if not line: continue
+                    try:
+                        msg = json.loads(line.decode("utf-8"))
+                        if "error" in msg and "event" not in msg:
+                            client.close()
+                            return msg.get("data")
+                    except Exception:
+                        pass
+            client.close()
+        except Exception:
+            pass
+        return None
+
+    def _send_ipc(self, command: list):
+        try:
+            client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            client.connect("/tmp/mpv-music_player")
+            client.send((json.dumps({"command": command}) + "\n").encode())
+            client.close()
+        except Exception:
+            pass
+
+    def stop(self):
+        with self._lock:
+            self._stop_internal()
+            self._current = None
+
+    def _stop_internal(self):
+        if self._proc and self._proc.poll() is None:
+            self._proc.terminate()
+            try:
+                self._proc.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                self._proc.kill()
+        self._proc = None
+
+    def is_playing(self) -> bool:
+        with self._lock:
+            return self._proc is not None and self._proc.poll() is None
+
+    def poll(self):
+        """Call periodically — clears state when mpv finishes naturally."""
+        with self._lock:
+            if self._proc and self._proc.poll() is not None:
+                self._proc = None
+                self._current = None
+
+# ─────────────────────────────────────────────────────────────
+# App State
+# ─────────────────────────────────────────────────────────────
+player       = Player()
+volume       = get_volume()
+selected_idx = 0   # cursor for rotary encoder navigation
+
+METADATA_FILE = Path(__file__).parent / "music_metadata.json"
+
+def load_metadata():
+    if METADATA_FILE.exists():
+        try:
+            with open(METADATA_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+def save_metadata(metadata):
+    try:
+        with open(METADATA_FILE, 'w', encoding='utf-8') as f:
+            json.dump(metadata, f, indent=4)
+        return True
+    except Exception as e:
+        print(f"Error saving metadata: {e}")
+        return False
+
+def scan_music() -> list[dict]:
+    if not MUSIC_FOLDER.exists():
+        return []
+        
+    songs = []
+    persistent_meta = load_metadata()
+    for f in sorted(MUSIC_FOLDER.iterdir()):
+        if f.suffix.lower() in SUPPORTED_EXT:
+            tech = get_audio_details(str(f))
+            artist = "Unknown Artist"
+            category = "All"
+            year = ""
+            
+            # Merge with persistent JSON metadata
+            file_key = f.name
+            rating = 0
+            if file_key in persistent_meta:
+                artist = persistent_meta[file_key].get("artist", artist)
+                category = persistent_meta[file_key].get("category", category)
+                year = persistent_meta[file_key].get("year", year)
+                rating = persistent_meta[file_key].get("rating", 0)
+
+            songs.append({
+                "path": f.name,
+                "name": f.name,
+                "stem": f.stem,
+                "suffix": f.suffix,
+                "artist": artist,
+                "category": category,
+                "year": year,
+                "rating": rating,
+                "tech": tech
+            })
+    return songs
+
+# ─────────────────────────────────────────────────────────────
+# Rotary Encoder (optional — silently skipped on dev PC)
+# ─────────────────────────────────────────────────────────────
+def _setup_encoder():
+    global volume, selected_idx
+    try:
+        from gpiozero import RotaryEncoder, Button
+    except Exception:
+        return  # Not on Pi or gpiozero not installed
+
+    encoder = RotaryEncoder(CLK_PIN, DT_PIN, max_steps=0)
+    sw      = Button(SW_PIN, pull_up=True)
+    _last_press = [0.0]
+    _press_count = [0]
+
+    def on_cw():
+        global volume, selected_idx
+        if player.is_playing():
+            volume = set_volume(volume + VOLUME_STEP)
+        else:
+            songs = scan_music()
+            if songs:
+                selected_idx = (selected_idx + 1) % len(songs)
+
+    def on_ccw():
+        global volume, selected_idx
+        if player.is_playing():
+            volume = set_volume(volume - VOLUME_STEP)
+        else:
+            songs = scan_music()
+            if songs:
+                selected_idx = (selected_idx - 1) % len(songs)
+
+    def on_press():
+        now = time.time()
+        if now - _last_press[0] < 3.0:
+            _press_count[0] += 1
+        else:
+            _press_count[0] = 1
+        _last_press[0] = now
+
+        if _press_count[0] >= 2:
+            _press_count[0] = 0
+            # Double-click: stop
+            player.stop()
+        else:
+            # Single-click: play selected / toggle stop
+            if player.is_playing():
+                player.stop()
+            else:
+                songs = scan_music()
+                if songs and selected_idx < len(songs):
+                    player.play(songs[selected_idx]["path"])
+
+    encoder.when_rotated_clockwise         = on_cw
+    encoder.when_rotated_counter_clockwise = on_ccw
+    sw.when_pressed = on_press
+
+def _poll_loop():
+    """Background thread — keeps player state fresh."""
+    while True:
+        player.poll()
+        time.sleep(1)
+
+# ─────────────────────────────────────────────────────────────
+# Flask Web UI
+# ─────────────────────────────────────────────────────────────
+app = Flask(__name__)
+
+HTML = """
+<!DOCTYPE html>
+<html lang="en" translate="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google" content="notranslate">
+<title>HiFi Music Console</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;600&family=Inter:wght@400;600&display=swap');
+
+  :root {
+    --bg: #07070a;
+    --card: rgba(255, 255, 255, 0.05);
+    --border: rgba(255, 255, 255, 0.08);
+    --accent: #b388ff;
+    --accent-glow: rgba(179, 136, 255, 0.4);
+    --text-main: #e0e0f0;
+    --text-dim: #8a8a9a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Dynamic Blur Background */
+  #bg-blur {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: -1;
+    background-size: cover;
+    background-position: center;
+    transition: background 1s ease-in-out;
+  }
+
+  /* Now Playing Header */
+  header {
+    text-align: center;
+    padding: 3rem 1.5rem 2rem;
+    background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, transparent 100%);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  #now-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .badges {
+    display: flex; justify-content: center; gap: 8px; margin-top: 10px;
+  }
+  .badge {
+    background: var(--card); border: 1px solid var(--border);
+    padding: 6px 14px; border-radius: 12px; font-size: 0.75rem; color: var(--text-dim);
+  }
+
+  /* Controls */
+  .controls-row {
+    display: flex; justify-content: center; gap: 1rem; margin: 1.5rem 0;
+  }
+  
+  .btn-circle {
+    width: 55px; height: 55px; border-radius: 50%;
+    background: var(--card); border: 1px solid var(--border);
+    color: white; font-size: 1.2rem;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-circle:hover { background: var(--accent); box-shadow: 0 0 20px var(--accent-glow); border-color: transparent; }
+  .btn-circle:active { transform: scale(0.9); }
+  
+  .btn-play { background: white; color: black; }
+  .btn-play:hover { background: #ddd; box-shadow: 0 0 20px rgba(255,255,255,0.4); }
+
+  /* Volume Slider Styling */
+  .vol-row {
+    display: flex; align-items: center; gap: 10px; margin: 1rem auto;
+    max-width: 300px; background: var(--card); padding: 8px 15px;
+    border-radius: 20px; border: 1px solid var(--border);
+  }
+  #vol-slider {
+    flex: 1; -webkit-appearance: none; height: 4px;
+    background: rgba(255,255,255,0.1); border-radius: 2px;
+    outline: none; cursor: pointer;
+  }
+  #vol-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px;
+    background: var(--accent); border-radius: 50%;
+    cursor: pointer; box-shadow: 0 0 8px var(--accent-glow);
+  }
+  .time-label, .vol-label { font-size: 0.8rem; color: var(--text-dim); }
+  
+  .controls-group {
+    display: flex; gap: 10px; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 40px; border: 1px solid var(--border);
+  }
+
+  /* Library */
+  .library { flex: 1; padding: 1.5rem; background: rgba(0,0,0,0.4); backdrop-filter: blur(20px); }
+  .lib-title { font-family: 'Outfit', sans-serif; font-size: 1.2rem; margin-bottom: 1rem; color: var(--text-main); }
+  
+  .song-row {
+    display: flex; align-items: center; padding: 0.8rem 1rem;
+    background: var(--card); border-radius: 8px; margin-bottom: 8px;
+    border: 1px solid transparent; cursor: pointer; transition: all 0.2s;
+  }
+  .song-row:hover { background: rgba(255,255,255,0.1); border-color: var(--border); }
+  .song-row.active { border-color: var(--accent); background: rgba(179, 136, 255, 0.1); }
+  
+  .song-info { flex: 1; overflow: hidden; }
+  .song-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem; }
+  .song-meta { font-size: 0.75rem; color: var(--text-dim); margin-top: 3px; }
+
+  /* Filter Bar */
+  .filter-bar {
+    display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap;
+  }
+  .filter-btn {
+    background: var(--card); border: 1px solid var(--border); color: var(--text-dim);
+    padding: 6px 14px; border-radius: 12px; font-size: 0.75rem; cursor: pointer; transition: 0.2s;
+  }
+  .filter-btn.active { 
+    color: var(--accent); 
+    border-color: var(--accent); 
+  }
+
+  /* Star Rating */
+  .star-rating {
+    display: flex; gap: 5px; font-size: 1.5rem; color: #4a4a4a; cursor: pointer; justify-content: center;
+  }
+  .star-rating .star.active {
+    color: #ffcc00; text-shadow: 0 0 10px rgba(255, 204, 0, 0.4);
+  }
+  .song-stars {
+    font-size: 0.8rem; color: #ffcc00; margin-top: 2px;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+    display: none; align-items: center; justify-content: center; z-index: 1000;
+  }
+  .modal-content {
+    background: #1a1a20; border: 1px solid var(--border);
+    padding: 2rem; border-radius: 20px; width: 90%; max-width: 380px;
+  }
+  .form-group { margin-bottom: 1.2rem; }
+  .form-label { display: block; margin-bottom: 0.5rem; color: var(--text-dim); font-size: 0.85rem; }
+  .form-input {
+    width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+    color: white; padding: 12px; border-radius: 10px; outline: none; transition: all 0.2s;
+  }
+  .form-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 10px var(--accent-glow);
+    background: rgba(255,255,255,0.1);
+  }
+  select.form-input option {
+    background-color: #1a1a20;
+    color: white;
+  }
+  .modal-actions { display: flex; gap: 10px; margin-top: 1.5rem; }
+  .btn-modal {
+    flex: 1; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 600; border: none;
+    transition: all 0.2s;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-secondary { background: var(--card); color: white; border: 1px solid var(--border); }
+  .btn-danger { background: rgba(255, 69, 58, 0.1); color: #ff453a; border: 1px solid #ff453a; }
+  .btn-danger:hover { background: rgba(255, 69, 58, 0.2); }
+
+  /* Edit Mode Extras */
+  .hamburger-btn {
+    display: none; padding: 10px; cursor: pointer; color: var(--text-dim); font-size: 1.2rem;
+  }
+  .edit-mode .hamburger-btn { display: block; }
+  .edit-mode .song-row { cursor: default; }
+  .edit-mode .edit-artist-badge { display: inline-block !important; }
+  #toggle-edit-btn.active { background: var(--accent); color: white; border-color: transparent; }
+
+</style>
+</head>
+<body>
+
+<div id="bg-blur"></div>
+
+<header>
+  <div id="now-title">Ready to Play</div>
+  <div class="badges" id="now-badges">
+    <span class="badge" id="badge-format">STANDBY</span>
+  </div>
+
+  <div class="slider-container" style="margin-top: 1.5rem;">
+    <span class="time-label" id="seek-current">0:00</span>
+    <input type="range" id="seek-slider" min="0" max="100" value="0"
+           onmousedown="window.seekDragging=true" ontouchstart="window.seekDragging=true"
+           onmouseup="onSeekRelease()" ontouchend="onSeekRelease()"
+           oninput="document.getElementById('seek-current').textContent=formatTime((this.value/100)*currentDuration)">
+    <span class="time-label" id="seek-total" style="text-align: right;">0:00</span>
+  </div>
+
+  <div class="controls-row">
+    <div class="controls-group">
+      <div class="btn-circle btn-play" onclick="resumeMusic()">▶</div>
+      <div class="btn-circle" onclick="pauseMusic()">⏸</div>
+      <div class="btn-circle" onclick="stopMusic()">⏹</div>
+    </div>
+    <div class="controls-group">
+      <div class="btn-circle" id="btn-video" onclick="toggleVideo()" style="font-size: 1.4rem;" title="Toggle Video (ON/OFF)">📺</div>
+    </div>
+  </div>
+
+  <div class="vol-row">
+    <span class="vol-label">🔊</span>
+    <input type="range" id="vol-slider" min="0" max="100" value="50" oninput="sendVolume(this.value)">
+    <span class="vol-label" id="vol-display" style="min-width: 40px; text-align: right;">50%</span>
+  </div>
+</header>
+
+<div class="library">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 10px;">
+    <div class="lib-title" style="margin-bottom: 0;">My Collection</div>
+    <div style="display: flex; gap: 5px;">
+      <button class="filter-btn" onclick="filterStars(3, this)" title="3 Stars">★★★</button>
+      <button class="filter-btn" onclick="filterStars(2, this)" title="2 Stars">★★</button>
+      <button class="filter-btn" onclick="filterStars(1, this)" title="1 Star">★</button>
+      <button class="filter-btn" onclick="filterStars(-1, this)" title="No Rating">No Star</button>
+      <button class="filter-btn active" onclick="filterStars(0, this)">All</button>
+    </div>
+    <button id="toggle-edit-btn" class="filter-btn" onclick="toggleEditMode()">Edit Off</button>
+  </div>
+  
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="filterCat('All', this)">All</button>
+    <button class="filter-btn" onclick="filterCat('Pop', this)">Pop</button>
+    <button class="filter-btn" onclick="filterCat('Rock', this)">Rock</button>
+    <button class="filter-btn" onclick="filterCat('Classical', this)">Classical</button>
+    <button class="filter-btn" onclick="filterCat('Spanish', this)">Spanish</button>
+    <button class="filter-btn" onclick="filterCat('Chinese', this)">Chinese</button>
+  </div>
+  
+  <div id="artist-filter-bar" class="filter-bar" style="margin-top: 0.8rem; display: none; padding-top: 0.8rem; border-top: 1px solid rgba(255,255,255,0.05);">
+    <!-- Dynamically populated -->
+  </div>
+
+  <div id="song-list">
+    {% if songs %}
+      {% for song in songs %}
+        <div class="song-row" id="row-{{ loop.index }}" 
+              data-filename="{{ song.name | e }}" 
+              data-stem="{{ song.stem | e }}"
+              data-suffix="{{ song.suffix | e }}"
+              data-category="{{ song.category | e }}"
+              data-artist="{{ song.artist | e }}"
+              data-year="{{ song.year | e }}"
+              data-rating="{{ song.rating | default(0) }}"
+              onclick="onRowClick(event, this)">
+          <div class="song-info">
+            <div class="song-name">
+              {{ song.stem }}
+              {% if song.category and song.category != 'All' %}
+                <span style="background:var(--accent); color:white; padding:2px 8px; border-radius:10px; font-size:0.6rem; margin-left:8px;">{{ song.category }}</span>
+              {% endif %}
+              <span class="edit-artist-badge" style="background:rgba(255,255,255,0.1); color:var(--text-dim); padding:2px 8px; border-radius:10px; font-size:0.6rem; margin-left:8px; border: 1px solid var(--border); display:none;">{{ song.artist }}</span>
+            </div>
+            <div class="song-meta">
+              {{ song.artist }}{% if song.year %} • {{ song.year }}{% endif %} • {{ (song.tech.format or 'UNKNOWN') | upper }}
+              {% if song.tech.sample_rate %} • {{ (song.tech.sample_rate|int / 1000)|round(1) }}kHz{% endif %}
+              {% if song.tech.bit_rate %} • {{ (song.tech.bit_rate|int / 1000)|round }}kbps{% endif %}
+            </div>
+            {% if song.rating and song.rating > 0 %}
+              <div class="song-stars">{{ "★" * song.rating }}</div>
+            {% endif %}
+          </div>
+          <div class="hamburger-btn" onclick="openEdit(event, this)">☰</div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div style="text-align:center; color: var(--text-dim); padding: 2rem;">No music found</div>
+    {% endif %}
+  </div>
+</div>
+
+<div id="edit-modal" class="modal-overlay">
+  <div class="modal-content">
+    <h3 style="margin-bottom:1.5rem; font-family:'Outfit'">Edit Details</h3>
+    <div class="form-group">
+      <label class="form-label">Title (Filename)</label>
+      <input type="text" id="edit-title" class="form-input">
+      <p style="font-size: 0.7rem; color: #ff453a; margin-top: 5px;">* Renaming will erase current metadata</p>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Artist</label>
+      <input type="text" id="edit-artist" class="form-input">
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <div class="form-group" style="flex: 1;">
+        <label class="form-label">Year</label>
+        <input type="text" id="edit-year" class="form-input">
+      </div>
+      <div class="form-group" style="flex: 1;">
+        <label class="form-label">Category</label>
+        <select id="edit-category" class="form-input">
+          <option value="All">All</option>
+          <option value="Pop">Pop</option>
+          <option value="Rock">Rock</option>
+          <option value="Classical">Classical</option>
+          <option value="Spanish">Spanish</option>
+          <option value="Chinese">Chinese</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Rating</label>
+      <div id="edit-stars" class="star-rating">
+        <span class="star" data-value="1" onclick="setEditRating(1)">★</span>
+        <span class="star" data-value="2" onclick="setEditRating(2)">★</span>
+        <span class="star" data-value="3" onclick="setEditRating(3)">★</span>
+      </div>
+      <p style="text-align:center; font-size:0.7rem; color:var(--text-dim); margin-top:5px;">Tap to rate 1-3 stars. Tap same star to reset.</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-modal btn-primary" onclick="saveMeta()">Save</button>
+      <button class="btn-modal btn-danger" onclick="deleteSong()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentFile = null;
+window.seekDragging = false;
+let currentDuration = 0;
+let videoEnabled = true;
+
+function toggleVideo() {
+  videoEnabled = !videoEnabled;
+  fetch('/video_set', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({enabled: videoEnabled}) });
+  updateVideoButton();
+}
+
+function formatTime(s) {
+  if (!s || isNaN(s)) return '0:00';
+  let m = Math.floor(s/60);
+  let sec = Math.floor(s%60).toString().padStart(2,'0');
+  return m+':'+sec;
+}
+
+async function playSong(filename, rowId) {
+  await fetch('/play', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({filename}) });
+  updateUI(filename);
+}
+
+async function stopMusic() { await fetch('/stop', {method:'POST'}); updateUI(null); }
+async function pauseMusic() { await fetch('/pause', {method:'POST'}); }
+async function resumeMusic() { await fetch('/resume', {method:'POST'}); }
+
+async function onSeekRelease() {
+  window.seekDragging = false;
+  let pos = (document.getElementById('seek-slider').value / 100) * currentDuration;
+  await fetch('/seek', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({position: pos}) });
+}
+
+let currentVolume = 50;
+
+function setVolumeUI(v) { 
+  currentVolume = v;
+  document.getElementById('vol-slider').value = v;
+  document.getElementById('vol-display').textContent = Math.round(v) + '%';
+}
+
+function updateVideoButton(isEnabled) {
+  let btn = document.getElementById('btn-video');
+  if(!btn) return;
+  if(isEnabled !== undefined) videoEnabled = isEnabled;
+  if(videoEnabled) { btn.style.background = 'var(--accent)'; btn.style.opacity = '1'; }
+  else { btn.style.background = 'transparent'; btn.style.opacity = '0.5'; }
+}
+
+async function sendVolume(v) {
+  document.getElementById('vol-display').textContent = v + '%';
+  await fetch('/volume_set', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({volume: v}) });
+}
+
+function updateUI(filename) {
+  document.querySelectorAll('.song-row').forEach(e => e.classList.remove('active'));
+  if(filename) {
+    let row = Array.from(document.querySelectorAll('.song-row')).find(e => e.getAttribute('data-filename') === filename);
+    if(row) {
+      row.classList.add('active');
+      document.getElementById('now-title').textContent = filename;
+      document.getElementById('badge-format').textContent = 'PLAYING';
+      document.getElementById('bg-blur').style.background = 'radial-gradient(circle at 50% 50%, rgba(179,136,255,0.15) 0%, transparent 100%)';
+      let meta = row.querySelector('.song-meta');
+      if(meta) {
+        document.getElementById('badge-format').innerHTML = '<span style="color:var(--accent)">▶ PLAYING</span> • ' + meta.innerHTML;
+      }
+    }
+  } else {
+    document.getElementById('now-title').textContent = "Ready to Play";
+    document.getElementById('badge-format').textContent = 'STANDBY';
+    document.getElementById('bg-blur').style.background = "none";
+  }
+}
+
+let isEditMode = false;
+let currentEditRow = null;
+
+function toggleEditMode() {
+  isEditMode = !isEditMode;
+  sessionStorage.setItem('editMode', isEditMode);
+  applyEditModeUI();
+}
+
+function applyEditModeUI() {
+  const btn = document.getElementById('toggle-edit-btn');
+  const list = document.getElementById('song-list');
+  if(!btn || !list) return;
+  btn.innerText = isEditMode ? 'Edit On' : 'Edit Off';
+  btn.classList.toggle('active', isEditMode);
+  list.classList.toggle('edit-mode', isEditMode);
+}
+
+function onRowClick(e, el) {
+  if (isEditMode) return;
+  playSong(el.getAttribute('data-filename'), el.id);
+}
+
+function openEdit(e, el) {
+  if (e) e.stopPropagation();
+  let row = el.closest('.song-row');
+  currentEditRow = row;
+  document.getElementById('edit-title').value = row.getAttribute('data-stem') || '';
+  document.getElementById('edit-artist').value = row.getAttribute('data-artist') || '';
+  document.getElementById('edit-category').value = row.getAttribute('data-category') || 'All';
+  document.getElementById('edit-year').value = row.getAttribute('data-year') || '';
+  
+  currentEditRating = parseInt(row.getAttribute('data-rating')) || 0;
+  updateModalStars(currentEditRating);
+  
+  document.getElementById('edit-modal').style.display = 'flex';
+}
+
+let currentEditRating = 0;
+function setEditRating(val) {
+  currentEditRating = (currentEditRating === val) ? 0 : val;
+  updateModalStars(currentEditRating);
+}
+
+function updateModalStars(val) {
+  document.querySelectorAll('#edit-stars .star').forEach(s => {
+    s.classList.toggle('active', parseInt(s.getAttribute('data-value')) <= val);
+  });
+}
+
+function closeModal() { document.getElementById('edit-modal').style.display = 'none'; }
+
+async function saveMeta() {
+  const filename = currentEditRow.getAttribute('data-filename');
+  const oldStem = currentEditRow.getAttribute('data-stem');
+  const suffix = currentEditRow.getAttribute('data-suffix');
+  const newStem = document.getElementById('edit-title').value;
+  const artist = document.getElementById('edit-artist').value;
+  const category = document.getElementById('edit-category').value;
+  const year = document.getElementById('edit-year').value;
+
+  await fetch('/api/music/update', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ 
+      filename, 
+      new_stem: newStem !== oldStem ? newStem : null,
+      suffix,
+      artist, 
+      category, 
+      year,
+      rating: currentEditRating
+    })
+  });
+  closeModal();
+  location.reload();
+}
+
+async function deleteSong() {
+  const filename = currentEditRow.getAttribute('data-filename');
+  if (!confirm("Permanently delete " + filename + "?")) return;
+  await fetch('/api/music/delete', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ filename })
+  });
+  closeModal();
+  location.reload();
+}
+
+let currentCategory = 'All';
+let currentArtist = 'All';
+let currentStars = 0; // 0=All, -1=Unrated, 1-3=Stars
+
+function applyFilters() {
+  document.querySelectorAll('.song-row').forEach(row => {
+    const catMatch = (currentCategory === 'All' || row.getAttribute('data-category') === currentCategory);
+    const artMatch = (currentArtist === 'All' || row.getAttribute('data-artist') === currentArtist);
+    
+    let starMatch = true;
+    const r = parseInt(row.getAttribute('data-rating')) || 0;
+    if (currentStars === -1) starMatch = (r === 0);
+    else if (currentStars > 0) starMatch = (r === currentStars);
+    
+    row.style.display = (catMatch && artMatch && starMatch) ? 'flex' : 'none';
+  });
+  updateArtistBar();
+}
+
+function filterStars(stars, btn) {
+  currentStars = stars;
+  const parent = btn.parentElement;
+  parent.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+
+function updateArtistBar() {
+  const bar = document.getElementById('artist-filter-bar');
+  const artists = new Set();
+  let hasMatchingSongs = false;
+
+  document.querySelectorAll('.song-row').forEach(row => {
+    if (currentCategory === 'All' || row.getAttribute('data-category') === currentCategory) {
+      const art = row.getAttribute('data-artist');
+      if (art && art !== 'Unknown Artist') {
+        artists.add(art);
+      }
+      hasMatchingSongs = true;
+    }
+  });
+
+  if (artists.size === 0 || !hasMatchingSongs) {
+    bar.style.display = 'none';
+    return;
+  }
+
+  bar.style.display = 'flex';
+  let html = `<button class="filter-btn ${currentArtist === 'All' ? 'active' : ''}" onclick="filterArtist('All', this)">All Artists</button>`;
+  Array.from(artists).sort().forEach(art => {
+    const safeArt = art.replace(/'/g, "\\'");
+    html += `<button class="filter-btn ${currentArtist === art ? 'active' : ''}" onclick="filterArtist('${safeArt}', this)">${art}</button>`;
+  });
+  bar.innerHTML = html;
+}
+
+function filterCat(cat, btn) {
+  currentCategory = cat;
+  currentArtist = 'All';
+  const parent = btn.parentElement;
+  parent.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+
+function filterArtist(art, btn) {
+  currentArtist = art;
+  document.querySelectorAll('#artist-filter-bar .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+
+async function poll() {
+  try {
+    let r = await fetch('/status');
+    let d = await r.json();
+    setVolumeUI(d.volume);
+    updateVideoButton(d.video_enabled);
+    if(d.playing !== currentFile) {
+      currentFile = d.playing;
+      updateUI(d.playing);
+    }
+    if(d.playing) {
+      let badge = document.getElementById('badge-format');
+      if (d.paused) {
+          badge.innerHTML = badge.innerHTML.replace('▶ PLAYING', '⏸ PAUSED').replace('var(--accent)', '#8a8a9a');
+      } else {
+          badge.innerHTML = badge.innerHTML.replace('⏸ PAUSED', '▶ PLAYING').replace('#8a8a9a', 'var(--accent)');
+      }
+    }
+    currentDuration = d.duration || 0;
+    if(!window.seekDragging && currentDuration > 0) {
+      document.getElementById('seek-total').textContent = formatTime(currentDuration);
+      document.getElementById('seek-current').textContent = formatTime(d.position);
+      document.getElementById('seek-slider').value = (d.position / currentDuration) * 100;
+    }
+  } catch(e) {}
+  setTimeout(poll, 1500);
+}
+
+// Init
+isEditMode = false; // Default to Off on power up
+sessionStorage.setItem('editMode', 'false');
+applyEditModeUI();
+applyFilters(); // Initial filter update
+poll();
+</script>
+</body>
+</html>
+"""
+
+@app.route("/api/cover/<path:filename>")
+def cover(filename):
+    path = MUSIC_FOLDER / filename
+    if not path.exists():
+        return jsonify(error="File not found"), 404
+    try:
+        cmd = ["ffmpeg"]
+        if path.suffix.lower() in ['.mkv', '.mp4', '.avi', '.mov', '.webm']:
+            cmd.extend(["-ss", "00:00:05"]) # Skip 5 seconds into the video to avoid black fade-in screens
+        cmd.extend(["-i", str(path), "-an", "-vframes", "1", "-c:v", "mjpeg", "-f", "image2", "pipe:1"])
+        
+        pic_bytes = subprocess.check_output(cmd, stderr=subprocess.DEVNULL, timeout=2)
+        if pic_bytes:
+            return Response(pic_bytes, mimetype="image/jpeg", headers={"Cache-Control": "max-age=86400"})
+    except Exception:
+        pass
+    transparent_gif = b'GIF89a\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;'
+    return Response(transparent_gif, mimetype="image/gif", headers={"Cache-Control": "max-age=86400"})
+
+@app.route("/")
+def index():
+    songs = scan_music()
+    return render_template_string(HTML, songs=songs, count=len(songs))
+
+@app.route("/play", methods=["POST"])
+def play():
+    filename = request.json.get("filename", "")
+    path = MUSIC_FOLDER / filename
+    if path.exists() and path.suffix.lower() in SUPPORTED_EXT:
+        player.play(path)
+        return jsonify(ok=True, filename=filename)
+    return jsonify(ok=False, error="File not found"), 404
+
+@app.route("/api/music/update", methods=["POST"])
+def update_music_meta():
+    data = request.json
+    filename = data.get("filename")
+    new_stem = data.get("new_stem")
+    suffix = data.get("suffix")
+    artist = data.get("artist")
+    category = data.get("category")
+    year = data.get("year")
+    rating = data.get("rating")
+    
+    meta = load_metadata()
+    
+    # Handle Renaming (mv)
+    if new_stem and filename:
+        old_path = MUSIC_FOLDER / filename
+        new_filename = f"{new_stem}{suffix}"
+        new_path = MUSIC_FOLDER / new_filename
+        
+        if old_path.exists() and not new_path.exists():
+            try:
+                old_path.rename(new_path)
+                # Erase old metadata
+                if filename in meta:
+                    del meta[filename]
+                # Update filename for the rest of the logic
+                filename = new_filename
+            except Exception as e:
+                print(f"Rename error: {e}")
+                return jsonify(ok=False, error="Rename failed"), 500
+
+    if filename not in meta: meta[filename] = {}
+    if artist is not None: meta[filename]["artist"] = artist
+    if category is not None: meta[filename]["category"] = category
+    if year is not None: meta[filename]["year"] = year
+    if rating is not None: meta[filename]["rating"] = rating
+    
+    if save_metadata(meta):
+        return jsonify(ok=True)
+    return jsonify(ok=False), 500
+
+@app.route("/api/music/delete", methods=["POST"])
+def delete_music_route():
+    data = request.json
+    filename = data.get("filename")
+    
+    if not filename:
+        return jsonify(ok=False, error="No filename provided"), 400
+        
+    path = MUSIC_FOLDER / filename
+    if not path.exists():
+        return jsonify(ok=False, error="File not found"), 404
+        
+    try:
+        # Remove physical file
+        path.unlink()
+        
+        # Cleanup metadata
+        meta = load_metadata()
+        if filename in meta:
+            del meta[filename]
+            save_metadata(meta)
+            
+        return jsonify(ok=True)
+    except Exception as e:
+        return jsonify(ok=False, error=str(e)), 500
+
+@app.route("/stop", methods=["POST"])
+def stop():
+    player.stop()
+    return jsonify(ok=True)
+
+@app.route("/pause", methods=["POST"])
+def pause_route():
+    player.pause()
+    return jsonify(ok=True)
+
+@app.route("/resume", methods=["POST"])
+def resume_route():
+    player.resume()
+    return jsonify(ok=True)
+
+@app.route("/video_set", methods=["POST"])
+def video_set_route():
+    enabled = request.json.get("enabled", True)
+    player.set_video(enabled)
+    return jsonify(ok=True)
+
+@app.route("/volume_set", methods=["POST"])
+def volume_set_route():
+    global volume
+    val = int(request.json.get("volume", 50))
+    volume = set_volume(val)
+    return jsonify(volume=volume)
+
+@app.route("/seek", methods=["POST"])
+def seek_route():
+    position = request.json.get("position", 0)
+    try:
+        position = float(position)
+    except (TypeError, ValueError):
+        return jsonify(error="Invalid position"), 400
+    player.seek(position)
+    return jsonify(ok=True)
+
+@app.route("/status")
+def status():
+    current = player.current
+    duration = player.get_property("duration") if current else 0
+    position = player.get_property("time-pos") if current else 0
+    vid = player.get_property("vid") if current else "auto"
+    paused = player.get_property("pause") if current else False
+    return jsonify(
+        playing=current.name if current else None,
+        volume=volume,
+        duration=round(float(duration), 2) if duration else 0,
+        position=round(float(position), 2) if position else 0,
+        video_enabled=(str(vid).lower() not in ("no", "false")),
+        paused=bool(paused)
+    )
+
+
+# ─────────────────────────────────────────────────────────────
+# Entry point
+# ─────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    _setup_encoder()
+    threading.Thread(target=_poll_loop, daemon=True).start()
+    print(f"Pi Music Console running → http://0.0.0.0:{WEB_PORT}")
+    app.run(host="0.0.0.0", port=WEB_PORT, debug=False, use_reloader=False)

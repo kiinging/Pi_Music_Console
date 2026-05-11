@@ -1,0 +1,14 @@
+ * Serving Flask app 'dashboard_1'
+ * Debug mode: off
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.1.18:5000
+[33mPress CTRL+C to quit[0m
+127.0.0.1 - - [11/May/2026 19:55:08] "GET /api/ping HTTP/1.1" 200 -
+192.168.1.7 - - [11/May/2026 19:55:16] "GET / HTTP/1.1" 200 -
+192.168.1.7 - - [11/May/2026 19:55:16] "GET /api/volume HTTP/1.1" 200 -
+192.168.1.7 - - [11/May/2026 19:55:38] "GET /api/songs?type=video HTTP/1.1" 200 -
+192.168.1.7 - - [11/May/2026 19:55:58] "POST /api/play HTTP/1.1" 200 -
+Launching mpv: /home/pizza/Music/Adele - Hello (Official Music Video).mkv
+WARNING: mpv socket not created
