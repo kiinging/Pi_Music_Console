@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Hi-Fi Audio Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@300;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* ----- Your original styles (unchanged) ----- */
+        :root {
+            --bg-dark: #07070a;
+            --accent: #9d4edd;
+            --accent-glow: rgba(157, 78, 221, 0.4);
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-main: #e0e0f0;
+            --text-dim: #8a8a9a;
+            --success: #00f5d4;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            background-image: radial-gradient(circle at 0% 0%, rgba(157, 78, 221, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 100% 100%, rgba(61, 44, 141, 0.05) 0%, transparent 50%);
+        }
+
+        /* Now Playing section (compact) */
+        .now-playing {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, transparent 100%);
+            padding: 0.5rem;
+            text-align: center;
+            border-bottom: 1px solid var(--glass-border);
+            flex-shrink: 0;
+        }
+
+        .track-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0;
+            background: linear-gradient(90deg, #fff, #b39ddb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: inline-block;
+        }
+
+        .track-artist {
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            margin: 0 0 0.5rem 10px;
+            display: inline-block;
+        }
+
+        /* Control bar with volume buttons */
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 0.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid var(--glass-border);
+            background: var(--glass);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1rem;
+            touch-action: manipulation;
+        }
+
+        .btn-circle:active {
+            transform: scale(0.9);
+            background: var(--accent);
+        }
+
+        .controls-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--glass);
+            padding: 6px;
+            border-radius: 40px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .volume-btn-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--glass);
+            padding: 4px 12px;
+            border-radius: 40px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .volume-btn-group .btn-circle {
+            width: 36px;
+            height: 36px;
+            font-size: 1.1rem;
+        }
+
+        #volume-percent {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            min-width: 45px;
+            text-align: center;
+        }
+
+        /* Seek bar */
+        .seek-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 0.2rem;
+            padding: 0 1rem;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        #seek-slider {
+            flex-grow: 1;
+            -webkit-appearance: none;
+            height: 4px;
+            background: var(--glass-border);
+            border-radius: 2px;
+            cursor: pointer;
+        }
+
+        #seek-slider::-webkit-slider-thumb {
+            width: 18px;
+            height: 18px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid var(--accent);
+            box-shadow: 0 0 8px var(--accent-glow);
+        }
+
+        .seek-time {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            min-width: 38px;
+        }
+
+        /* Track list */
+        .track-list-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 1rem 1rem 1rem 4rem;
+        }
+
+        .track-list {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .track-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            margin-bottom: 8px;
+            background: var(--glass);
+            border-radius: 12px;
+            cursor: pointer;
+        }
+
+        .track-info {
+            flex-grow: 1;
+        }
+
+        .track-item-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .track-item-sub {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        .media-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 1rem 0;
+        }
+
+        .tab-btn {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            color: var(--text-dim);
+            padding: 8px 24px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+        }
+
+        .tab-btn.active {
+            background: var(--accent);
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        .hamburger-btn {
+            display: none;
+            padding: 10px;
+            cursor: pointer;
+            color: var(--text-dim);
+        }
+
+        .edit-mode .hamburger-btn {
+            display: block;
+        }
+
+        .edit-mode .track-item {
+            cursor: default;
+        }
+
+        .filter-bar {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            color: var(--text-dim);
+            padding: 6px 16px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .filter-btn.active {
+            background: #2c2c34;
+            color: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        /* Modal styles (edit, network, youtube) */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: #15151a;
+            border: 1px solid var(--glass-border);
+            padding: 1rem;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 320px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .form-input,
+        select.form-input {
+            width: 100%;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 8px 0;
+        }
+
+        .star-rating {
+            display: flex;
+            gap: 5px;
+            font-size: 1.5rem;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .star-rating .star.active {
+            color: #ffcc00;
+            text-shadow: 0 0 10px rgba(255, 204, 0, 0.4);
+        }
+
+        .track-item-stars {
+            font-size: 0.8rem;
+            color: #ffcc00;
+            margin-top: 2px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 1rem;
+        }
+
+        .btn-primary,
+        .btn-secondary,
+        .btn-danger {
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            flex: 1;
+            text-align: center;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--glass);
+            color: white;
+            border: 1px solid var(--glass-border);
+        }
+
+        .btn-danger {
+            background: rgba(255, 69, 58, 0.1);
+            color: #ff453a;
+            border: 1px solid #ff453a;
+        }
+
+        /* Home Menu (3 big buttons) */
+        .home-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 30%, #1e1e2f, #0a0a0a);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            z-index: 200;
+        }
+
+        .home-btn {
+            width: 80%;
+            max-width: 280px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border);
+            border-radius: 60px;
+            padding: 20px 0;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: white;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .home-btn:active {
+            transform: scale(0.96);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .home-btn i {
+            margin-right: 15px;
+            font-size: 2rem;
+            vertical-align: middle;
+        }
+
+        /* Home icon inside app view */
+        .home-icon {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: var(--glass);
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 1rem;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .app-view {
+            display: none;
+            flex-direction: column;
+            height: 100vh;
+            position: relative;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- HOME MENU -->
+    <div id="homeMenu" class="home-menu">
+        <div class="home-btn" onclick="showMusicLibrary()"><i class="fas fa-folder-music"></i> Music Library</div>
+        <div class="home-btn" onclick="showNetworkModal()"><i class="fas fa-network-wired"></i> Network</div>
+        <div class="home-btn" onclick="showYoutubeModal()"><i class="fab fa-youtube"></i> YouTube</div>
+    </div>
+
+    <!-- MAIN APP VIEW (your dashboard) -->
+    <div id="appView" class="app-view">
+        <div class="home-icon" onclick="goHome()"><i class="fas fa-arrow-left"></i> Home</div>
+
+        <section class="now-playing">
+            <h1 id="playing-title" class="track-title">Select a Track</h1>
+            <div id="playing-artist" class="track-artist">Ready to Play</div>
+            <div id="playing-badges" class="metadata-badges"></div>
+            <div class="controls">
+                <div class="controls-group">
+                    <button class="btn-circle" style="background: var(--success); color: black;"
+                        onclick="resumeMusic()">▶</button>
+                    <button class="btn-circle" onclick="pauseMusic()">⏸</button>
+                    <button class="btn-circle" onclick="stopMusic()">⏹</button>
+                </div>
+                <div class="volume-btn-group">
+                    <button class="btn-circle" onclick="volumeDown()">−</button>
+                    <span id="volume-percent">50%</span>
+                    <button class="btn-circle" onclick="volumeUp()">+</button>
+                </div>
+                <button id="btn-video" class="btn-circle" style="background: var(--accent)"
+                    onclick="toggleVideo()">📺</button>
+            </div>
+            <div class="seek-container">
+                <span id="seek-current">0:00</span>
+                <input type="range" id="seek-slider" min="0" max="100" value="0" onmousedown="seekDragging=true"
+                    ontouchstart="seekDragging=true" onmouseup="onSeekRelease()" ontouchend="onSeekRelease()"
+                    oninput="updateSeekDisplay(this.value)">
+                <span id="seek-total">0:00</span>
+            </div>
+        </section>
+
+        <div class="track-list-container">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <h2 style="margin:0;">My Collection</h2>
+                <div class="filter-group" style="display: flex; gap: 5px;">
+                    <button class="filter-btn" onclick="filterByStars(3)">★★★</button>
+                    <button class="filter-btn" onclick="filterByStars(2)">★★</button>
+                    <button class="filter-btn" onclick="filterByStars(1)">★</button>
+                    <button class="filter-btn" onclick="filterByStars(-1)">No Star</button>
+                    <button class="filter-btn active" onclick="filterByStars(0)">All</button>
+                </div>
+                <button id="toggle-edit-btn" class="tab-btn" onclick="toggleEditMode()" style="padding:6px 15px;">Edit
+                    Off</button>
+            </div>
+            <div class="media-tabs">
+                <button class="tab-btn" onclick="switchTab('music')">Music</button>
+                <button class="tab-btn active" onclick="switchTab('video')">Video</button>
+            </div>
+            <div class="filter-bar" id="category-filter-bar">
+                <button class="filter-btn active" onclick="filterByCategory('All')">All Categories</button>
+                <button class="filter-btn" onclick="filterByCategory('Pop')">Pop</button>
+                <button class="filter-btn" onclick="filterByCategory('Rock')">Rock</button>
+                <button class="filter-btn" onclick="filterByCategory('Classical')">Classical</button>
+                <button class="filter-btn" onclick="filterByCategory('Spanish')">Spanish</button>
+                <button class="filter-btn" onclick="filterByCategory('Chinese')">Chinese</button>
+            </div>
+            <div class="filter-bar" id="artist-filter-bar"
+                style="border-top:1px solid var(--glass-border); padding-top:10px;"></div>
+            <div id="track-list" class="track-list">Loading Media Library...</div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="edit-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Edit Song Details</h3>
+            <div style="display:none;"><input id="edit-filename" class="form-input"></div>
+            <input id="edit-title" placeholder="Title" class="form-input">
+            <input id="edit-artist" placeholder="Artist" class="form-input">
+            <select id="edit-category" class="form-input">
+                <option>All</option>
+                <option>Pop</option>
+                <option>Rock</option>
+                <option>Classical</option>
+                <option>Spanish</option>
+                <option>Chinese</option>
+            </select>
+            <input id="edit-year" placeholder="Year" class="form-input">
+            <div class="star-rating" id="edit-stars">
+                <span class="star" data-value="1">★</span>
+                <span class="star" data-value="2">★</span>
+                <span class="star" data-value="3">★</span>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn-primary" onclick="saveSongDetails()">Save</button>
+                <button class="btn-danger" onclick="deleteSong()">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Network Modal -->
+    <div id="networkModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Network Settings</h3>
+            <button class="btn-secondary" onclick="scanWifi()">Scan Wi-Fi</button>
+            <div id="wifi-list" style="margin:10px 0;"></div>
+            <input type="password" id="wifi-password" placeholder="Password" class="form-input">
+            <button class="btn-primary" onclick="connectToSelectedWifi()">Connect</button>
+            <hr>
+            <button class="btn-secondary" onclick="enableEthernet()">Use Ethernet</button>
+            <div id="network-status" style="margin-top:10px;"></div>
+            <button class="btn-secondary" onclick="closeNetworkModal()" style="margin-top:15px;">Close</button>
+        </div>
+    </div>
+
+    <!-- YouTube Modal -->
+    <div id="youtubeModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Play YouTube</h3>
+            <input type="text" id="youtube-url" placeholder="URL or search term" class="form-input">
+            <button class="btn-primary" onclick="playYoutube()">▶ Play</button>
+            <button class="btn-secondary" onclick="closeYoutubeModal()">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        // ---------- YOUR ORIGINAL JAVASCRIPT (with apostrophe fix) ----------
+        let isEditMode = false;
+        let currentMediaType = 'video';
+        let currentCategory = 'All';
+        let currentArtist = 'All';
+        let currentStars = 0;
+        let allSongs = [];
+        let editingPath = null;
+        let originalFilename = null;
+        let currentEditRating = 0;
+        let currentDuration = 0;
+        let seekDragging = false;
+        let videoEnabled = true;
+
+        function syncUI() {
+            const btn = document.getElementById('toggle-edit-btn');
+            if (btn) btn.innerText = isEditMode ? 'Edit On' : 'Edit Off';
+            document.getElementById('track-list')?.classList.toggle('edit-mode', isEditMode);
+        }
+        function toggleEditMode() { isEditMode = !isEditMode; syncUI(); renderTracks(allSongs); }
+        function switchTab(type) {
+            currentMediaType = type;
+            document.querySelectorAll('.media-tabs .tab-btn').forEach(btn => btn.classList.remove('active'));
+            if (type === 'music') document.querySelector('.media-tabs .tab-btn:first-child').classList.add('active');
+            else document.querySelector('.media-tabs .tab-btn:last-child').classList.add('active');
+            refreshList();
+        }
+        async function refreshList() {
+            document.getElementById('track-list').innerHTML = '<div>Refreshing...</div>';
+            await fetchSongs();
+        }
+        async function fetchSongs() {
+            await fetchVolume();
+            const res = await fetch(`/api/songs?type=${currentMediaType}`);
+            allSongs = await res.json();
+            renderArtistFilters(allSongs);
+            renderTracks(allSongs);
+        }
+        function filterByCategory(cat) {
+            currentCategory = cat;
+            document.querySelectorAll('#category-filter-bar .filter-btn').forEach(btn => btn.classList.toggle('active', btn.innerText === (cat === 'All' ? 'All Categories' : cat)));
+            currentArtist = 'All';
+            renderArtistFilters(allSongs);
+            renderTracks(allSongs);
+        }
+        function filterByArtist(artist) { currentArtist = artist; renderArtistFilters(allSongs); renderTracks(allSongs); }
+        function filterByStars(stars) {
+            currentStars = stars;
+            const vals = [3, 2, 1, -1, 0];
+            document.querySelectorAll('.filter-group .filter-btn').forEach((btn, i) => btn.classList.toggle('active', vals[i] === stars));
+            renderTracks(allSongs);
+        }
+        function setEditRating(val) { currentEditRating = (currentEditRating === val) ? 0 : val; updateModalStars(currentEditRating); }
+        function updateModalStars(val) { document.querySelectorAll('#edit-stars .star').forEach(s => s.classList.toggle('active', parseInt(s.dataset.value) <= val)); }
+        function renderArtistFilters(songs) {
+            let filtered = (currentCategory === 'All') ? songs : songs.filter(s => s.category === currentCategory);
+            let artists = ['All', ...new Set(filtered.map(s => s.artist && s.artist !== 'Unknown Artist' ? s.artist : 'Others'))];
+            const container = document.getElementById('artist-filter-bar');
+            container.innerHTML = artists.map(a => `<button class="filter-btn ${currentArtist === a ? 'active' : ''}" onclick="filterByArtist('${a.replace(/'/g, "\\'")}')">${a === 'All' ? 'All Artists' : a}</button>`).join('');
+        }
+        function renderTracks(songs) {
+            let filtered = songs;
+            if (currentStars !== 0) filtered = filtered.filter(s => currentStars === -1 ? (!s.rating || s.rating === 0) : s.rating === currentStars);
+            if (currentCategory !== 'All') filtered = filtered.filter(s => s.category === currentCategory);
+            if (currentArtist !== 'All') filtered = filtered.filter(s => (s.artist || 'Others') === currentArtist);
+            const container = document.getElementById('track-list');
+            if (!filtered.length) { container.innerHTML = '<div>No matching media</div>'; return; }
+            container.innerHTML = filtered.map(song => {
+                const artist = (song.artist && song.artist !== 'Unknown Artist') ? song.artist : 'Others';
+                const title = song.title || song.filename;
+                const catBadge = (song.category && song.category !== 'All') ? `<span style="background:var(--accent); color:white; padding:2px 8px; border-radius:10px; font-size:0.6rem; margin-left:8px;">${song.category}</span>` : '';
+                const artBadge = isEditMode ? `<span style="background:#4a4a4a; color:white; padding:2px 8px; border-radius:10px; font-size:0.6rem; margin-left:8px;">👤 ${artist}</span>` : '';
+                const starsHtml = song.rating ? `<div class="track-item-stars">${'★'.repeat(song.rating)}</div>` : '';
+                const techInfo = (song.tech.format || 'UNK').toUpperCase() + (song.tech.sample_rate ? ` • ${(song.tech.sample_rate / 1000).toFixed(1)}kHz` : '') + (song.tech.bit_rate ? ` • ${Math.round(song.tech.bit_rate / 1000)}kbps` : '');
+                // FIX: path is stored in data-path attribute, with double quotes. Apostrophe inside is safe.
+                // We must NOT replace ' with \' in the attribute value.
+                return `
+            <div class="track-item" onclick="onTrackClick(event, this)" data-path="${song.path.replace(/"/g, '&quot;')}" data-type="${song.type}">
+                <div class="track-info">
+                    <span class="track-item-title">${title}${catBadge}${artBadge}</span>
+                    <span class="track-item-sub">${artist} • ${techInfo}</span>
+                    ${starsHtml}
+                </div>
+                <div class="hamburger-btn" onclick="prepareEdit(event, this, '${title.replace(/'/g, "\\'")}', '${artist.replace(/'/g, "\\'")}', '${song.category}', '${song.year || ''}', '${song.filename.replace(/'/g, "\\'")}', ${song.rating || 0})">☰</div>
+            </div>`;
+            }).join('');
+        }
+        function onTrackClick(e, el) { if (isEditMode) return; playTrack(el.getAttribute('data-path'), el.getAttribute('data-type')); }
+        async function playTrack(path, type) {
+            try {
+                const res = await fetch('/api/play', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path, type }) });
+                const data = await res.json();
+                if (data.status === 'success') { updateNowPlaying(data.track); videoEnabled = true; updateVideoButton(); }
+            } catch (e) { console.error(e); }
+        }
+        function prepareEdit(e, el, title, artist, cat, year, filename, rating) {
+            e.stopPropagation();
+            editingPath = el.closest('.track-item').getAttribute('data-path');
+            originalFilename = filename;
+            currentEditRating = rating;
+            updateModalStars(rating);
+            document.getElementById('edit-filename').value = filename;
+            document.getElementById('edit-title').value = title;
+            document.getElementById('edit-artist').value = (artist === 'Others') ? '' : artist;
+            document.getElementById('edit-category').value = cat || 'All';
+            document.getElementById('edit-year').value = year || '';
+            document.getElementById('edit-modal').style.display = 'flex';
+        }
+        function closeModal() { document.getElementById('edit-modal').style.display = 'none'; }
+        async function saveSongDetails() {
+            const payload = { path: editingPath, title: document.getElementById('edit-title').value, artist: document.getElementById('edit-artist').value || 'Unknown Artist', category: document.getElementById('edit-category').value, year: document.getElementById('edit-year').value, rating: currentEditRating };
+            const newFile = document.getElementById('edit-filename').value;
+            if (newFile !== originalFilename && newFile.trim() !== "") {
+                if (!confirm("Rename file?")) return;
+                const res = await fetch('/api/songs/rename', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: editingPath, new_filename: newFile, type: currentMediaType }) });
+                if ((await res.json()).status === 'success') { closeModal(); refreshList(); return; }
+            }
+            await fetch('/api/songs/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            closeModal(); refreshList();
+        }
+        async function deleteSong() { if (!confirm("Delete permanently?")) return; await fetch('/api/songs/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: editingPath, type: currentMediaType }) }); closeModal(); refreshList(); }
+        async function stopMusic() { await fetch('/api/stop', { method: 'POST' }); refreshList(); }
+        async function pauseMusic() { await fetch('/api/pause', { method: 'POST' }); }
+        async function resumeMusic() { await fetch('/api/resume', { method: 'POST' }); }
+        async function fetchVolume() { const res = await fetch('/api/volume'); const data = await res.json(); document.getElementById('volume-percent').innerText = Math.round(data.volume) + '%'; }
+        async function updateVolume(val) { val = Math.min(100, Math.max(0, val)); document.getElementById('volume-percent').innerText = val + '%'; await fetch('/api/volume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ volume: val }) }); }
+        async function volumeUp() { let v = parseInt(document.getElementById('volume-percent').innerText); if (isNaN(v)) v = 50; await updateVolume(Math.min(100, v + 1)); }
+        async function volumeDown() { let v = parseInt(document.getElementById('volume-percent').innerText); if (isNaN(v)) v = 50; await updateVolume(Math.max(0, v - 1)); }
+        async function toggleVideo() { videoEnabled = !videoEnabled; await fetch('/api/video/toggle', { method: 'POST' }); updateVideoButton(); }
+        function updateVideoButton() { const btn = document.getElementById('btn-video'); if (btn) btn.style.background = videoEnabled ? 'var(--accent)' : 'transparent'; }
+        function formatTime(s) { if (!s || isNaN(s)) return '0:00'; return Math.floor(s / 60) + ':' + Math.floor(s % 60).toString().padStart(2, '0'); }
+        function updateNowPlaying(track) { if (!track) return; document.getElementById('playing-title').innerText = track.title || "Unknown"; document.getElementById('playing-artist').innerText = track.artist || ""; const badges = document.getElementById('playing-badges'); if (badges && track.tech) badges.innerHTML = `<span style="color:var(--accent)">▶ PLAYING</span> • ${(track.tech.format || 'UNK').toUpperCase()} ${track.tech.sample_rate ? `• ${(track.tech.sample_rate / 1000).toFixed(1)}kHz` : ''} ${track.tech.bit_rate ? `• ${Math.round(track.tech.bit_rate / 1000)}kbps` : ''}`; }
+        async function pollStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const d = await res.json();
+                if (d.status !== 'error') {
+                    if (d.title !== document.getElementById('playing-title').innerText) updateNowPlaying(d);
+                    if (d.video_enabled !== undefined) { videoEnabled = d.video_enabled; updateVideoButton(); }
+                    currentDuration = d.duration || 0;
+                    if (!seekDragging && currentDuration) {
+                        document.getElementById('seek-total').innerText = formatTime(currentDuration);
+                        document.getElementById('seek-current').innerText = formatTime(d.position);
+                        document.getElementById('seek-slider').value = (d.position / currentDuration) * 100;
+                    }
+                }
+            } catch (e) { }
+            setTimeout(pollStatus, 1500);
+        }
+        async function onSeekRelease() { seekDragging = false; const pos = (document.getElementById('seek-slider').value / 100) * currentDuration; await fetch('/api/seek', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ position: pos }) }); }
+        function updateSeekDisplay(val) { if (currentDuration) document.getElementById('seek-current').innerText = formatTime((val / 100) * currentDuration); }
+
+        // ---------- HOME SCREEN NAVIGATION ----------
+        function goHome() { document.getElementById('homeMenu').style.display = 'flex'; document.getElementById('appView').style.display = 'none'; }
+        function showMusicLibrary() { document.getElementById('homeMenu').style.display = 'none'; document.getElementById('appView').style.display = 'flex'; refreshList(); }
+
+        // ---------- NETWORK FUNCTIONS (requires backend routes) ----------
+        let selectedWifiSSID = null;
+        async function scanWifi() { const res = await fetch('/api/network/wifi/scan'); const data = await res.json(); if (data.error) { document.getElementById('wifi-list').innerHTML = `<div>${data.error}</div>`; return; } document.getElementById('wifi-list').innerHTML = data.map(net => `<div class="filter-btn" style="display:block;margin:5px 0;" onclick="selectWifi('${net.ssid.replace(/'/g, "\\'")}')">📶 ${net.ssid} (${net.signal}%) ${net.secure ? '🔒' : ''}</div>`).join(''); }
+        function selectWifi(ssid) { selectedWifiSSID = ssid; alert(`Selected ${ssid}. Enter password and click Connect.`); }
+        async function connectToSelectedWifi() { const pwd = document.getElementById('wifi-password').value; const res = await fetch('/api/network/wifi/connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ssid: selectedWifiSSID, password: pwd }) }); const data = await res.json(); alert(data.status === 'connected' ? 'Connected!' : 'Failed: ' + data.error); if (data.status === 'connected') closeNetworkModal(); }
+        async function updateNetworkStatus() { const res = await fetch('/api/network/status'); const data = await res.json(); document.getElementById('network-status').innerHTML = `<div>Wi‑Fi: ${data.wifi ? data.wifi.name : 'None'}</div><div>Ethernet: ${data.ethernet ? data.ethernet.name : 'Inactive'}</div>`; }
+        async function enableEthernet() { await fetch('/api/network/ethernet/connect', { method: 'POST' }); updateNetworkStatus(); }
+        function showNetworkModal() { document.getElementById('networkModal').style.display = 'flex'; scanWifi(); updateNetworkStatus(); }
+        function closeNetworkModal() { document.getElementById('networkModal').style.display = 'none'; }
+
+        // ---------- YOUTUBE FUNCTIONS ----------
+        function showYoutubeModal() { document.getElementById('youtubeModal').style.display = 'flex'; }
+        function closeYoutubeModal() { document.getElementById('youtubeModal').style.display = 'none'; }
+        async function playYoutube() { let url = document.getElementById('youtube-url').value.trim(); if (!url) return alert('Enter URL or search term'); if (!url.startsWith('http')) url = 'ytsearch:' + url; const res = await fetch('/api/youtube/play', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) }); const data = await res.json(); if (data.status === 'playing') closeYoutubeModal(); else alert(data.error); }
+
+        // Initial load
+        window.onload = () => { syncUI(); fetchSongs(); pollStatus(); fetchVolume(); };
+    </script>
+</body>
+
+</html>

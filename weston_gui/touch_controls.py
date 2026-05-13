@@ -1,178 +1,264 @@
+import os
 import requests
-import time
+
 from kivy.app import App
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.button import Button
 from kivy.uix.gridlayout import GridLayout
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
 from kivy.clock import Clock
 from kivy.core.window import Window
 from kivy.config import Config
 
-from kivy.uix.label import Label
-
-# Kivy configuration for touch screens
+# =========================
+# KIVY CONFIG
+# =========================
 Config.set('graphics', 'resizable', '0')
 Config.set('graphics', 'fullscreen', '1')
 Config.set('graphics', 'borderless', '1')
-Config.set('graphics', 'window_state', 'maximized')
-Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
 Config.set('graphics', 'show_cursor', '0')
 
 API_URL = "http://localhost:5000/api"
 
+MUSIC_FOLDER = os.path.expanduser("~/Music")
+
+# =========================
+# MAIN UI
+# =========================
 class TouchOverlay(FloatLayout):
+
     def __init__(self, **kwargs):
-        super(TouchOverlay, self).__init__(**kwargs)
-        
-        # Now Playing Label (Top)
+        super().__init__(**kwargs)
+
+        # Transparent background
+        Window.clearcolor = (0, 0, 0, 0)
+
+        # =========================
+        # TOP STATUS LABEL
+        # =========================
         self.lbl_playing = Label(
-            text="Waiting for Music...",
-            font_size='20sp',
-            pos_hint={'top': 0.95, 'center_x': 0.5},
-            size_hint=(1, 0.1),
+            text="Pi Music Console",
+            font_size='18sp',
             bold=True,
             color=(1, 1, 1, 1),
-            opacity=0 # Hidden by default
+            size_hint=(1, 0.08),
+            pos_hint={"top": 1}
         )
-        
-        # Main button container
-        self.controls = GridLayout(
-            cols=3, 
-            size_hint=(0.8, 0.4),
-            pos_hint={'center_x': 0.5, 'center_y': 0.45},
-            spacing=20,
-            padding=20
+
+        self.add_widget(self.lbl_playing)
+
+        # =========================
+        # TOP BUTTON BAR
+        # =========================
+        self.topbar = GridLayout(
+            cols=4,
+            size_hint=(1, 0.12),
+            pos_hint={"top": 0.90},
+            padding=10,
+            spacing=10
         )
-        
-        # Hide controls initially
-        self.controls.opacity = 0
-        self.controls.disabled = True
-        
-        # Premium Button styling helper
-        def create_btn(text, color):
+
+        def top_btn(text, color):
             return Button(
                 text=text,
-                font_size='20sp',
+                font_size='22sp',
+                bold=True,
                 background_normal='',
                 background_color=color,
-                color=(1, 1, 1, 1),
-                bold=True,
-                halign='center'
+                color=(1,1,1,1)
             )
 
-        # Colors (Modern Palette)
-        BLUE = (0.1, 0.4, 0.8, 0.9)
-        GREEN = (0.1, 0.7, 0.3, 0.9)
-        RED = (0.8, 0.2, 0.2, 0.9)
-        ORANGE = (0.9, 0.5, 0.1, 0.9)
-        GRAY = (0.3, 0.3, 0.3, 0.6)
+        # Nice colors
+        BLUE = (0.15, 0.35, 0.75, 0.95)
+        PURPLE = (0.45, 0.20, 0.70, 0.95)
+        GREEN = (0.10, 0.60, 0.30, 0.95)
+        GRAY = (0.20, 0.20, 0.20, 0.90)
 
-        # Create buttons
-        self.btn_prev = create_btn('⏮\nPrev', BLUE)
-        self.btn_play = create_btn('⏯\nPlay/Pause', GREEN)
-        self.btn_next = create_btn('⏭\nNext', BLUE)
-        
-        self.btn_vol_down = create_btn('🔉\nVol -', ORANGE)
-        self.btn_stop = create_btn('⏹\nStop', RED)
-        self.btn_vol_up = create_btn('🔊\nVol +', ORANGE)
-        
-        # Close button (top right, small)
-        self.btn_close = Button(
-            text='X',
-            size_hint=(None, None),
-            size=(60, 60),
-            pos_hint={'top': 0.98, 'right': 0.98},
-            background_color=GRAY,
-            opacity=0
+        self.btn_home = top_btn("⌂", BLUE)
+        self.btn_music = top_btn("🎵", PURPLE)
+        self.btn_settings = top_btn("⚙", GRAY)
+        self.btn_wifi = top_btn("📶", GREEN)
+
+        self.topbar.add_widget(self.btn_home)
+        self.topbar.add_widget(self.btn_music)
+        self.topbar.add_widget(self.btn_settings)
+        self.topbar.add_widget(self.btn_wifi)
+
+        self.add_widget(self.topbar)
+
+        # =========================
+        # MUSIC LIST AREA
+        # =========================
+        self.scroll = ScrollView(
+            size_hint=(1, 0.78),
+            pos_hint={"x": 0, "y": 0}
         )
-        
-        # Bind buttons
-        self.btn_prev.bind(on_release=lambda x: self.api_call("prev"))
-        self.btn_play.bind(on_release=lambda x: self.api_call("resume"))
-        self.btn_next.bind(on_release=lambda x: self.api_call("next"))
-        self.btn_stop.bind(on_release=lambda x: self.api_call("stop"))
-        self.btn_vol_up.bind(on_release=lambda x: self.adjust_volume(5))
-        self.btn_vol_down.bind(on_release=lambda x: self.adjust_volume(-5))
-        self.btn_close.bind(on_release=lambda x: self.hide_controls())
-        
-        # Add buttons to grid
-        self.controls.add_widget(self.btn_prev)
-        self.controls.add_widget(self.btn_play)
-        self.controls.add_widget(self.btn_next)
-        self.controls.add_widget(self.btn_vol_down)
-        self.controls.add_widget(self.btn_stop)
-        self.controls.add_widget(self.btn_vol_up)
-        
-        self.add_widget(self.lbl_playing)
-        self.add_widget(self.controls)
-        self.add_widget(self.btn_close)
-        
-        # Polling for status (every 2 seconds)
+
+        self.music_layout = BoxLayout(
+            orientation='vertical',
+            spacing=8,
+            padding=10,
+            size_hint_y=None
+        )
+
+        self.music_layout.bind(
+            minimum_height=self.music_layout.setter('height')
+        )
+
+        self.scroll.add_widget(self.music_layout)
+
+        self.add_widget(self.scroll)
+
+        # Hide music list initially
+        self.scroll.opacity = 0
+
+        # =========================
+        # BUTTON ACTIONS
+        # =========================
+        self.btn_music.bind(on_release=self.show_music_library)
+        self.btn_home.bind(on_release=self.go_home)
+
+        # =========================
+        # UPDATE NOW PLAYING
+        # =========================
         Clock.schedule_interval(self.update_status, 2)
-        
-        # Timer for hiding
-        self.hide_event = None
-        
-    def update_status(self, dt):
+
+    # ==================================================
+    # SHOW HOME
+    # ==================================================
+    def go_home(self, instance=None):
+        self.scroll.opacity = 0
+        self.lbl_playing.text = "Pi Music Console"
+
+    # ==================================================
+    # SHOW MUSIC LIBRARY
+    # ==================================================
+    def show_music_library(self, instance=None):
+
+        self.scroll.opacity = 1
+
+        self.music_layout.clear_widgets()
+
+        supported = (
+            ".mp3",
+            ".flac",
+            ".wav",
+            ".m4a",
+            ".aac",
+            ".ogg",
+            ".mp4",
+            ".mkv"
+        )
+
+        files = []
+
+        for root, dirs, filenames in os.walk(MUSIC_FOLDER):
+            for f in filenames:
+                if f.lower().endswith(supported):
+                    full = os.path.join(root, f)
+                    files.append(full)
+
+        files.sort()
+
+        if not files:
+            self.music_layout.add_widget(
+                Label(
+                    text="No music found",
+                    size_hint_y=None,
+                    height=60
+                )
+            )
+            return
+
+        for filepath in files:
+
+            filename = os.path.basename(filepath)
+
+            btn = Button(
+                text=filename,
+                size_hint_y=None,
+                height=75,
+                font_size='16sp',
+                bold=True,
+                halign='left',
+                valign='middle',
+                text_size=(700, None),
+                background_normal='',
+                background_color=(0.12, 0.12, 0.15, 0.92),
+                color=(1,1,1,1)
+            )
+
+            btn.bind(
+                on_release=lambda x, p=filepath: self.play_track(p)
+            )
+
+            self.music_layout.add_widget(btn)
+
+    # ==================================================
+    # PLAY TRACK
+    # ==================================================
+    def play_track(self, path):
+
         try:
-            # Increased timeout to 3s to be more patient with the server
-            r = requests.get(f"{API_URL}/status", timeout=3)
+
+            ext = os.path.splitext(path)[1].lower()
+
+            media_type = "music"
+
+            if ext in [".mp4", ".mkv"]:
+                media_type = "video"
+
+            payload = {
+                "path": path,
+                "type": media_type
+            }
+
+            r = requests.post(
+                f"{API_URL}/play",
+                json=payload,
+                timeout=5
+            )
+
+            print(r.text)
+
+        except Exception as e:
+            print("Play Error:", e)
+
+    # ==================================================
+    # UPDATE STATUS
+    # ==================================================
+    def update_status(self, dt):
+
+        try:
+
+            r = requests.get(
+                f"{API_URL}/status",
+                timeout=3
+            )
+
             if r.status_code == 200:
+
                 data = r.json()
-                title = data.get("title", "Unknown")
+
+                title = data.get("title", "Nothing Playing")
                 artist = data.get("artist", "")
-                self.lbl_playing.text = f"Now Playing: {title}\n{artist}"
+
+                self.lbl_playing.text = f"{title}\n{artist}"
+
         except:
             pass
 
-    def on_touch_down(self, touch):
-        # If controls are hidden, show them
-        if self.controls.opacity == 0:
-            self.show_controls()
-            return True 
-        
-        return super(TouchOverlay, self).on_touch_down(touch)
 
-    def show_controls(self):
-        self.controls.opacity = 1
-        self.controls.disabled = False
-        self.btn_close.opacity = 1
-        self.lbl_playing.opacity = 1
-        
-        if self.hide_event:
-            self.hide_event.cancel()
-        self.hide_event = Clock.schedule_once(self.hide_controls, 15)
-
-    def hide_controls(self, dt=None):
-        self.controls.opacity = 0
-        self.controls.disabled = True
-        self.btn_close.opacity = 0
-        self.lbl_playing.opacity = 0
-
-    def api_call(self, endpoint):
-        self.show_controls()
-        try:
-            requests.post(f"{API_URL}/{endpoint}", timeout=2)
-        except Exception as e:
-            print(f"API Error: {e}")
-
-    def adjust_volume(self, delta):
-        self.show_controls()
-        try:
-            r = requests.get(f"{API_URL}/volume", timeout=2)
-            if r.status_code == 200:
-                curr = r.json().get("volume", 50)
-                new_vol = max(0, min(100, curr + delta))
-                requests.post(f"{API_URL}/volume", json={"volume": new_vol}, timeout=2)
-        except Exception as e:
-            print(f"Volume API Error: {e}")
-
+# =========================
+# APP
+# =========================
 class MusicGuiApp(App):
+
     def build(self):
-        if Window:
-            # Set background to 100% transparent to see video underneath
-            Window.clearcolor = (0, 0, 0, 0)
         return TouchOverlay()
+
 
 if __name__ == '__main__':
     MusicGuiApp().run()

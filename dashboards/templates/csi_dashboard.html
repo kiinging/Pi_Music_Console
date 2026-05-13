@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Music Library</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #0a0a0f;
+            font-family: 'Inter', sans-serif;
+            color: #eee;
+            padding: 1rem;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #fff, #b39ddb);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            padding: 8px 16px;
+            border-radius: 30px;
+            cursor: pointer;
+        }
+
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .file-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: background 0.1s;
+            touch-action: manipulation;
+        }
+
+        .file-item:active {
+            background: rgba(255, 255, 255, 0.12);
+            transform: scale(0.98);
+        }
+
+        .file-name {
+            font-size: 1.2rem;
+            font-weight: 500;
+            word-break: break-word;
+            flex: 1;
+        }
+
+        .play-icon {
+            font-size: 1.8rem;
+            margin-left: 16px;
+        }
+
+        .empty-msg {
+            text-align: center;
+            padding: 3rem;
+            color: #888;
+        }
+
+        @media (max-width: 600px) {
+            .file-name {
+                font-size: 1rem;
+            }
+
+            .file-item {
+                padding: 14px 16px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>📁 Music Library</h1>
+        <button class="back-btn" onclick="window.location.href='/'">🏠 Home</button>
+    </div>
+    <div id="fileList" class="file-list">Loading...</div>
+
+    <script>
+        async function loadFiles() {
+            try {
+                const res = await fetch('/api/songs?type=music');
+                const songs = await res.json();
+                const container = document.getElementById('fileList');
+                if (!songs.length) {
+                    container.innerHTML = '<div class="empty-msg">🎵 No music files found in ~/Music</div>';
+                    return;
+                }
+                container.innerHTML = songs.map(song => `
+                    <div class="file-item" onclick="playFile('${song.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', '${song.type}')">
+                        <span class="file-name">${escapeHtml(song.title || song.filename)}</span>
+                        <span class="play-icon">▶</span>
+                    </div>
+                `).join('');
+            } catch (e) {
+                document.getElementById('fileList').innerHTML = '<div class="empty-msg">❌ Error loading files</div>';
+            }
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/[&<>]/g, function (m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        async function playFile(path, type) {
+            try {
+                await fetch('/api/play', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path, type })
+                });
+                // Optionally show a small "Playing..." notification, or just rely on the main dashboard.
+                alert('Now playing: ' + path.split('/').pop());
+            } catch (err) {
+                alert('Playback error');
+            }
+        }
+
+        loadFiles();
+    </script>
+</body>
+
+</html>

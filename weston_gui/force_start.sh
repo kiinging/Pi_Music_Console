@@ -55,7 +55,7 @@ fi
 
 # 6. Start the Background API Server
 echo "[2/3] Starting Background API Server..."
-(cd ../dashboards && $PYTHON_EXEC dashboard_1.py > ../weston_gui/api.log 2>&1) &
+(cd ../dashboards && $PYTHON_EXEC dashboard_2.py > ../weston_gui/api.log 2>&1) &
 
 # Wait for API to be ready (max 15 seconds)
 echo "Waiting for API to respond..."

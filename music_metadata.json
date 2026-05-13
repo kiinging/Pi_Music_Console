@@ -46,8 +46,10 @@
     },
     "Bon Jovi - It's My Life (Official Music Video).mkv": {
         "artist": "Bon Jovi",
-        "category": "Pop",
-        "year": ""
+        "category": "Rock",
+        "year": "",
+        "title": "Bon Jovi - It's My Life (Official Music Video).mkv",
+        "rating": 0
     },
     "Christina Aguilera - Pero Me Acuerdo De T\u00ed (Video Oficial).mkv": {
         "artist": "Unknown Artist",
@@ -146,9 +148,11 @@
         "year": ""
     },
     "Taylor Swift - Wildest Dreams.mkv": {
-        "artist": "Unknown Artist",
+        "artist": "Taylor Swift",
         "category": "Pop",
-        "year": ""
+        "year": "",
+        "title": "Taylor Swift - Wildest Dreams.mkv",
+        "rating": 0
     },
     "Taylor Swift - You Belong With Me (Taylor's Version) (Lyric Video).mkv": {
         "artist": "Unknown Artist",
@@ -385,9 +389,11 @@
         "year": ""
     },
     "Billie Eilish, Khalid - lovely.mkv": {
-        "artist": "Unknown Artist",
+        "artist": "Billie Eilish",
         "category": "Pop",
-        "year": ""
+        "year": "",
+        "title": "Billie Eilish, Khalid - lovely.mkv",
+        "rating": 0
     },
     "Metallica - Enter Sandman Live (Stranger in Moscow, Moscow Russia   1991).mkv": {
         "artist": "Metallica",
@@ -458,10 +464,11 @@
         "rating": 0
     },
     "Tate McRae - Revolving door (Official Video).mkv": {
-        "artist": "Tate McRae ",
+        "artist": "Tate McRae",
         "category": "Pop",
         "year": "",
-        "rating": 0
+        "rating": 0,
+        "title": "Tate McRae - Revolving door (Official Video).mkv"
     },
     "\u8cbb\u7389\u6e05 - \u4e00\u526a\u6885.mkv": {
         "artist": "\u8cbb\u7389\u6e05",
@@ -613,9 +620,10 @@
     },
     "\u4f59\u5929 Yu Tien - \u5348\u591c\u5922\u8ff4\u6642 (\u5b98\u65b9\u7248MV).mkv": {
         "artist": "Unknown Artist",
-        "category": "Classical",
+        "category": "Chinese",
         "year": "",
-        "rating": 0
+        "rating": 0,
+        "title": "\u4f59\u5929 Yu Tien - \u5348\u591c\u5922\u8ff4\u6642 (\u5b98\u65b9\u7248MV).mkv"
     },
     "Itzhak Perlman \u2013 Beethoven Violin Concerto (with Daniel Barenboim, Berliner Philharmoniker).mkv": {
         "category": "Classical",
@@ -639,7 +647,7 @@
         "rating": 0
     },
     "katseye/KATSEYE (\ucea3\uce20\uc544\uc774)  Gameboy\u201d Official MV.mkv": {
-        "category": "Rock",
+        "category": "Pop",
         "artist": "KATSEYE",
         "year": "",
         "title": "KATSEYE (\ucea3\uce20\uc544\uc774)  Gameboy\u201d Official MV.mkv",
@@ -840,7 +848,7 @@
         "category": "Classical",
         "artist": "Unknown Artist",
         "year": "",
-        "title": "Luciano Pavarotti sings  Nessun dorma  from Turandot (The Three Tenors in Concert 1994).mkv",
+        "title": "Luciano Pavarotti - Nessun dorma Concert 1994).mkv",
         "rating": 0
     },
     "\u5289\u5fb7\u83ef - \u53ef\u4e0d\u53ef\u4ee5 (\u7cb5\u8a9e).mkv": {
@@ -897,6 +905,209 @@
         "artist": "Aerosmith",
         "year": "",
         "title": "Aerosmith - What Could Have Been Love.mkv",
+        "rating": 0
+    },
+    "Bon Jovi - Runaway (Official Music Video).mkv": {
+        "category": "Rock",
+        "artist": "Bon Jovi",
+        "year": "",
+        "title": "Bon Jovi - Runaway (Official Music Video).mkv",
+        "rating": 0
+    },
+    "Bon Jovi - These Days.mkv": {
+        "category": "Rock",
+        "artist": "Bon Jovi",
+        "year": "",
+        "title": "Bon Jovi - These Days.mkv",
+        "rating": 0
+    },
+    "Jon Bon Jovi - Blaze Of Glory (Official Music Video).mkv": {
+        "category": "Rock",
+        "artist": "Bon Jovi",
+        "year": "",
+        "title": "Jon Bon Jovi - Blaze Of Glory (Official Music Video).mkv",
+        "rating": 0
+    },
+    "Chino & Nacho - El Poeta.mkv": {
+        "category": "Spanish",
+        "artist": "Unknown Artist",
+        "year": "",
+        "title": "Chino & Nacho - El Poeta.mkv",
+        "rating": 0
+    },
+    "Chino y Nacho - Tu Angelito.mkv": {
+        "category": "Spanish",
+        "artist": "Unknown Artist",
+        "year": "",
+        "title": "Chino y Nacho - Tu Angelito.mkv",
+        "rating": 0
+    },
+    "Chino & Nacho - Ni\u00f1a Bonita.mkv": {
+        "category": "Spanish",
+        "artist": "Unknown Artist",
+        "year": "",
+        "title": "Chino & Nacho - Ni\u00f1a Bonita.mkv",
+        "rating": 0
+    },
+    "Chino & Nacho - Me Voy Enamorando (Remix) ft. Farruko.mkv": {
+        "category": "Spanish",
+        "artist": "Unknown Artist",
+        "year": "",
+        "title": "Chino & Nacho - Me Voy Enamorando (Remix) ft. Farruko.mkv",
+        "rating": 0
+    },
+    "Gustavo Elis - Cuando Escuches Esto ( Video Oficial ).mkv": {
+        "category": "Spanish",
+        "artist": "Unknown Artist",
+        "year": "",
+        "title": "Gustavo Elis - Cuando Escuches Esto ( Video Oficial ).mkv",
+        "rating": 0
+    },
+    "Gustavo Elis - Despu\u00e9s De Las 3 (Video Oficial).mkv": {
+        "category": "Spanish",
+        "artist": "Unknown Artist",
+        "year": "",
+        "title": "Gustavo Elis - Despu\u00e9s De Las 3 (Video Oficial).mkv",
+        "rating": 0
+    },
+    "Chino y Nacho - Andas En Mi Cabeza ft. Daddy Yankee.mkv": {
+        "category": "Spanish",
+        "artist": "Unknown Artist",
+        "year": "",
+        "title": "Chino y Nacho - Andas En Mi Cabeza ft. Daddy Yankee.mkv",
+        "rating": 0
+    },
+    "Gustavo Elis - La Ultima Vez (Video Oficial).mkv": {
+        "category": "Spanish",
+        "artist": "Unknown Artist",
+        "year": "",
+        "title": "Gustavo Elis - La Ultima Vez (Video Oficial).mkv",
+        "rating": 0
+    },
+    "Gustavo Elis - No Me Dejes Solo   Video Oficial.mkv": {
+        "category": "Spanish",
+        "artist": "Unknown Artist",
+        "year": "",
+        "title": "Gustavo Elis - No Me Dejes Solo   Video Oficial.mkv",
+        "rating": 0
+    },
+    "Gustavo Elis - Ya No Importa (Video Oficial) \ud83d\udc94.mkv": {
+        "category": "Spanish",
+        "artist": "Unknown Artist",
+        "year": "",
+        "title": "Gustavo Elis - Ya No Importa (Video Oficial) \ud83d\udc94.mkv",
+        "rating": 0
+    },
+    "Gustavo Elis Ft. Corina Smith - Novios (Video Oficial).mkv": {
+        "category": "Spanish",
+        "artist": "Unknown Artist",
+        "year": "",
+        "title": "Gustavo Elis Ft. Corina Smith - Novios (Video Oficial).mkv",
+        "rating": 0
+    },
+    "Metallica Nothing Else Matters (Official Music Video).mkv": {
+        "category": "Rock",
+        "artist": "Metallica",
+        "year": "",
+        "title": "Metallica Nothing Else Matters (Official Music Video).mkv",
+        "rating": 0
+    },
+    "Mr. Big - To Be With You 4K Video.mkv": {
+        "category": "Rock",
+        "artist": "Mr. Big",
+        "year": "",
+        "title": "Mr. Big - To Be With You 4K Video.mkv",
+        "rating": 0
+    },
+    "Mr. Big - Wild World (MV).mkv": {
+        "category": "Rock",
+        "artist": "Mr. Big",
+        "year": "",
+        "title": "Mr. Big - Wild World (MV).mkv",
+        "rating": 0
+    },
+    "katseye/PINKY UP  MV (Choreography Ver.)   KATSEYE.mkv": {
+        "category": "Pop",
+        "artist": "KATSEYE",
+        "year": "",
+        "title": "PINKY UP  MV (Choreography Ver.)   KATSEYE.mkv",
+        "rating": 0
+    },
+    "Metallica The Unforgiven (Official Music Video).mkv": {
+        "category": "Rock",
+        "artist": "Metallica",
+        "year": "",
+        "title": "Metallica The Unforgiven (Official Music Video).mkv",
+        "rating": 0
+    },
+    "Skid Row - I Remember You (Official Music Video).mkv": {
+        "category": "Rock",
+        "artist": "Skid Row ",
+        "year": "",
+        "title": "Skid Row - I Remember You (Official Music Video).mkv",
+        "rating": 0
+    },
+    "Taylor Swift - Love Story.mkv": {
+        "category": "Pop",
+        "artist": "Taylor Swift",
+        "year": "",
+        "title": "Taylor Swift - Love Story.mkv",
+        "rating": 0
+    },
+    "Taylor Swift - Opalite (Lyric Video) (1).mkv": {
+        "category": "Pop",
+        "artist": "Taylor Swift",
+        "year": "",
+        "title": "Taylor Swift - Opalite (Lyric Video) (1).mkv",
+        "rating": 0
+    },
+    "Taylor Swift - Happiness (2026 Official Music Video).mkv": {
+        "category": "Pop",
+        "artist": "Taylor Swift",
+        "year": "",
+        "title": "Taylor Swift - Happiness (2026 Official Music Video).mkv",
+        "rating": 0
+    },
+    "Aerosmith - I Dont Want to Miss a Thing Official HD Video.mkv": {
+        "category": "Rock",
+        "artist": "Aerosmith",
+        "year": "",
+        "title": "Aerosmith - I Dont Want to Miss a Thing Official HD Video.mkv",
+        "rating": 0
+    },
+    "Bon Jovi - I'll Be There For You.mkv": {
+        "artist": "Bon Jovi",
+        "category": "Rock",
+        "year": "",
+        "rating": 0,
+        "title": "Bon Jovi - I'll Be There For You.mkv"
+    },
+    "Taylor Swift - Opalite (Visualizer).mkv": {
+        "category": "Pop",
+        "artist": "Taylor Swift",
+        "year": "",
+        "title": "Taylor Swift - Opalite (Visualizer).mkv",
+        "rating": 0
+    },
+    "Taylor Swift - We Are Never Ever Getting Back Together.mkv": {
+        "category": "Pop",
+        "artist": "Taylor Swift",
+        "year": "",
+        "title": "Taylor Swift - We Are Never Ever Getting Back Together.mkv",
+        "rating": 0
+    },
+    "Bon Jovi - Livin' On A Prayer.mkv": {
+        "category": "Rock",
+        "artist": "Bon Jovi",
+        "year": "",
+        "title": "Bon Jovi - Livin' On A Prayer.mkv",
+        "rating": 0
+    },
+    "Bon Jovi - This Ain't A Love Song (Official Music Video).mkv": {
+        "category": "Rock",
+        "artist": "Bon Jovi",
+        "year": "",
+        "title": "Bon Jovi - This Ain't A Love Song (Official Music Video).mkv",
         "rating": 0
     }
 }
