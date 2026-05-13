@@ -476,12 +476,6 @@
         "year": "",
         "rating": 0
     },
-    "The Chainsmokers - Don't Let Me Down (Official Video) ft. Daya.mp4": {
-        "artist": "Unknown Artist",
-        "category": "Pop",
-        "year": "",
-        "rating": 0
-    },
     "Taylor Swift - Anti-Hero (Official Music Video).mkv": {
         "artist": "Taylor Swift",
         "category": "Pop",
@@ -876,7 +870,7 @@
         "category": "Pop",
         "artist": "Taylor Swift",
         "year": "",
-        "title": "Taylor Swift - Back to the Start (Heartfelt Storytelling Pop 2026)   Music Lyric Video 2026.mkv",
+        "title": "Taylor Swift - Back to the Start (Heartfelt Storytelling Pop 2026) .mkv",
         "rating": 0
     },
     "Whitney Houston - I Will Always Love You (Official 4K Video).mkv": {
@@ -1108,6 +1102,48 @@
         "artist": "Bon Jovi",
         "year": "",
         "title": "Bon Jovi - This Ain't A Love Song (Official Music Video).mkv",
+        "rating": 0
+    },
+    "3 Doors Down - Here Without You (Official Music Video).mkv": {
+        "category": "Rock",
+        "artist": "Unknown Artist",
+        "year": "",
+        "title": "three Doors Down - Here Without You (Official Music Video).mkv",
+        "rating": 0
+    },
+    "Kika Edgar - Basta (En Vivo desde El Cantoral).mkv": {
+        "category": "Spanish",
+        "artist": "Unknown Artist",
+        "year": "",
+        "title": "Kika Edgar - Basta (En Vivo desde El Cantoral).mkv",
+        "rating": 0
+    },
+    "Miley Cyrus - Used To Be Young (Official Video).mkv": {
+        "category": "Pop",
+        "artist": "Miley Cyrus",
+        "year": "",
+        "title": "Miley Cyrus - Used To Be Young (Official Video).mkv",
+        "rating": 0
+    },
+    "Selena - No Me Queda Mas.mkv": {
+        "category": "Spanish",
+        "artist": "Selena",
+        "year": "",
+        "title": "Selena - No Me Queda Mas.mkv",
+        "rating": 0
+    },
+    "katseye/\u201cDebut\u201d MV (Choreography Ver.)   KATSEYE.mkv": {
+        "category": "Pop",
+        "artist": "KATSEYE",
+        "year": "",
+        "title": "KATSEYE - \u201cDebut\u201d MV (Choreography Ver.).mkv",
+        "rating": 0
+    },
+    "Van Halen - Don\u2019t Tell Me (What Love Can Do) (Official Video) [HD].mkv": {
+        "category": "Rock",
+        "artist": "Unknown Artist",
+        "year": "",
+        "title": "Van Halen - Don\u2019t Tell Me (What Love Can Do) (Official Video) [HD].mkv",
         "rating": 0
     }
 }

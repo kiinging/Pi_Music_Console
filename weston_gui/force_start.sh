@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 
 # 1. Kill everything first to be sure
 echo "Cleaning up old sessions and services..."
@@ -71,7 +71,8 @@ for i in {1..15}; do
     sleep 1
 done
 
-# 7. Run Kivy with Wayland settings
+# 7. Run Kivy with Wayland settings (ensure /usr/bin browsers visible)
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH}"
 export WAYLAND_DISPLAY=wayland-0
 export SDL_VIDEODRIVER=wayland
 export KIVY_WINDOW=sdl2

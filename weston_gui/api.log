@@ -1,3 +1,42 @@
  * Serving Flask app 'dashboard_2'
  * Debug mode: off
-Name or service not known
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.1.18:5000
+[33mPress CTRL+C to quit[0m
+127.0.0.1 - - [13/May/2026 20:23:20] "GET /api/ping HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:23:41] "GET / HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:23:42] "GET /api/volume HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:23:42] "GET /api/volume HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:23:42] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+192.168.1.8 - - [13/May/2026 20:23:43] "GET /api/volume HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:24:08] "GET /api/songs?type=video HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:24:08] "GET /api/songs?type=video HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:25:36] "POST /api/songs/update HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:25:36] "GET /api/volume HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:25:36] "GET /api/songs?type=video HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:26:41] "POST /api/songs/update HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:26:41] "GET /api/volume HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:26:41] "GET /api/songs?type=video HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:27:29] "POST /api/songs/update HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:27:29] "GET /api/volume HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:27:30] "GET /api/songs?type=video HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:28:05] "POST /api/songs/update HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:28:05] "GET /api/volume HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:28:06] "GET /api/songs?type=video HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:29:09] "POST /api/songs/update HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:29:09] "GET /api/volume HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:29:09] "GET /api/songs?type=video HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:29:39] "POST /api/songs/update HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:29:39] "GET /api/volume HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:29:39] "GET /api/songs?type=video HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:30:04] "POST /api/songs/delete HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:30:04] "GET /api/volume HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:30:04] "GET /api/songs?type=video HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:30:55] "POST /api/songs/update HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:30:55] "GET /api/volume HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:30:55] "GET /api/songs?type=video HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:31:10] "POST /api/songs/update HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:31:10] "GET /api/volume HTTP/1.1" 200 -
+192.168.1.8 - - [13/May/2026 20:31:10] "GET /api/songs?type=video HTTP/1.1" 200 -

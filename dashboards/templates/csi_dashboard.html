@@ -2,157 +2,1015 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Music Library</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        * {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-            margin: 0;
-            padding: 0;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>REJANG A1 — Library</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg0: #0c0c10;
+      --line: rgba(255, 255, 255, 0.08);
+      --muted: #8b8b9a;
+      --text: #f2f2f8;
+      --gold: #c9a962;
+      --gold-dim: rgba(201, 169, 98, 0.35);
+      --tile: rgba(255, 255, 255, 0.04);
+    }
 
-        body {
-            background: #0a0a0f;
-            font-family: 'Inter', sans-serif;
-            color: #eee;
-            padding: 1rem;
-        }
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      margin: 0;
+      padding: 0;
+    }
 
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 1rem;
-        }
+    body {
+      font-family: "DM Sans", system-ui, sans-serif;
+      background: radial-gradient(120% 80% at 50% 0%, #1a1520 0%, var(--bg0) 55%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
 
-        h1 {
-            font-size: 1.6rem;
-            font-weight: 600;
-            background: linear-gradient(135deg, #fff, #b39ddb);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
+    .topbar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent);
+      min-height: 52px;
+    }
 
-        .back-btn {
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: white;
-            font-size: 1.2rem;
-            padding: 8px 16px;
-            border-radius: 30px;
-            cursor: pointer;
-        }
+    .top-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
 
-        .file-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
+    .brand {
+      font-weight: 900;
+      font-size: 1.1rem;
+      letter-spacing: 0.14em;
+      color: var(--gold);
+      text-transform: uppercase;
+      white-space: nowrap;
+      text-shadow: 0 0 12px rgba(201, 169, 98, 0.35);
+    }
 
-        .file-item {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 20px;
-            padding: 16px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            cursor: pointer;
-            transition: background 0.1s;
-            touch-action: manipulation;
-        }
+    .top-home-btn {
+      border: 1px solid rgba(201, 169, 98, 0.45);
+      background: rgba(201, 169, 98, 0.10);
+      color: #f6e2b0;
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-weight: 700;
+      font-size: 0.88rem;
+      cursor: pointer;
+      touch-action: manipulation;
+      white-space: nowrap;
+    }
 
-        .file-item:active {
-            background: rgba(255, 255, 255, 0.12);
-            transform: scale(0.98);
-        }
+    .clockwrap { display: none; }
+    .clockline { display: none; }
 
-        .file-name {
-            font-size: 1.2rem;
-            font-weight: 500;
-            word-break: break-word;
-            flex: 1;
-        }
+    .status-icons {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 1.15rem;
+    }
 
-        .play-icon {
-            font-size: 1.8rem;
-            margin-left: 16px;
-        }
+    .top-icon-btn {
+      border: 1px solid var(--line);
+      background: var(--tile);
+      color: var(--muted);
+      width: 48px;
+      height: 40px;
+      border-radius: 14px;
+      cursor: pointer;
+      touch-action: manipulation;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.15rem;
+    }
 
-        .empty-msg {
-            text-align: center;
-            padding: 3rem;
-            color: #888;
-        }
+    .toolbar {
+      flex-shrink: 0;
+      padding: 10px 12px 6px;
+      border-bottom: 1px solid var(--line);
+    }
 
-        @media (max-width: 600px) {
-            .file-name {
-                font-size: 1rem;
-            }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
 
-            .file-item {
-                padding: 14px 16px;
-            }
-        }
-    </style>
+    .tab {
+      flex: 1;
+      text-align: center;
+      padding: 10px 6px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: var(--tile);
+      color: var(--muted);
+      font-size: 0.95rem;
+      font-weight: 900;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .tab.active {
+      color: #0c0c10;
+      background: linear-gradient(135deg, #e8d5a3, var(--gold));
+      border-color: transparent;
+    }
+
+    .chip-scroll {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      margin-bottom: 10px;
+      scrollbar-width: none;
+    }
+
+    .chip-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+
+
+    .chip {
+      flex-shrink: 0;
+      padding: 12px 22px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--tile);
+      color: var(--muted);
+      font-size: 0.95rem;
+      font-weight: 950;
+      cursor: pointer;
+      touch-action: manipulation;
+      min-height: 52px;
+    }
+
+    .chip.on {
+      border-color: var(--gold);
+      color: var(--gold);
+      box-shadow: 0 0 12px var(--gold-dim);
+    }
+
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 14px;
+      margin-bottom: 10px;
+      border-radius: 16px;
+      background: var(--tile);
+      border: 1px solid var(--line);
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .row:active {
+      transform: scale(0.99);
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    .play {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid var(--gold-dim);
+      color: var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+
+    .meta {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .t1 {
+      font-weight: 950;
+      font-size: 1.02rem;
+      line-height: 1.25;
+      word-break: break-word;
+    }
+
+    .t2 {
+      font-size: 0.84rem;
+      color: var(--muted);
+      margin-top: 5px;
+      font-weight: 750;
+    }
+
+    .badge {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.72rem;
+      font-weight: 900;
+      background: rgba(201, 169, 98, 0.2);
+      color: var(--gold);
+      vertical-align: middle;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 2.2rem 1rem;
+      color: var(--muted);
+      font-size: 1.05rem;
+      font-weight: 850;
+    }
+
+    /* home menu overlay */
+    .home-menu {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at 20% 30%, rgba(157, 78, 221, 0.25), rgba(0, 0, 0, 0.65));
+      z-index: 120;
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 18px;
+      padding: 18px 14px;
+      touch-action: manipulation;
+    }
+
+    .home-title {
+      font-weight: 950;
+      color: var(--gold);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      font-size: 1.1rem;
+    }
+
+    .home-btn {
+      width: 90%;
+      max-width: 360px;
+      border-radius: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.06);
+      color: white;
+      font-weight: 950;
+      font-size: 1.1rem;
+      padding: 18px 18px;
+      cursor: pointer;
+    }
+
+    .screen-off-overlay {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 130;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+    }
+
+    .screen-off-inner {
+      color: rgba(255, 255, 255, 0.75);
+      font-weight: 900;
+      font-size: 1.15rem;
+      text-align: center;
+      padding: 24px;
+    }
+
+    /* now playing */
+    .np-panel {
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      top: 88px;
+      z-index: 110;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      border-radius: 18px;
+      padding: 16px 14px;
+      display: none;
+      backdrop-filter: blur(6px);
+    }
+
+    .np-line1 {
+      font-weight: 950;
+      font-size: 1.18rem;
+      line-height: 1.25;
+      word-break: break-word;
+    }
+
+    .np-line2 {
+      margin-top: 8px;
+      color: var(--muted);
+      font-weight: 800;
+      font-size: 0.95rem;
+    }
+
+    /* bottom controls */
+    .controls-bar {
+      position: fixed;
+      left: 8px;
+      right: 8px;
+      bottom: 10px;
+      z-index: 115;
+      background: rgba(10, 10, 18, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 22px;
+      padding: 14px 12px;
+      display: none;
+      backdrop-filter: blur(10px);
+      touch-action: manipulation;
+    }
+
+    .controls-row1 {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .controls-row2 {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .ctl-btn {
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+      border-radius: 16px;
+      padding: 16px 10px;
+      font-weight: 700;
+      font-size: 1.05rem;
+      cursor: pointer;
+      touch-action: manipulation;
+      flex: 1;
+      min-height: 52px;
+    }
+
+    .ctl-btn.small {
+      padding: 16px 8px;
+      font-size: 1rem;
+    }
+
+    .ctl-btn:active {
+      background: rgba(201, 169, 98, 0.25);
+    }
+
+    .vol-mid {
+      text-align: center;
+      color: #f6e2b0;
+      font-weight: 950;
+      font-size: 1.15rem;
+      padding: 8px 0;
+    }
+
+    .list-wrap {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 10px 100px 10px;
+      -webkit-overflow-scrolling: touch;
+      background: transparent;
+      scrollbar-width: thin;
+    }
+
+    .list-wrap::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .list-wrap::-webkit-scrollbar-thumb {
+      background: rgba(201, 169, 98, 0.45);
+      border-radius: 20px;
+    }
+  </style>
 </head>
 
 <body>
-    <div class="header">
-        <h1>📁 Music Library</h1>
-        <button class="back-btn" onclick="window.location.href='/'">🏠 Home</button>
+  <header class="topbar">
+    <div class="top-left">
+      <button id="topHomeBtn" class="top-home-btn" type="button">HOME</button>
+      <div class="brand">REJANG A1</div>
     </div>
-    <div id="fileList" class="file-list">Loading...</div>
+    <div class="status-icons" aria-hidden="true">
+      <button id="topMenuBtn" class="top-icon-btn" type="button" title="Home menu">&#9881;</button>
+    </div>
+  </header>
 
-    <script>
-        async function loadFiles() {
-            try {
-                const res = await fetch('/api/songs?type=music');
-                const songs = await res.json();
-                const container = document.getElementById('fileList');
-                if (!songs.length) {
-                    container.innerHTML = '<div class="empty-msg">🎵 No music files found in ~/Music</div>';
-                    return;
-                }
-                container.innerHTML = songs.map(song => `
-                    <div class="file-item" onclick="playFile('${song.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', '${song.type}')">
-                        <span class="file-name">${escapeHtml(song.title || song.filename)}</span>
-                        <span class="play-icon">▶</span>
-                    </div>
-                `).join('');
-            } catch (e) {
-                document.getElementById('fileList').innerHTML = '<div class="empty-msg">❌ Error loading files</div>';
+  <div class="toolbar">
+    <div class="tabs">
+      <button type="button" class="tab" data-tab="music">Music</button>
+      <button type="button" class="tab active" data-tab="video">Video</button>
+    </div>
+
+    <!-- CATEGORY ONLY -->
+    <div class="chip-scroll" id="catBar"></div>
+  </div>
+
+  <div class="list-wrap" id="listWrap">
+    <div class="empty" id="msg">Loading...</div>
+  </div>
+
+  <!-- Home menu overlay -->
+  <div id="homeMenu" class="home-menu">
+    <div class="home-title">REJANG A1</div>
+    <button class="home-btn" id="homeBtnGoMain" type="button">Music Library</button>
+    <button class="home-btn" id="homeBtnScreenToggle" type="button">Screen Off</button>
+    <button class="home-btn" id="homeBtnBack" type="button">Back</button>
+  </div>
+
+  <!-- Screen off overlay -->
+  <div id="screenOffOverlay" class="screen-off-overlay">
+    <div class="screen-off-inner">Touch to wake</div>
+  </div>
+
+  <!-- Now playing panel -->
+  <div id="nowPlayingPanel" class="np-panel">
+    <div class="np-line1" id="npTitle">Select a Track</div>
+    <div class="np-line2" id="npArtist">Ready</div>
+  </div>
+
+  <!-- Bottom controls -->
+  <div id="controlsBar" class="controls-bar">
+    <div class="controls-row1">
+      <button class="ctl-btn" id="btnHomeNow" type="button">HOME</button>
+      <button class="ctl-btn" id="btnPlay" type="button">▶</button>
+      <button class="ctl-btn" id="btnPause" type="button">⏸</button>
+      <button class="ctl-btn" id="btnStop" type="button">⏹</button>
+      <button class="ctl-btn" id="btnVideo" type="button">VIDEO</button>
+    </div>
+    <div class="controls-row2">
+      <button class="ctl-btn small" id="btnVolDown" type="button">Vol -</button>
+      <div class="vol-mid"><span id="volumePercent">50%</span></div>
+      <button class="ctl-btn small" id="btnVolUp" type="button">Vol +</button>
+    </div>
+  </div>
+
+  <script>
+    let currentMediaType = "video";
+    let currentCategory = "All";
+
+    let allSongs = [];
+
+    let viewMode = "library"; // library | home | nowplaying
+    let isScreenOff = false;
+
+    let statusTimer = null;
+    let controlsHideTimer = null;
+    let playbackWatcherTimer = null;
+
+    let currentVolume = 50;
+    let videoEnabled = true;
+
+    let lastStatus = { paused: true, title: "", artist: "", video_enabled: true };
+
+    function pad(n) { return n < 10 ? "0" + n : "" + n; }
+
+    function tickClock() {
+      var d = new Date();
+      var time = pad(d.getHours()) + ":" + pad(d.getMinutes());
+      var opts = { weekday: "short", month: "short", day: "numeric" };
+      var date = d.toLocaleDateString(undefined, opts);
+      document.getElementById("clockLine").textContent = time + " • " + date;
+    }
+    setInterval(tickClock, 1000);
+    tickClock();
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+      });
+    }
+
+    function uniqueCategories(songs) {
+      var set = { All: true };
+      songs.forEach(function (s) {
+        var c = (s.category && String(s.category).trim()) || "All";
+        if (c && c !== "All") set[c] = true;
+      });
+      return Object.keys(set);
+    }
+
+    function renderCategoryChips() {
+      var bar = document.getElementById("catBar");
+
+      var cats = uniqueCategories(
+        allSongs.filter(function (s) {
+          return s.type === currentMediaType;
+        })
+      );
+
+      cats.sort(function (a, b) {
+        if (a === "All") return -1;
+        if (b === "All") return 1;
+        return a.localeCompare(b);
+      });
+
+      bar.innerHTML = "";
+
+      cats.forEach(function (c) {
+
+        var b = document.createElement("button");
+
+        b.type = "button";
+
+        b.className = "chip" + (currentCategory === c ? " on" : "");
+
+        b.textContent = c === "All" ? "All Categories" : c;
+
+        b.addEventListener("touchstart", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          currentCategory = c;
+
+          renderCategoryChips();
+
+          renderList();
+        }, { passive: false });
+
+        b.addEventListener("click", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          currentCategory = c;
+
+          renderCategoryChips();
+
+          renderList();
+        });
+
+        bar.appendChild(b);
+      });
+    }
+
+
+
+
+
+
+
+    function setLibraryVisible(show) {
+      var listWrap = document.getElementById("listWrap");
+      listWrap.style.display = show ? "block" : "none";
+    }
+
+    function setNowPlayingVisible(show) {
+      document.getElementById("nowPlayingPanel").style.display = show ? "block" : "none";
+    }
+
+    function setControlsVisible(show) {
+      document.getElementById("controlsBar").style.display = show ? "block" : "none";
+    }
+
+    function showHomeMenu(show) {
+      var homeMenu = document.getElementById("homeMenu");
+      homeMenu.style.display = show ? "flex" : "none";
+      if (show) {
+        document.getElementById("nowPlayingPanel").style.display = "none";
+        setControlsVisible(false);
+        setLibraryVisible(false);
+      } else {
+        setLibraryVisible(true);
+      }
+    }
+
+    function stopStatusPolling() {
+      if (statusTimer) { clearInterval(statusTimer); statusTimer = null; }
+    }
+
+    async function pollStatusOnce() {
+      var res = await fetch("/api/status");
+      var d = await res.json();
+      if (d && d.status === "error") return null;
+      if (!d) return null;
+      lastStatus = d;
+
+      document.getElementById("npTitle").textContent = d.title || "Now playing";
+      document.getElementById("npArtist").textContent = d.artist || "";
+
+      videoEnabled = (d.video_enabled !== undefined) ? !!d.video_enabled : videoEnabled;
+      var btnVideo = document.getElementById("btnVideo");
+      if (btnVideo) btnVideo.textContent = videoEnabled ? "VIDEO ON" : "VIDEO OFF";
+
+      // If paused, make Play look active and Pause dim.
+      var btnPlay = document.getElementById("btnPlay");
+      var btnPause = document.getElementById("btnPause");
+      if (btnPlay && btnPause) {
+        btnPlay.style.opacity = d.paused ? "1" : "0.65";
+        btnPause.style.opacity = d.paused ? "0.65" : "1";
+      }
+
+      return d;
+    }
+
+    function startStatusPolling() {
+      if (statusTimer) return;
+      statusTimer = setInterval(function () {
+        if (viewMode !== "nowplaying" || isScreenOff) return;
+        pollStatusOnce().catch(function () { /* ignore */ });
+      }, 1500);
+    }
+
+
+    function startPlaybackWatcher() {
+      if (playbackWatcherTimer) return;
+      playbackWatcherTimer = setInterval(function () {
+        if (isScreenOff) return;
+        // If playback started from another screen (e.g. HDMI PC), hide the library list.
+        if (viewMode !== "library") return;
+        fetch("/api/status")
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d && d.status !== "error" && isNowPlayingTitle(d)) {
+              setView("nowplaying");
+              document.getElementById("npTitle").textContent = d.title || "Now playing";
+              document.getElementById("npArtist").textContent = d.artist || "";
+              startStatusPolling();
             }
-        }
+          })
+          .catch(function () { /* ignore */ });
+      }, 2000);
+    }
 
-        function escapeHtml(str) {
-            return str.replace(/[&<>]/g, function (m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            });
-        }
+    async function fetchVolume() {
+      var res = await fetch("/api/volume");
+      var data = await res.json();
+      if (!data || data.volume === undefined) return;
+      currentVolume = Math.round(data.volume);
+      document.getElementById("volumePercent").textContent = currentVolume + "%";
+    }
 
-        async function playFile(path, type) {
-            try {
-                await fetch('/api/play', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ path, type })
-                });
-                // Optionally show a small "Playing..." notification, or just rely on the main dashboard.
-                alert('Now playing: ' + path.split('/').pop());
-            } catch (err) {
-                alert('Playback error');
-            }
-        }
+    async function setVolume(val) {
+      val = Math.min(100, Math.max(0, Math.round(val)));
+      await fetch("/api/volume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ volume: val })
+      });
+      currentVolume = val;
+      document.getElementById("volumePercent").textContent = currentVolume + "%";
+    }
 
-        loadFiles();
-    </script>
+    function showControlsTimed(ms) {
+      ms = ms || 8000;
+      if (viewMode !== "nowplaying" || isScreenOff) return;
+      setControlsVisible(true);
+      if (controlsHideTimer) clearTimeout(controlsHideTimer);
+      controlsHideTimer = setTimeout(function () {
+        if (viewMode === "nowplaying" && !isScreenOff) setControlsVisible(false);
+      }, ms);
+      fetchVolume().catch(function () { /* ignore */ });
+      pollStatusOnce().catch(function () { /* ignore */ });
+    }
+
+    function setView(mode) {
+      viewMode = mode;
+      if (mode === "library") {
+        showHomeMenu(false);
+        setLibraryVisible(true);
+        setNowPlayingVisible(false);
+        setControlsVisible(false);
+        stopStatusPolling();
+      }
+      if (mode === "nowplaying") {
+        setLibraryVisible(false);
+        setNowPlayingVisible(true);
+        setControlsVisible(false);
+      }
+    }
+
+    function isNowPlayingTitle(d) {
+      // Flask returns title="Not Playing" when nothing is playing.
+      return d && d.title && d.title !== "Not Playing" && d.title !== "Nothing Playing";
+    }
+
+    async function stopMusicAndHome() {
+      await fetch("/api/stop", { method: "POST" }).catch(function () { /* ignore */ });
+      stopStatusPolling();
+      setView("library");
+      document.getElementById("msg").textContent = "";
+      document.getElementById("listWrap").style.display = "block";
+      renderList();
+    }
+
+    async function pauseMusic() {
+      await fetch("/api/pause", { method: "POST" }).catch(function () { /* ignore */ });
+    }
+
+    async function resumeMusic() {
+      await fetch("/api/resume", { method: "POST" }).catch(function () { /* ignore */ });
+    }
+
+    async function toggleVideo() {
+      await fetch("/api/video/toggle", { method: "POST" }).catch(function () { /* ignore */ });
+      var btnVideo = document.getElementById("btnVideo");
+      // Label will be corrected by pollStatusOnce().
+      if (btnVideo) btnVideo.textContent = "Toggling...";
+    }
+
+    async function playTrack(path, type) {
+      var res = await fetch("/api/play", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: path, type: type })
+      });
+
+      var data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Playback failed");
+        return;
+      }
+
+      setView("nowplaying");
+      document.getElementById("npTitle").textContent = (data && data.track && data.track.title) ? data.track.title : "Now playing";
+      document.getElementById("npArtist").textContent = (data && data.track && data.track.artist) ? data.track.artist : "";
+      showControlsTimed(8000);
+      startStatusPolling();
+    }
+
+    function renderList() {
+
+      if (viewMode !== "library") return;
+
+      var wrap = document.getElementById("listWrap");
+
+      var rows = allSongs.filter(function (s) {
+        return s.type === currentMediaType;
+      });
+
+      // CATEGORY FILTER
+      if (currentCategory !== "All") {
+
+        rows = rows.filter(function (s) {
+
+          return (s.category || "All") === currentCategory;
+
+        });
+      }
+
+      rows.sort(function (a, b) {
+        return (a.title || a.filename)
+          .toLowerCase()
+          .localeCompare((b.title || b.filename).toLowerCase());
+      });
+
+      if (!rows.length) {
+        wrap.innerHTML = '<div class="empty">No media for this filter.</div>';
+        return;
+      }
+
+      wrap.innerHTML = "";
+
+      rows.forEach(function (song) {
+
+        var div = document.createElement("div");
+
+        div.className = "row";
+
+        var title = song.title || song.filename;
+
+        var artist = (song.artist && song.artist !== "Unknown Artist")
+          ? song.artist
+          : "Others";
+
+        var cat = (song.category && song.category !== "All")
+          ? '<span class="badge">' + escapeHtml(song.category) + "</span>"
+          : "";
+
+        div.innerHTML =
+          '<div class="play">&#9654;</div>' +
+          '<div class="meta">' +
+          '<div class="t1">' + escapeHtml(title) + cat + '</div>' +
+          '<div class="t2">' + escapeHtml(artist) + '</div>' +
+          '</div>';
+
+        // PREVENT ACCIDENTAL PLAY DURING SCROLL
+        let moved = false;
+
+        div.addEventListener("touchstart", function () {
+          moved = false;
+        }, { passive: true });
+
+        div.addEventListener("touchmove", function () {
+          moved = true;
+        }, { passive: true });
+
+        div.addEventListener("touchend", function (e) {
+
+          if (moved) return;
+
+          if (viewMode !== "library") return;
+
+          playTrack(song.path, song.type);
+
+        });
+
+        wrap.appendChild(div);
+      });
+    }
+
+
+    async function load() {
+      try {
+        var res = await fetch("/api/songs?type=" + currentMediaType);
+
+        allSongs = await res.json();
+
+        renderCategoryChips();
+
+        renderList();
+
+      } catch (e) {
+
+        document.getElementById("listWrap").innerHTML =
+          '<div class="empty">Could not load library.</div>';
+      }
+    }
+
+
+
+    document.querySelectorAll(".tab").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        if (viewMode !== "library") return;
+        currentMediaType = btn.getAttribute("data-tab");
+        document.querySelectorAll(".tab").forEach(function (b) {
+          b.classList.toggle("active", b.getAttribute("data-tab") === currentMediaType);
+        });
+        currentCategory = "All";
+
+        load();
+      });
+    });
+
+    function setScreenOff(off) {
+      isScreenOff = !!off;
+      var overlay = document.getElementById("screenOffOverlay");
+      overlay.style.display = isScreenOff ? "flex" : "none";
+
+      if (isScreenOff) {
+        setControlsVisible(false);
+        setNowPlayingVisible(false);
+        setLibraryVisible(false);
+        showHomeMenu(false);
+      }
+
+      var btn = document.getElementById("homeBtnScreenToggle");
+      if (btn) btn.textContent = isScreenOff ? "Screen On" : "Screen Off";
+    }
+
+    async function wakeFromScreenOff() {
+      if (!isScreenOff) return;
+      setScreenOff(false);
+
+      try {
+        var d = await (await fetch("/api/status")).json();
+        if (d && isNowPlayingTitle(d)) {
+          setView("nowplaying");
+          document.getElementById("npTitle").textContent = d.title || "Now playing";
+          document.getElementById("npArtist").textContent = d.artist || "";
+          showControlsTimed(6000);
+          startStatusPolling();
+        } else {
+          setView("library");
+          load();
+          startPlaybackWatcher();
+        }
+      } catch (e) {
+        setView("library");
+        load();
+        startPlaybackWatcher();
+      }
+    }
+
+    // Buttons
+    document.getElementById("topHomeBtn").addEventListener("click", function () {
+      if (isScreenOff) return;
+      stopMusicAndHome().catch(function () { /* ignore */ });
+    });
+
+    document.getElementById("topMenuBtn").addEventListener("click", function () {
+      if (isScreenOff) return;
+      viewMode = "home";
+      showHomeMenu(true);
+    });
+
+    document.getElementById("homeBtnGoMain").addEventListener("click", function () {
+      showHomeMenu(false);
+      setView("library");
+      load();
+      startPlaybackWatcher();
+    });
+
+    document.getElementById("homeBtnBack").addEventListener("click", function () {
+      showHomeMenu(false);
+      if (viewMode === "nowplaying") setView("nowplaying");
+      else setView("library");
+    });
+
+    document.getElementById("homeBtnScreenToggle").addEventListener("click", function () {
+      setScreenOff(!isScreenOff);
+    });
+
+    document.getElementById("btnHomeNow").addEventListener("click", function () {
+      stopMusicAndHome().catch(function () { /* ignore */ });
+    });
+
+    document.getElementById("btnPlay").addEventListener("click", function () {
+      if (viewMode !== "nowplaying") return;
+      resumeMusic().then(function () { showControlsTimed(8000); }).catch(function () { /* ignore */ });
+    });
+
+    document.getElementById("btnPause").addEventListener("click", function () {
+      if (viewMode !== "nowplaying") return;
+      pauseMusic().then(function () { showControlsTimed(8000); }).catch(function () { /* ignore */ });
+    });
+
+    document.getElementById("btnStop").addEventListener("click", function () {
+      if (viewMode !== "nowplaying") return;
+      stopMusicAndHome().catch(function () { /* ignore */ });
+    });
+
+    document.getElementById("btnVideo").addEventListener("click", function () {
+      if (viewMode !== "nowplaying") return;
+      toggleVideo().then(function () { showControlsTimed(8000); }).catch(function () { /* ignore */ });
+    });
+
+    document.getElementById("btnVolUp").addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (viewMode !== "nowplaying") return;
+      setVolume(currentVolume + 5).then(function () { showControlsTimed(10000); }).catch(function () { /* ignore */ });
+    });
+
+    document.getElementById("btnVolDown").addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (viewMode !== "nowplaying") return;
+      setVolume(currentVolume - 5).then(function () { showControlsTimed(10000); }).catch(function () { /* ignore */ });
+    });
+
+    // Touch behavior — only triggers for nowplaying view or screen-off wake
+    document.addEventListener("touchstart", function (e) {
+      if (isScreenOff) {
+        wakeFromScreenOff();
+        return;
+      }
+
+      // Don't interfere when the user is in the library picking a track
+      if (viewMode === "library") return;
+
+      if (viewMode === "nowplaying") {
+        // Only show controls if the touch is NOT already on a control button
+        var controls = document.getElementById("controlsBar");
+        if (controls && controls.contains(e.target)) return;
+        showControlsTimed(8000);
+        return;
+      }
+
+      // If playback started elsewhere, detect and switch UI safely before showing controls.
+      fetch("/api/status")
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d && d.status !== "error" && isNowPlayingTitle(d)) {
+            setView("nowplaying");
+            document.getElementById("npTitle").textContent = d.title || "Now playing";
+            document.getElementById("npArtist").textContent = d.artist || "";
+            startStatusPolling();
+            showControlsTimed(8000);
+          }
+        })
+        .catch(function () { /* ignore */ });
+    }, { passive: true });
+
+    document.getElementById("screenOffOverlay").addEventListener("touchstart", function (e) {
+      e.preventDefault();
+      wakeFromScreenOff();
+    }, { passive: false });
+
+    // Initial view
+    setView("library");
+    load();
+    startPlaybackWatcher();
+  </script>
 </body>
 
 </html>

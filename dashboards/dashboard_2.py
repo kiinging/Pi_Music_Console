@@ -324,6 +324,12 @@ def route_map():
 def index():
     return render_template("dashboard_2.html")
 
+@app.route("/csi")
+def csi_console():
+    """5-inch touchscreen library UI (served alongside the main dashboard)."""
+    return render_template("csi_dashboard.html")
+
+
 @app.route("/api/songs")
 def list_songs():
     """List all supported media files from both Music and Video folders."""
@@ -631,7 +637,6 @@ def volume_api():
         return jsonify({"volume": get_current_volume()})
 
 # ========== ADD THESE ROUTES ==========
-import subprocess
 
 def run_nmcli(args):
     try:
@@ -724,7 +729,39 @@ def youtube_play():
 
 
 
+@app.route("/api/system/quit", methods=["POST"])
+def system_quit():
+    """Kill Chromium to return to the Kivy launcher."""
+    try:
+        # We use pkill -f to find the process by command line
+        subprocess.run(["pkill", "-f", "chromium"], stderr=subprocess.DEVNULL)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/system/screen_toggle", methods=["POST"])
+def screen_toggle():
+    """Toggle the display backlight if possible."""
+    try:
+        paths = [
+            "/sys/class/backlight/rpi_backlight/bl_power",
+            "/sys/class/backlight/10-0045/bl_power"
+        ]
+        for p in paths:
+            if os.path.exists(p):
+                with open(p, "r") as f:
+                    current = f.read().strip()
+                new_val = "1" if current == "0" else "0"
+                with open(p, "w") as f:
+                    f.write(new_val)
+                return jsonify({"status": "success", "power": new_val == "0"})
+    except Exception:
+        pass
+    return jsonify({"status": "not_supported"})
+
 if __name__ == "__main__":
     # Do not start mpv here; wait until Play is clicked
-    app.run(host="[IP_ADDRESS]", port=5000, debug=False, threaded=True)
+    bind_host = os.environ.get("PI_MUSIC_HOST", "0.0.0.0")
+    bind_port = int(os.environ.get("PI_MUSIC_PORT", "5000"))
+    app.run(host=bind_host, port=bind_port, debug=False, threaded=True)
 
