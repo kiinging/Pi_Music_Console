@@ -432,6 +432,12 @@
         <div class="home-btn" onclick="showMusicLibrary()"><i class="fas fa-folder-music"></i> Music Library</div>
         <div class="home-btn" onclick="showNetworkModal()"><i class="fas fa-network-wired"></i> Network</div>
         <div class="home-btn" onclick="showYoutubeModal()"><i class="fab fa-youtube"></i> YouTube</div>
+        <div class="home-btn" id="voiceToggleBtn" onclick="toggleVoiceControl()" style="background: rgba(100,255,100,0.15); border-color: rgba(100,255,100,0.3);">
+            <i class="fas fa-microphone"></i> Voice Control: OFF
+        </div>
+        <div class="home-btn" style="background: rgba(255,100,100,0.15); border-color: rgba(255,100,100,0.3);" onclick="toggleHardwareScreen()">
+            <i class="fas fa-power-off"></i> Screen Backlight
+        </div>
     </div>
 
     <!-- MAIN APP VIEW (your dashboard) -->
@@ -723,6 +729,30 @@
         function showYoutubeModal() { document.getElementById('youtubeModal').style.display = 'flex'; }
         function closeYoutubeModal() { document.getElementById('youtubeModal').style.display = 'none'; }
         async function playYoutube() { let url = document.getElementById('youtube-url').value.trim(); if (!url) return alert('Enter URL or search term'); if (!url.startsWith('http')) url = 'ytsearch:' + url; const res = await fetch('/api/youtube/play', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) }); const data = await res.json(); if (data.status === 'playing') closeYoutubeModal(); else alert(data.error); }
+
+        async function toggleHardwareScreen() {
+            try {
+                const res = await fetch('/api/system/screen_toggle', { method: 'POST' });
+                const data = await res.json();
+                if (data.status !== 'success') alert('Hardware backlight control not available on this device.');
+            } catch (e) { alert('Failed to contact server for hardware control.'); }
+        }
+
+        let voiceActive = false;
+        async function toggleVoiceControl() {
+            voiceActive = !voiceActive;
+            const btn = document.getElementById('voiceToggleBtn');
+            try {
+                const res = await fetch('/api/voice/toggle', { 
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ enabled: voiceActive }) 
+                });
+                const data = await res.json();
+                btn.innerHTML = `<i class="fas fa-microphone"></i> Voice Control: ${voiceActive ? 'ON' : 'OFF'}`;
+                btn.style.background = voiceActive ? 'rgba(100,255,100,0.3)' : 'rgba(100,255,100,0.15)';
+            } catch (e) { alert('Voice service failed to respond.'); }
+        }
 
         // Initial load
         window.onload = () => { syncUI(); fetchSongs(); pollStatus(); fetchVolume(); };

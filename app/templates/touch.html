@@ -104,34 +104,8 @@
 
     .toolbar {
       flex-shrink: 0;
-      padding: 10px 12px 6px;
+      padding: 6px 12px 6px;
       border-bottom: 1px solid var(--line);
-    }
-
-    .tabs {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-
-    .tab {
-      flex: 1;
-      text-align: center;
-      padding: 10px 6px;
-      border-radius: 12px;
-      border: 1px solid var(--line);
-      background: var(--tile);
-      color: var(--muted);
-      font-size: 0.95rem;
-      font-weight: 900;
-      cursor: pointer;
-      touch-action: manipulation;
-    }
-
-    .tab.active {
-      color: #0c0c10;
-      background: linear-gradient(135deg, #e8d5a3, var(--gold));
-      border-color: transparent;
     }
 
     .chip-scroll {
@@ -418,12 +392,7 @@
   </header>
 
   <div class="toolbar">
-    <div class="tabs">
-      <button type="button" class="tab" data-tab="music">Music</button>
-      <button type="button" class="tab active" data-tab="video">Video</button>
-    </div>
-
-    <!-- CATEGORY ONLY -->
+    <!-- Category filter chips only -->
     <div class="chip-scroll" id="catBar"></div>
   </div>
 
@@ -435,7 +404,8 @@
   <div id="homeMenu" class="home-menu">
     <div class="home-title">REJANG A1</div>
     <button class="home-btn" id="homeBtnGoMain" type="button">Music Library</button>
-    <button class="home-btn" id="homeBtnScreenToggle" type="button">Screen Off</button>
+    <button class="home-btn" id="homeBtnVoiceToggle" type="button" style="background: rgba(100,255,100,0.15)">Voice Control: OFF</button>
+    <button class="home-btn" id="homeBtnScreenToggle" type="button" style="background: rgba(255,100,100,0.2)">Screen Backlight Off</button>
     <button class="home-btn" id="homeBtnBack" type="button">Back</button>
   </div>
 
@@ -457,7 +427,7 @@
       <button class="ctl-btn" id="btnPlay" type="button">▶</button>
       <button class="ctl-btn" id="btnPause" type="button">⏸</button>
       <button class="ctl-btn" id="btnStop" type="button">⏹</button>
-      <button class="ctl-btn" id="btnVideo" type="button">VIDEO</button>
+      <button class="ctl-btn" id="btnVideo" type="button" title="Toggle MPV Video Stream">VIDEO</button>
     </div>
     <div class="controls-row2">
       <button class="ctl-btn small" id="btnVolDown" type="button">Vol -</button>
@@ -514,11 +484,7 @@
     function renderCategoryChips() {
       var bar = document.getElementById("catBar");
 
-      var cats = uniqueCategories(
-        allSongs.filter(function (s) {
-          return s.type === currentMediaType;
-        })
-      );
+      var cats = uniqueCategories(allSongs);
 
       cats.sort(function (a, b) {
         if (a === "All") return -1;
@@ -563,12 +529,6 @@
         bar.appendChild(b);
       });
     }
-
-
-
-
-
-
 
     function setLibraryVisible(show) {
       var listWrap = document.getElementById("listWrap");
@@ -643,6 +603,7 @@
           .then(function (r) { return r.json(); })
           .then(function (d) {
             if (d && d.status !== "error" && isNowPlayingTitle(d)) {
+              lastStatus = d;
               setView("nowplaying");
               document.getElementById("npTitle").textContent = d.title || "Now playing";
               document.getElementById("npArtist").textContent = d.artist || "";
@@ -755,9 +716,7 @@
 
       var wrap = document.getElementById("listWrap");
 
-      var rows = allSongs.filter(function (s) {
-        return s.type === currentMediaType;
-      });
+      var rows = allSongs.slice();
 
       // CATEGORY FILTER
       if (currentCategory !== "All") {
@@ -832,41 +791,38 @@
 
 
     async function load() {
+      var wrap = document.getElementById("listWrap");
+      wrap.innerHTML = '<div class="empty">Loading…</div>';
       try {
-        var res = await fetch("/api/songs?type=" + currentMediaType);
-
-        allSongs = await res.json();
-
+        // Fetch both video and music, merge into allSongs
+        var resV = await fetch("/api/songs?type=video");
+        var resM = await fetch("/api/songs?type=music");
+        var videos = await resV.json();
+        var music  = await resM.json();
+        allSongs = (Array.isArray(videos) ? videos : [])
+                   .concat(Array.isArray(music) ? music : []);
         renderCategoryChips();
-
-        renderList();
-
+        // Only render list if still in library mode (not hijacked by watcher yet)
+        if (viewMode === "library") renderList();
       } catch (e) {
-
-        document.getElementById("listWrap").innerHTML =
-          '<div class="empty">Could not load library.</div>';
+        wrap.innerHTML = '<div class="empty">Could not load library. Is the server running?</div>';
+      } finally {
+        // Start watcher only after first load attempt completes
+        startPlaybackWatcher();
       }
     }
 
-
-
-    document.querySelectorAll(".tab").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        if (viewMode !== "library") return;
-        currentMediaType = btn.getAttribute("data-tab");
-        document.querySelectorAll(".tab").forEach(function (b) {
-          b.classList.toggle("active", b.getAttribute("data-tab") === currentMediaType);
-        });
-        currentCategory = "All";
-
-        load();
-      });
-    });
-
-    function setScreenOff(off) {
+    async function setScreenOff(off) {
       isScreenOff = !!off;
       var overlay = document.getElementById("screenOffOverlay");
       overlay.style.display = isScreenOff ? "flex" : "none";
+
+      // Call hardware API to actually turn off the backlight
+      try {
+        await fetch("/api/system/screen_toggle", { method: "POST" });
+      } catch (e) {
+        console.error("Backlight toggle failed:", e);
+      }
 
       if (isScreenOff) {
         setControlsVisible(false);
@@ -876,7 +832,7 @@
       }
 
       var btn = document.getElementById("homeBtnScreenToggle");
-      if (btn) btn.textContent = isScreenOff ? "Screen On" : "Screen Off";
+      if (btn) btn.textContent = isScreenOff ? "Turn Screen ON" : "Screen Backlight OFF";
     }
 
     async function wakeFromScreenOff() {
@@ -904,10 +860,21 @@
     }
 
     // Buttons
-    document.getElementById("topHomeBtn").addEventListener("click", function () {
+    function goHomeAndClose() {
       if (isScreenOff) return;
-      stopMusicAndHome().catch(function () { /* ignore */ });
-    });
+      // Tell server to stop
+      fetch("/api/stop", { method: "POST" }).catch(function(){});
+      // Try JS close first
+      window.close();
+      // Use server-side kill as guaranteed fallback
+      fetch("/api/quit_browser", { method: "POST" }).catch(function(){});
+    }
+
+    document.getElementById("topHomeBtn").addEventListener("touchstart", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      goHomeAndClose();
+    }, { passive: false });
 
     document.getElementById("topMenuBtn").addEventListener("click", function () {
       if (isScreenOff) return;
@@ -932,73 +899,112 @@
       setScreenOff(!isScreenOff);
     });
 
+    var voiceActive = false;
+    document.getElementById("homeBtnVoiceToggle").addEventListener("click", async function () {
+      voiceActive = !voiceActive;
+      var btn = document.getElementById("homeBtnVoiceToggle");
+      try {
+        await fetch("/api/voice/toggle", { 
+          method: "POST", 
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ enabled: voiceActive }) 
+        });
+        btn.textContent = "Voice Control: " + (voiceActive ? "ON" : "OFF");
+        btn.style.background = voiceActive ? "rgba(100,255,100,0.3)" : "rgba(100,255,100,0.15)";
+      } catch (e) {
+        console.error("Voice toggle failed", e);
+      }
+    });
+
     document.getElementById("btnHomeNow").addEventListener("click", function () {
       stopMusicAndHome().catch(function () { /* ignore */ });
     });
 
-    document.getElementById("btnPlay").addEventListener("click", function () {
-      if (viewMode !== "nowplaying") return;
-      resumeMusic().then(function () { showControlsTimed(8000); }).catch(function () { /* ignore */ });
+    // Helper: stop touch bubbling to document for all control buttons
+    ["btnPlay","btnPause","btnStop","btnVideo","btnVolUp","btnVolDown","btnHomeNow"].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener("touchstart", function(e) { e.stopPropagation(); }, { passive: false });
     });
 
-    document.getElementById("btnPause").addEventListener("click", function () {
+    document.getElementById("btnPlay").addEventListener("click", function (e) {
+      e.stopPropagation();
       if (viewMode !== "nowplaying") return;
-      pauseMusic().then(function () { showControlsTimed(8000); }).catch(function () { /* ignore */ });
+      resumeMusic().then(function () { showControlsTimed(10000); }).catch(function () {});
     });
 
-    document.getElementById("btnStop").addEventListener("click", function () {
+    document.getElementById("btnPause").addEventListener("click", function (e) {
+      e.stopPropagation();
       if (viewMode !== "nowplaying") return;
-      stopMusicAndHome().catch(function () { /* ignore */ });
+      pauseMusic().then(function () { showControlsTimed(10000); }).catch(function () {});
     });
 
-    document.getElementById("btnVideo").addEventListener("click", function () {
+    document.getElementById("btnStop").addEventListener("click", function (e) {
+      e.stopPropagation();
       if (viewMode !== "nowplaying") return;
-      toggleVideo().then(function () { showControlsTimed(8000); }).catch(function () { /* ignore */ });
+      stopMusicAndHome().catch(function () {});
+    });
+
+    document.getElementById("btnVideo").addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (viewMode !== "nowplaying") return;
+      toggleVideo().then(function () { showControlsTimed(10000); }).catch(function () {});
     });
 
     document.getElementById("btnVolUp").addEventListener("click", function (e) {
       e.stopPropagation();
       if (viewMode !== "nowplaying") return;
-      setVolume(currentVolume + 5).then(function () { showControlsTimed(10000); }).catch(function () { /* ignore */ });
+      setVolume(currentVolume + 5).then(function () { showControlsTimed(12000); }).catch(function () {});
     });
 
     document.getElementById("btnVolDown").addEventListener("click", function (e) {
       e.stopPropagation();
       if (viewMode !== "nowplaying") return;
-      setVolume(currentVolume - 5).then(function () { showControlsTimed(10000); }).catch(function () { /* ignore */ });
+      setVolume(currentVolume - 5).then(function () { showControlsTimed(12000); }).catch(function () {});
     });
 
-    // Touch behavior — only triggers for nowplaying view or screen-off wake
+    // When browser tab regains focus (user returns from mpv), check if still playing
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden || isScreenOff) return;
+      fetch("/api/status")
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d && d.status !== "error" && isNowPlayingTitle(d)) {
+            if (viewMode !== "nowplaying") setView("nowplaying");
+            document.getElementById("npTitle").textContent = d.title || "Now playing";
+            document.getElementById("npArtist").textContent = d.artist || "";
+            startStatusPolling();
+            showControlsTimed(10000);
+          }
+        }).catch(function () {});
+    });
+
+    // Touch behavior
     document.addEventListener("touchstart", function (e) {
       if (isScreenOff) {
         wakeFromScreenOff();
         return;
       }
 
-      // Don't interfere when the user is in the library picking a track
-      if (viewMode === "library") return;
-
       if (viewMode === "nowplaying") {
-        // Only show controls if the touch is NOT already on a control button
         var controls = document.getElementById("controlsBar");
         if (controls && controls.contains(e.target)) return;
-        showControlsTimed(8000);
+        showControlsTimed(10000);
         return;
       }
 
-      // If playback started elsewhere, detect and switch UI safely before showing controls.
+      // Proactive check: if we touch in library, see if server is playing
       fetch("/api/status")
         .then(function (r) { return r.json(); })
         .then(function (d) {
           if (d && d.status !== "error" && isNowPlayingTitle(d)) {
+            lastStatus = d;
             setView("nowplaying");
             document.getElementById("npTitle").textContent = d.title || "Now playing";
             document.getElementById("npArtist").textContent = d.artist || "";
             startStatusPolling();
-            showControlsTimed(8000);
+            showControlsTimed(10000);
           }
-        })
-        .catch(function () { /* ignore */ });
+        }).catch(function () {});
     }, { passive: true });
 
     document.getElementById("screenOffOverlay").addEventListener("touchstart", function (e) {
@@ -1006,10 +1012,9 @@
       wakeFromScreenOff();
     }, { passive: false });
 
-    // Initial view
+    // Initial view — startPlaybackWatcher is called inside load() after songs fetch
     setView("library");
     load();
-    startPlaybackWatcher();
   </script>
 </body>
 
