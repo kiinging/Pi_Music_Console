@@ -3,9 +3,10 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>REJANG A1 — Library</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>REJANG A1</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;900&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg0: #0c0c10;
@@ -15,6 +16,7 @@
       --gold: #c9a962;
       --gold-dim: rgba(201, 169, 98, 0.35);
       --tile: rgba(255, 255, 255, 0.04);
+      --rose: #7c3aed;
     }
 
     * {
@@ -28,129 +30,303 @@
       font-family: "DM Sans", system-ui, sans-serif;
       background: radial-gradient(120% 80% at 50% 0%, #1a1520 0%, var(--bg0) 55%);
       color: var(--text);
-      min-height: 100vh;
+      height: 100vh;
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      touch-action: pan-x pan-y;
     }
 
+    /* ── TOP BAR ── */
     .topbar {
       flex-shrink: 0;
+      position: relative;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
-      padding: 10px 12px;
+      padding: 10px 14px;
       border-bottom: 1px solid var(--line);
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent);
-      min-height: 52px;
+      min-height: 58px;
     }
 
     .top-left {
       display: flex;
       align-items: center;
-      gap: 14px;
-      min-width: 0;
+      gap: 12px;
+      z-index: 2;
+    }
+
+    .top-home-btn {
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      padding: 7px 14px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.75rem;
+      cursor: pointer;
+      touch-action: manipulation;
+      letter-spacing: 0.05em;
+      display: none;
+      /* Only show on other pages */
+    }
+
+    .top-home-btn:active {
+      background: rgba(201, 169, 98, 0.25);
     }
 
     .brand {
       font-weight: 900;
-      font-size: 1.1rem;
-      letter-spacing: 0.14em;
+      font-size: 0.9rem;
+      letter-spacing: 0.12em;
       color: var(--gold);
       text-transform: uppercase;
-      white-space: nowrap;
       text-shadow: 0 0 12px rgba(201, 169, 98, 0.35);
     }
 
-    .top-home-btn {
-      border: 1px solid rgba(201, 169, 98, 0.45);
-      background: rgba(201, 169, 98, 0.10);
-      color: #f6e2b0;
-      padding: 10px 14px;
-      border-radius: 14px;
-      font-weight: 700;
-      font-size: 0.88rem;
-      cursor: pointer;
-      touch-action: manipulation;
-      white-space: nowrap;
-    }
-
-    .clockwrap { display: none; }
-    .clockline { display: none; }
-
-    .status-icons {
+    .top-right {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
       display: flex;
       align-items: center;
       gap: 10px;
-      color: var(--muted);
-      font-size: 1.15rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: rgba(255, 255, 255, 0.82);
+      white-space: nowrap;
     }
 
-    .top-icon-btn {
-      border: 1px solid var(--line);
-      background: var(--tile);
-      color: var(--muted);
-      width: 48px;
-      height: 40px;
-      border-radius: 14px;
-      cursor: pointer;
-      touch-action: manipulation;
-      display: inline-flex;
+    /* SAME SIZE */
+    #clockTime,
+    #clockDate {
+      font-size: inherit;
+      font-weight: inherit;
+      line-height: 1;
+      color: inherit;
+      margin: 0;
+    }
+
+    /* Optional separator */
+    #clockDate::before {
+      content: "•";
+      margin-right: 10px;
+      color: var(--gold);
+      opacity: 0.7;
+    }
+
+    /* ── SCREENS ── */
+    .screen {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    /* ── HOME SCREEN (Rose RS520 style) ── */
+    #homeScreen {
       align-items: center;
       justify-content: center;
-      font-size: 1.15rem;
+      gap: 0;
+      padding: 20px 16px;
     }
 
-    .toolbar {
+    .home-greeting {
+      font-size: 0.75rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .home-title {
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: var(--gold);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-shadow: 0 0 20px var(--gold-dim);
+      margin-bottom: 30px;
+    }
+
+    .home-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      width: 100%;
+      max-width: 440px;
+    }
+
+    .home-tile {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 18px;
+      padding: 18px 8px 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    .home-tile:active {
+      background: rgba(201, 169, 98, 0.15);
+      transform: scale(0.97);
+    }
+
+    .home-tile.accent {
+      border-color: rgba(201, 169, 98, 0.4);
+      background: rgba(201, 169, 98, 0.08);
+    }
+
+    .home-tile-icon {
+      font-size: 2rem;
+      line-height: 1;
+    }
+
+    .home-tile-label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-align: center;
+      color: var(--text);
+    }
+
+    .home-tile.accent .home-tile-label {
+      color: var(--gold);
+    }
+
+    .now-playing-mini {
+      margin-top: 24px;
+      width: 100%;
+      max-width: 340px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px 16px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .now-playing-mini:active {
+      background: rgba(201, 169, 98, 0.1);
+    }
+
+    .mini-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 0 8px var(--gold);
       flex-shrink: 0;
-      padding: 6px 12px 6px;
-      border-bottom: 1px solid var(--line);
+      animation: blink 1.2s infinite;
     }
 
-    .chip-scroll {
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: 0.3
+      }
+    }
+
+    .mini-text {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .mini-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mini-label {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* ── LIBRARY SCREEN ── */
+    #libraryScreen {}
+
+    .chip-bar {
+      flex-shrink: 0;
       display: flex;
       gap: 8px;
       overflow-x: auto;
-      padding-bottom: 6px;
-      margin-bottom: 10px;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--line);
       scrollbar-width: none;
     }
 
-    .chip-scroll::-webkit-scrollbar {
+    .chip-bar::-webkit-scrollbar {
       display: none;
     }
 
-
-
     .chip {
       flex-shrink: 0;
-      padding: 12px 22px;
+      padding: 8px 18px;
       border-radius: 999px;
       border: 1px solid var(--line);
       background: var(--tile);
       color: var(--muted);
-      font-size: 0.95rem;
-      font-weight: 950;
+      font-size: 0.82rem;
+      font-weight: 700;
       cursor: pointer;
       touch-action: manipulation;
-      min-height: 52px;
+      white-space: nowrap;
     }
 
     .chip.on {
       border-color: var(--gold);
       color: var(--gold);
-      box-shadow: 0 0 12px var(--gold-dim);
+      box-shadow: 0 0 10px var(--gold-dim);
     }
 
+    .list-wrap {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 10px 16px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+    }
+
+    .list-wrap::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .list-wrap::-webkit-scrollbar-thumb {
+      background: rgba(201, 169, 98, 0.5);
+      border-radius: 20px;
+      border: 2px solid transparent;
+      background-clip: content-box;
+    }
 
     .row {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 14px 14px;
-      margin-bottom: 10px;
-      border-radius: 16px;
+      gap: 14px;
+      padding: 16px 14px;
+      margin-bottom: 8px;
+      border-radius: 14px;
       background: var(--tile);
       border: 1px solid var(--line);
       cursor: pointer;
@@ -162,16 +338,149 @@
       background: rgba(255, 255, 255, 0.07);
     }
 
-    .play {
-      width: 44px;
-      height: 44px;
+    .album-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      padding: 4px 0 16px;
+    }
+
+    .album-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .album-card:active {
+      transform: scale(0.97);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .album-card-img {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+      background: #1a1520;
+    }
+
+    .album-card-info {
+      padding: 10px 12px 12px;
+    }
+
+    .album-card-title {
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 3px;
+    }
+
+    .album-card-artist {
+      font-size: 0.72rem;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── ALBUM HEADER (Hi-Fi Streamer Style) ── */
+    .album-header-wrap {
+      display: flex;
+      gap: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      align-items: flex-start;
+      position: relative;
+    }
+
+    .album-header-cover {
+      width: 100px;
+      height: 100px;
+      border-radius: 12px;
+      background: var(--tile);
+      object-fit: cover;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+
+    .album-header-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      height: 100px;
+    }
+
+    .album-header-title {
+      font-size: 1.15rem;
+      font-weight: 900;
+      color: var(--gold);
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .album-header-artist {
+      font-size: 0.85rem;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .album-header-meta {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .album-back-btn {
+      position: absolute;
+      top: -12px;
+      right: -6px;
+      padding: 8px 14px;
+      background: var(--bg0);
+      border: 1px solid rgba(201, 169, 98, 0.4);
+      color: var(--gold);
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 900;
+      cursor: pointer;
+      touch-action: manipulation;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+
+    .album-back-btn:active {
+      background: rgba(201, 169, 98, 0.15);
+    }
+
+    .row:active {
+      transform: scale(0.99);
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    .play-icon {
+      width: 38px;
+      height: 38px;
       border-radius: 50%;
       border: 1px solid var(--gold-dim);
       color: var(--gold);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       flex-shrink: 0;
     }
 
@@ -181,290 +490,361 @@
     }
 
     .t1 {
-      font-weight: 950;
-      font-size: 1.02rem;
-      line-height: 1.25;
+      font-weight: 700;
+      font-size: 0.95rem;
+      line-height: 1.3;
       word-break: break-word;
     }
 
     .t2 {
-      font-size: 0.84rem;
+      font-size: 0.78rem;
       color: var(--muted);
-      margin-top: 5px;
-      font-weight: 750;
+      margin-top: 3px;
     }
 
     .badge {
       display: inline-block;
-      margin-left: 8px;
-      padding: 2px 8px;
-      border-radius: 10px;
-      font-size: 0.72rem;
+      margin-left: 6px;
+      padding: 1px 7px;
+      border-radius: 8px;
+      font-size: 0.68rem;
       font-weight: 900;
       background: rgba(201, 169, 98, 0.2);
       color: var(--gold);
-      vertical-align: middle;
     }
 
     .empty {
       text-align: center;
-      padding: 2.2rem 1rem;
+      padding: 3rem 1rem;
       color: var(--muted);
-      font-size: 1.05rem;
-      font-weight: 850;
-    }
-
-    /* home menu overlay */
-    .home-menu {
-      position: fixed;
-      inset: 0;
-      background: radial-gradient(circle at 20% 30%, rgba(157, 78, 221, 0.25), rgba(0, 0, 0, 0.65));
-      z-index: 120;
-      display: none;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      gap: 18px;
-      padding: 18px 14px;
-      touch-action: manipulation;
-    }
-
-    .home-title {
-      font-weight: 950;
-      color: var(--gold);
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-      font-size: 1.1rem;
-    }
-
-    .home-btn {
-      width: 90%;
-      max-width: 360px;
-      border-radius: 28px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      background: rgba(255, 255, 255, 0.06);
-      color: white;
-      font-weight: 950;
-      font-size: 1.1rem;
-      padding: 18px 18px;
-      cursor: pointer;
-    }
-
-    .screen-off-overlay {
-      position: fixed;
-      inset: 0;
-      background: #000;
-      z-index: 130;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      touch-action: manipulation;
-    }
-
-    .screen-off-inner {
-      color: rgba(255, 255, 255, 0.75);
-      font-weight: 900;
-      font-size: 1.15rem;
-      text-align: center;
-      padding: 24px;
-    }
-
-    /* now playing */
-    .np-panel {
-      position: fixed;
-      left: 12px;
-      right: 12px;
-      top: 88px;
-      z-index: 110;
-      background: rgba(0, 0, 0, 0.35);
-      border: 1px solid rgba(255, 255, 255, 0.10);
-      border-radius: 18px;
-      padding: 16px 14px;
-      display: none;
-      backdrop-filter: blur(6px);
-    }
-
-    .np-line1 {
-      font-weight: 950;
-      font-size: 1.18rem;
-      line-height: 1.25;
-      word-break: break-word;
-    }
-
-    .np-line2 {
-      margin-top: 8px;
-      color: var(--muted);
-      font-weight: 800;
-      font-size: 0.95rem;
-    }
-
-    /* bottom controls */
-    .controls-bar {
-      position: fixed;
-      left: 8px;
-      right: 8px;
-      bottom: 10px;
-      z-index: 115;
-      background: rgba(10, 10, 18, 0.92);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      border-radius: 22px;
-      padding: 14px 12px;
-      display: none;
-      backdrop-filter: blur(10px);
-      touch-action: manipulation;
-    }
-
-    .controls-row1 {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-
-    .controls-row2 {
-      margin-top: 12px;
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px;
-      align-items: center;
-    }
-
-    .ctl-btn {
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      background: rgba(255, 255, 255, 0.08);
-      color: white;
-      border-radius: 16px;
-      padding: 16px 10px;
-      font-weight: 700;
-      font-size: 1.05rem;
-      cursor: pointer;
-      touch-action: manipulation;
-      flex: 1;
-      min-height: 52px;
-    }
-
-    .ctl-btn.small {
-      padding: 16px 8px;
       font-size: 1rem;
+      font-weight: 700;
     }
 
-    .ctl-btn:active {
-      background: rgba(201, 169, 98, 0.25);
+    /* ── FAVORITES SCREEN ── */
+    #nowScreen {
+      align-items: stretch;
+      justify-content: flex-start;
+      padding: 0;
+      gap: 0;
     }
 
-    .vol-mid {
-      text-align: center;
-      color: #f6e2b0;
-      font-weight: 950;
-      font-size: 1.15rem;
-      padding: 8px 0;
+    .fav-header {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px 10px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(201, 169, 98, 0.06);
     }
 
-    .list-wrap {
+    .fav-header-icon {
+      font-size: 1.4rem;
+    }
+
+    .fav-header-text {
+      font-size: 0.9rem;
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      color: var(--gold);
+      text-transform: uppercase;
+    }
+
+    .fav-header-sub {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    .star-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      padding: 1px 7px;
+      border-radius: 8px;
+      font-size: 0.72rem;
+      font-weight: 900;
+      background: rgba(201, 169, 98, 0.2);
+      color: var(--gold);
+      margin-left: 6px;
+    }
+
+    /* ── FLOATING CONTROL BAR (Rose RS520 style) ── */
+    .cbar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: -150px;
+      z-index: 150;
+      background: rgba(8, 8, 14, 0.96);
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(12px);
+      padding: 10px 10px 12px;
+      transition: bottom 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .cbar.visible {
+      bottom: 0;
+    }
+
+    .cbar-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .cbar-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .cb {
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      background: rgba(255, 255, 255, 0.07);
+      color: #fff;
+      border-radius: 12px;
+      padding: 0;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      touch-action: manipulation;
       flex: 1;
-      overflow-y: auto;
-      padding: 10px 10px 100px 10px;
-      -webkit-overflow-scrolling: touch;
-      background: transparent;
-      scrollbar-width: thin;
+      height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
     }
 
-    .list-wrap::-webkit-scrollbar {
-      width: 6px;
+    .cb:active {
+      background: rgba(201, 169, 98, 0.3);
     }
 
-    .list-wrap::-webkit-scrollbar-thumb {
-      background: rgba(201, 169, 98, 0.45);
-      border-radius: 20px;
+    .cb.gold {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    .cb.mode-auto {
+      color: #60d0ff;
+      border-color: rgba(96, 208, 255, 0.4);
+      font-size: 0.78rem;
+    }
+
+    .cb.mode-repeat {
+      color: #ff9f60;
+      border-color: rgba(255, 159, 96, 0.4);
+      font-size: 0.78rem;
+    }
+
+    .cb.mode-stop {
+      color: #ff6060;
+      border-color: rgba(255, 96, 96, 0.4);
+      font-size: 0.78rem;
+    }
+
+    .cb.vid-on {
+      color: #60ff90;
+      border-color: rgba(96, 255, 144, 0.4);
+      font-size: 0.78rem;
+    }
+
+    .cb.vid-off {
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .cb-vol {
+      flex: 0.7;
+      font-size: 0.82rem;
+      color: #f6e2b0;
+      cursor: default;
+    }
+
+    /* ── OVERLAYS ── */
+    #screenOffOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      background: #000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      color: rgba(255, 255, 255, 0.4);
+      font-weight: 700;
+      touch-action: manipulation;
     }
   </style>
 </head>
 
 <body>
+
+  <!-- TOP BAR -->
   <header class="topbar">
     <div class="top-left">
-      <button id="topHomeBtn" class="top-home-btn" type="button">HOME</button>
+      <button id="topHomeBtn" class="top-home-btn" type="button">⌂ HOME</button>
       <div class="brand">REJANG A1</div>
     </div>
-    <div class="status-icons" aria-hidden="true">
-      <button id="topMenuBtn" class="top-icon-btn" type="button" title="Home menu">&#9881;</button>
+    <div class="top-right" id="topClockContainer">
+      <span id="clockTime">--:--</span>
+      <span id="clockDate">---, -- ---</span>
     </div>
   </header>
 
-  <div class="toolbar">
-    <!-- Category filter chips only -->
-    <div class="chip-scroll" id="catBar"></div>
+  <!-- SCREEN 1: HOME -->
+  <div id="homeScreen" class="screen active">
+    <div class="home-greeting">Welcome to</div>
+    <div class="home-title">Pi Console</div>
+    <div class="home-grid">
+      <div class="home-tile" id="tileMusic">
+        <div class="home-tile-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+        </div>
+        <div class="home-tile-label">MUSIC</div>
+      </div>
+      <div class="home-tile" id="tileVideo">
+        <div class="home-tile-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+        </div>
+        <div class="home-tile-label">VIDEO</div>
+      </div>
+      <div class="home-tile accent" id="tileNowPlaying">
+        <div class="home-tile-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+        </div>
+        <div class="home-tile-label">FAVORITES</div>
+      </div>
+    </div>
+    <div class="now-playing-mini" id="miniNowPlaying">
+      <div class="mini-dot"></div>
+      <div class="mini-text">
+        <div class="mini-title" id="miniTitle">—</div>
+        <div class="mini-label">Now Playing · Tap to open</div>
+      </div>
+      <span style="color:var(--gold); font-size:1.1rem;">›</span>
+    </div>
   </div>
 
-  <div class="list-wrap" id="listWrap">
-    <div class="empty" id="msg">Loading...</div>
+  <!-- SCREEN 2: LIBRARY -->
+  <div id="libraryScreen" class="screen">
+    <div class="chip-bar" id="catBar"></div>
+    <div class="list-wrap" id="listWrap">
+      <div class="empty" id="msg">Loading...</div>
+    </div>
   </div>
 
-  <!-- Home menu overlay -->
-  <div id="homeMenu" class="home-menu">
-    <div class="home-title">REJANG A1</div>
-    <button class="home-btn" id="homeBtnGoMain" type="button">Music Library</button>
-    <button class="home-btn" id="homeBtnVoiceToggle" type="button" style="background: rgba(100,255,100,0.15)">Voice Control: OFF</button>
-    <button class="home-btn" id="homeBtnScreenToggle" type="button" style="background: rgba(255,100,100,0.2)">Screen Backlight Off</button>
-    <button class="home-btn" id="homeBtnBack" type="button">Back</button>
+  <!-- SCREEN 3: FAVORITES (3-star songs) -->
+  <div id="nowScreen" class="screen">
+    <div class="fav-header">
+      <div class="fav-header-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+      </div>
+      <div>
+        <div class="fav-header-text">Favorites</div>
+        <div class="fav-header-sub">Songs you rated 3 stars or above · Tap to play</div>
+      </div>
+    </div>
+    <div class="list-wrap" id="favListWrap">
+      <div class="empty" id="favMsg">Loading favorites...</div>
+    </div>
+  </div>
+
+  <!-- FLOATING CONTROL BAR (appears on touch, both screens) -->
+  <div class="cbar" id="cbar">
+    <!-- Row 1: Mode | Prev | Play/Pause | Next | Video -->
+    <div class="cbar-row">
+      <button class="cb mode-auto" id="cbMode" type="button" title="Playback mode">→ AUTO</button>
+      <button class="cb" id="cbPrev" type="button">⏮</button>
+      <button class="cb gold" id="cbPlayPause" type="button">▶</button>
+      <button class="cb" id="cbNext" type="button">⏭</button>
+      <button class="cb vid-off" id="cbVideo" type="button">VIDEO</button>
+    </div>
+    <!-- Row 2: Vol- | Vol% | Vol+ | Stop -->
+    <div class="cbar-row">
+      <button class="cb" id="cbVolDown" type="button">Vol −</button>
+      <div class="cb cb-vol" id="cbVolDisplay">50%</div>
+      <button class="cb" id="cbVolUp" type="button">Vol +</button>
+      <button class="cb" id="cbStop" type="button" style="color:#ff6060; border-color:rgba(255,96,96,0.4);">⏹
+        STOP</button>
+    </div>
   </div>
 
   <!-- Screen off overlay -->
-  <div id="screenOffOverlay" class="screen-off-overlay">
-    <div class="screen-off-inner">Touch to wake</div>
-  </div>
-
-  <!-- Now playing panel -->
-  <div id="nowPlayingPanel" class="np-panel">
-    <div class="np-line1" id="npTitle">Select a Track</div>
-    <div class="np-line2" id="npArtist">Ready</div>
-  </div>
-
-  <!-- Bottom controls -->
-  <div id="controlsBar" class="controls-bar">
-    <div class="controls-row1">
-      <button class="ctl-btn" id="btnHomeNow" type="button">HOME</button>
-      <button class="ctl-btn" id="btnPlay" type="button">▶</button>
-      <button class="ctl-btn" id="btnPause" type="button">⏸</button>
-      <button class="ctl-btn" id="btnStop" type="button">⏹</button>
-      <button class="ctl-btn" id="btnVideo" type="button" title="Toggle MPV Video Stream">VIDEO</button>
-    </div>
-    <div class="controls-row2">
-      <button class="ctl-btn small" id="btnVolDown" type="button">Vol -</button>
-      <div class="vol-mid"><span id="volumePercent">50%</span></div>
-      <button class="ctl-btn small" id="btnVolUp" type="button">Vol +</button>
-    </div>
-  </div>
+  <div id="screenOffOverlay">Touch to wake</div>
 
   <script>
-    let currentMediaType = "video";
-    let currentCategory = "All";
+    // ── State ──
+    var currentScreen = "home";
+    var allSongs = [];
+    var filteredSongs = [];
+    var currentIndex = -1;
+    var currentCategory = "All";
+    var currentLibraryType = "music";
+    var currentAlbum = null;
+    var currentVolume = 50;
+    var isScreenOff = false;
+    var statusTimer = null;
+    var cbarTimer = null;
+    var cbarVisible = false;
+    var playMode = "auto";
+    var videoEnabled = false;
+    var wasPlaying = false;
 
-    let allSongs = [];
+    // ── Screen Router ──
+    function showScreen(name) {
+      currentScreen = name;
+      ["homeScreen", "libraryScreen", "nowScreen"].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.classList.remove("active");
+      });
 
-    let viewMode = "library"; // library | home | nowplaying
-    let isScreenOff = false;
+      var homeBtn = document.getElementById("topHomeBtn");
+      var clock = document.getElementById("topClockContainer");
 
-    let statusTimer = null;
-    let controlsHideTimer = null;
-    let playbackWatcherTimer = null;
-
-    let currentVolume = 50;
-    let videoEnabled = true;
-
-    let lastStatus = { paused: true, title: "", artist: "", video_enabled: true };
-
-    function pad(n) { return n < 10 ? "0" + n : "" + n; }
-
-    function tickClock() {
-      var d = new Date();
-      var time = pad(d.getHours()) + ":" + pad(d.getMinutes());
-      var opts = { weekday: "short", month: "short", day: "numeric" };
-      var date = d.toLocaleDateString(undefined, opts);
-      document.getElementById("clockLine").textContent = time + " • " + date;
+      if (name === "home") {
+        document.getElementById("homeScreen").classList.add("active");
+        if (homeBtn) homeBtn.style.display = "none";
+        if (clock) clock.style.display = "flex";
+      } else {
+        var screenEl = document.getElementById(name + "Screen") || document.getElementById(name === "nowplaying" ? "nowScreen" : name + "Screen");
+        if (screenEl) screenEl.classList.add("active");
+        if (homeBtn) homeBtn.style.display = "block";
+        if (clock) clock.style.display = "none";
+      }
     }
-    setInterval(tickClock, 1000);
-    tickClock();
+
+    // ── Navigation ──
+    document.getElementById("topHomeBtn").addEventListener("click", function () {
+      if (isScreenOff) return;
+      hideCbar();
+      showScreen("home");
+      checkNowPlaying();
+    });
+
+    document.getElementById("tileMusic").addEventListener("click", function () {
+      showScreen("library");
+      currentCategory = "All";
+      currentLibraryType = "music";
+      currentAlbum = null;
+      loadLibrary("music");
+    });
+    document.getElementById("tileVideo").addEventListener("click", function () {
+      showScreen("library");
+      currentCategory = "All";
+      currentLibraryType = "video";
+      currentAlbum = null;
+      loadLibrary("video");
+    });
+    document.getElementById("tileNowPlaying").addEventListener("click", function () {
+      showScreen("nowplaying");
+      loadFavorites();
+    });
+    document.getElementById("miniNowPlaying").addEventListener("click", function () {
+      showScreen("nowplaying");
+      loadFavorites();
+    });
 
     function escapeHtml(s) {
       return String(s).replace(/[&<>"']/g, function (c) {
@@ -472,549 +852,516 @@
       });
     }
 
-    function uniqueCategories(songs) {
-      var set = { All: true };
-      songs.forEach(function (s) {
-        var c = (s.category && String(s.category).trim()) || "All";
-        if (c && c !== "All") set[c] = true;
-      });
-      return Object.keys(set);
+    function formatTech(tech) {
+      if (!tech) return "";
+      var parts = [];
+      if (tech.format) parts.push(tech.format.toUpperCase());
+      if (tech.sample_rate) {
+        var sr = (tech.sample_rate / 1000).toFixed(1) + "kHz";
+        if (tech.bit_depth) sr += "/" + tech.bit_depth + "bit";
+        parts.push(sr);
+      }
+      if (tech.bit_rate) {
+        parts.push(Math.round(tech.bit_rate / 1000) + " kbps");
+      }
+      return parts.join(" • ");
     }
 
     function renderCategoryChips() {
       var bar = document.getElementById("catBar");
-
-      var cats = uniqueCategories(allSongs);
-
-      cats.sort(function (a, b) {
-        if (a === "All") return -1;
-        if (b === "All") return 1;
-        return a.localeCompare(b);
+      if (!bar) return;
+      var cats = { All: true };
+      allSongs.forEach(function (s) {
+        var c = (s.category && String(s.category).trim()) || "All";
+        if (c && c !== "All") cats[c] = true;
       });
-
+      var list = Object.keys(cats).sort(function (a, b) {
+        if (a === "All") return -1; if (b === "All") return 1; return a.localeCompare(b);
+      });
       bar.innerHTML = "";
-
-      cats.forEach(function (c) {
-
+      list.forEach(function (c) {
         var b = document.createElement("button");
-
         b.type = "button";
-
         b.className = "chip" + (currentCategory === c ? " on" : "");
-
-        b.textContent = c === "All" ? "All Categories" : c;
-
-        b.addEventListener("touchstart", function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-
+        b.textContent = c === "All" ? "All" : c;
+        b.onclick = function () {
           currentCategory = c;
-
           renderCategoryChips();
-
           renderList();
-        }, { passive: false });
-
-        b.addEventListener("click", function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-
-          currentCategory = c;
-
-          renderCategoryChips();
-
-          renderList();
-        });
-
+        };
         bar.appendChild(b);
       });
     }
 
-    function setLibraryVisible(show) {
-      var listWrap = document.getElementById("listWrap");
-      listWrap.style.display = show ? "block" : "none";
-    }
+    function renderList() {
+      var wrap = document.getElementById("listWrap");
+      if (!wrap) return;
 
-    function setNowPlayingVisible(show) {
-      document.getElementById("nowPlayingPanel").style.display = show ? "block" : "none";
-    }
-
-    function setControlsVisible(show) {
-      document.getElementById("controlsBar").style.display = show ? "block" : "none";
-    }
-
-    function showHomeMenu(show) {
-      var homeMenu = document.getElementById("homeMenu");
-      homeMenu.style.display = show ? "flex" : "none";
-      if (show) {
-        document.getElementById("nowPlayingPanel").style.display = "none";
-        setControlsVisible(false);
-        setLibraryVisible(false);
-      } else {
-        setLibraryVisible(true);
+      filteredSongs = allSongs.slice();
+      if (currentCategory !== "All") {
+        filteredSongs = filteredSongs.filter(function (s) { return (s.category || "All") === currentCategory; });
       }
+
+      if (currentLibraryType === "music") {
+        if (currentAlbum === null) {
+          // Render albums
+          var albums = {};
+          filteredSongs.forEach(function(s) {
+            var key = (s.album && s.album !== "Unknown Album") ? s.album : (s.artist && s.artist !== "Others" && s.artist !== "Unknown Artist" ? s.artist + " \u2013 Singles" : "Unknown Album");
+            if (!albums[key]) albums[key] = { name: key, artist: s.artist || "Unknown Artist", songs: [] };
+            albums[key].songs.push(s);
+          });
+          var list = Object.values(albums).sort(function(a,b) { return a.name.localeCompare(b.name); });
+          
+          if (!list.length) {
+            wrap.innerHTML = '<div class="empty">No media found.<br><button onclick="showScreen(\'home\')" style="margin-top:10px; padding:8px 16px; border-radius:10px; border:1px solid var(--gold); background:transparent; color:var(--gold);">Back Home</button></div>';
+            return;
+          }
+
+          wrap.innerHTML = "";
+          var grid = document.createElement("div");
+          grid.className = "album-grid";
+          
+          list.forEach(function(al) {
+            var firstSongPath = al.songs[0].path;
+            var coverUrl = "/api/cover?path=" + encodeURIComponent(firstSongPath);
+            
+            var card = document.createElement("div");
+            card.className = "album-card";
+            card.innerHTML = 
+              '<img class="album-card-img" src="' + coverUrl + '" onerror="this.src=\'data:image/svg+xml;utf8,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\' width=\\\'100\\\' height=\\\'100\\\'><rect width=\\\'100\\\' height=\\\'100\\\' fill=\\\'#1a1520\\\'/><text x=\\\'50%\\\' y=\\\'50%\\\' fill=\\\'#c9a962\\\' font-size=\\\'35\\\' text-anchor=\\\'middle\\\' alignment-baseline=\\\'middle\\\'>🎵</text></svg>\'">' +
+              '<div class="album-card-info">' +
+                '<div class="album-card-title">' + escapeHtml(al.name) + '</div>' +
+                '<div class="album-card-artist">' + escapeHtml(al.artist) + '</div>' +
+              '</div>';
+            card.onclick = function() {
+              currentAlbum = al.name;
+              renderList();
+            };
+            grid.appendChild(card);
+          });
+          wrap.appendChild(grid);
+          return; // Done rendering albums
+        } else {
+          // Filter by currentAlbum
+          filteredSongs = filteredSongs.filter(function(s) {
+            var key = (s.album && s.album !== "Unknown Album") ? s.album : (s.artist && s.artist !== "Others" && s.artist !== "Unknown Artist" ? s.artist + " \u2013 Singles" : "Unknown Album");
+            return key === currentAlbum;
+          });
+        }
+      }
+
+      // Render Tracks (Videos or Album tracks)
+      filteredSongs.sort(function (a, b) {
+        if (currentAlbum !== null) {
+          return (a.track_number || 0) - (b.track_number || 0); // track order
+        }
+        return (a.title || a.filename).toLowerCase().localeCompare((b.title || b.filename).toLowerCase());
+      });
+
+      if (!filteredSongs.length) {
+        wrap.innerHTML = '<div class="empty">No media found.<br><button onclick="showScreen(\'home\')" style="margin-top:10px; padding:8px 16px; border-radius:10px; border:1px solid var(--gold); background:transparent; color:var(--gold);">Back Home</button></div>';
+        return;
+      }
+
+      wrap.innerHTML = "";
+
+      if (currentLibraryType === "music" && currentAlbum !== null && filteredSongs.length > 0) {
+        var firstSong = filteredSongs[0];
+        var coverUrl = "/api/cover?path=" + encodeURIComponent(firstSong.path);
+        var artistName = (firstSong.artist && firstSong.artist !== "Unknown Artist") ? firstSong.artist : "Unknown Artist";
+        
+        var header = document.createElement("div");
+        header.className = "album-header-wrap";
+        header.innerHTML = 
+          '<img class="album-header-cover" src="' + coverUrl + '" onerror="this.src=\'data:image/svg+xml;utf8,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\' width=\\\'100\\\' height=\\\'100\\\'><rect width=\\\'100\\\' height=\\\'100\\\' fill=\\\'#1a1520\\\'/><text x=\\\'50%\\\' y=\\\'50%\\\' fill=\\\'#c9a962\\\' font-size=\\\'35\\\' text-anchor=\\\'middle\\\' alignment-baseline=\\\'middle\\\'>🎵</text></svg>\'">' +
+          '<div class="album-header-info">' +
+            '<div class="album-header-title">' + escapeHtml(currentAlbum) + '</div>' +
+            '<div class="album-header-artist">' + escapeHtml(artistName) + '</div>' +
+            '<div class="album-header-meta">' + filteredSongs.length + ' tracks</div>' +
+          '</div>' +
+          '<div class="album-back-btn">← BACK</div>';
+          
+        header.querySelector('.album-back-btn').onclick = function() {
+          currentAlbum = null;
+          renderList();
+        };
+        wrap.appendChild(header);
+      }
+
+      filteredSongs.forEach(function (song, index) {
+        var div = document.createElement("div");
+        div.className = "row";
+        
+        var isAlbumView = (currentLibraryType === "music" && currentAlbum !== null);
+        var title = isAlbumView ? song.filename : (song.title || song.filename);
+        var artist = (song.artist && song.artist !== "Unknown Artist") ? song.artist : "Others";
+        var cat = (song.category && song.category !== "All") ? '<span class="badge">' + escapeHtml(song.category) + '</span>' : "";
+        
+        var subText = artist;
+        var subStyle = "";
+        if (isAlbumView) {
+          var techStr = formatTech(song.tech);
+          subText = techStr ? techStr : artist;
+          subStyle = 'color:#60d0ff;font-size:0.75rem;font-weight:700;letter-spacing:0.04em;';
+        }
+
+        div.innerHTML =
+          '<div class="play-icon">&#9654;</div>' +
+          '<div class="meta">' +
+          '<div class="t1">' + escapeHtml(title) + cat + '</div>' +
+          '<div class="t2" style="' + subStyle + '">' + escapeHtml(subText) + '</div>' +
+          '</div>';
+
+        var playHandler = function () {
+          currentIndex = index;
+          playTrack(song.path, song.type);
+        };
+
+        div.addEventListener("click", playHandler);
+        wrap.appendChild(div);
+      });
+    }
+
+    async function loadLibrary(filterType) {
+      var wrap = document.getElementById("listWrap");
+      wrap.innerHTML = '<div class="empty">Scanning Library...</div>';
+      try {
+        var url = "/api/songs";
+        if (filterType) url += "?type=" + filterType;
+        var res = await fetch(url);
+        var data = await res.json();
+        allSongs = Array.isArray(data) ? data : [];
+        renderCategoryChips();
+        renderList();
+      } catch (e) {
+        wrap.innerHTML = '<div class="empty">Connection Error<br><button onclick="loadLibrary()" style="margin-top:16px;padding:10px 20px;background:var(--gold);border:none;border-radius:8px;color:#000;font-weight:900;">RETRY</button></div>';
+      }
+    }
+
+    // ── Playback ──
+    async function playTrack(path, type) {
+      wasPlaying = false;
+      try {
+        var res = await fetch("/api/play", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ path: path, type: type })
+        });
+        if (!res.ok) throw new Error("Play failed");
+        startStatusPolling();
+        fetchVolume();
+        showCbar();
+      } catch (e) {
+        alert("Error: " + e.message);
+      }
+    }
+
+    function playNext() {
+      if (!filteredSongs.length) return;
+      currentIndex = (currentIndex + 1) % filteredSongs.length;
+      var s = filteredSongs[currentIndex];
+      playTrack(s.path, s.type);
+    }
+
+    function playPrev() {
+      if (!filteredSongs.length) return;
+      currentIndex = (currentIndex - 1 + filteredSongs.length) % filteredSongs.length;
+      var s = filteredSongs[currentIndex];
+      playTrack(s.path, s.type);
+    }
+
+    function playCurrent() {
+      if (currentIndex < 0 || !filteredSongs.length) return;
+      var s = filteredSongs[currentIndex];
+      playTrack(s.path, s.type);
+    }
+
+    // ── Control Bar ──
+    function showCbar() {
+      // Show on any screen whenever media has been/is active
+      cbarVisible = true;
+      document.getElementById("cbar").classList.add("visible");
+      if (cbarTimer) clearTimeout(cbarTimer);
+      cbarTimer = setTimeout(hideCbar, 7000);
+    }
+    function hideCbar() {
+      cbarVisible = false;
+      document.getElementById("cbar").classList.remove("visible");
+    }
+
+    var modeLabels = { auto: "→ AUTO", repeat: "↺ REPEAT", stop: "⏹ STOP" };
+    var modeClasses = { auto: "mode-auto", repeat: "mode-repeat", stop: "mode-stop" };
+    function setMode(m) {
+      playMode = m;
+      var btn = document.getElementById("cbMode");
+      btn.textContent = modeLabels[m];
+      btn.className = "cb " + modeClasses[m];
+    }
+
+    // ── Status Polling ──
+    async function pollStatus() {
+      try {
+        var res = await fetch("/api/status");
+        var d = await res.json();
+        var stopped = !d || d.status === "error";
+
+        if (stopped) {
+          if (wasPlaying) {
+            wasPlaying = false;
+            if (playMode === "repeat") { playCurrent(); return; }
+            if (playMode === "auto") { playNext(); return; }
+            showScreen("home"); hideCbar();
+          }
+          document.getElementById("miniNowPlaying").style.display = "none";
+          return;
+        }
+
+        wasPlaying = !d.paused;
+        document.getElementById("miniTitle").textContent = d.title || "Now Playing";
+
+        if (d.path && (currentIndex === -1 || (filteredSongs[currentIndex] && filteredSongs[currentIndex].path !== d.path))) {
+          var idx = filteredSongs.findIndex(function (s) { return s.path === d.path; });
+          if (idx !== -1) currentIndex = idx;
+        }
+
+        document.getElementById("cbPlayPause").textContent = d.paused ? "▶" : "⏸";
+        document.getElementById("cbPlayPause").className = d.paused ? "cb gold" : "cb";
+
+        videoEnabled = !!d.video_enabled;
+        var vbtn = document.getElementById("cbVideo");
+        vbtn.textContent = videoEnabled ? "VIDEO ON" : "VIDEO";
+        vbtn.className = videoEnabled ? "cb vid-on" : "cb vid-off";
+
+        var isPlaying = d.title && d.title !== "Not Playing" && d.title !== "Nothing Playing";
+        document.getElementById("miniNowPlaying").style.display = isPlaying ? "flex" : "none";
+      } catch (e) { }
+    }
+
+    function startStatusPolling() {
+      if (statusTimer) return;
+      statusTimer = setInterval(function () {
+        pollStatus();
+      }, 1000);
     }
 
     function stopStatusPolling() {
       if (statusTimer) { clearInterval(statusTimer); statusTimer = null; }
     }
 
-    async function pollStatusOnce() {
-      var res = await fetch("/api/status");
-      var d = await res.json();
-      if (d && d.status === "error") return null;
-      if (!d) return null;
-      lastStatus = d;
+    async function checkNowPlaying() { pollStatus(); }
 
-      document.getElementById("npTitle").textContent = d.title || "Now playing";
-      document.getElementById("npArtist").textContent = d.artist || "";
-
-      videoEnabled = (d.video_enabled !== undefined) ? !!d.video_enabled : videoEnabled;
-      var btnVideo = document.getElementById("btnVideo");
-      if (btnVideo) btnVideo.textContent = videoEnabled ? "VIDEO ON" : "VIDEO OFF";
-
-      // If paused, make Play look active and Pause dim.
-      var btnPlay = document.getElementById("btnPlay");
-      var btnPause = document.getElementById("btnPause");
-      if (btnPlay && btnPause) {
-        btnPlay.style.opacity = d.paused ? "1" : "0.65";
-        btnPause.style.opacity = d.paused ? "0.65" : "1";
-      }
-
-      return d;
-    }
-
-    function startStatusPolling() {
-      if (statusTimer) return;
-      statusTimer = setInterval(function () {
-        if (viewMode !== "nowplaying" || isScreenOff) return;
-        pollStatusOnce().catch(function () { /* ignore */ });
-      }, 1500);
-    }
-
-
-    function startPlaybackWatcher() {
-      if (playbackWatcherTimer) return;
-      playbackWatcherTimer = setInterval(function () {
-        if (isScreenOff) return;
-        // If playback started from another screen (e.g. HDMI PC), hide the library list.
-        if (viewMode !== "library") return;
-        fetch("/api/status")
-          .then(function (r) { return r.json(); })
-          .then(function (d) {
-            if (d && d.status !== "error" && isNowPlayingTitle(d)) {
-              lastStatus = d;
-              setView("nowplaying");
-              document.getElementById("npTitle").textContent = d.title || "Now playing";
-              document.getElementById("npArtist").textContent = d.artist || "";
-              startStatusPolling();
-            }
-          })
-          .catch(function () { /* ignore */ });
-      }, 2000);
-    }
-
+    // ── Volume ──
     async function fetchVolume() {
-      var res = await fetch("/api/volume");
-      var data = await res.json();
-      if (!data || data.volume === undefined) return;
-      currentVolume = Math.round(data.volume);
-      document.getElementById("volumePercent").textContent = currentVolume + "%";
+      try {
+        var res = await fetch("/api/volume");
+        var d = await res.json();
+        if (d && d.volume !== undefined) {
+          currentVolume = Math.round(d.volume);
+          document.getElementById("cbVolDisplay").textContent = currentVolume + "%";
+        }
+      } catch (e) { }
     }
 
     async function setVolume(val) {
       val = Math.min(100, Math.max(0, Math.round(val)));
-      await fetch("/api/volume", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ volume: val })
-      });
-      currentVolume = val;
-      document.getElementById("volumePercent").textContent = currentVolume + "%";
-    }
-
-    function showControlsTimed(ms) {
-      ms = ms || 8000;
-      if (viewMode !== "nowplaying" || isScreenOff) return;
-      setControlsVisible(true);
-      if (controlsHideTimer) clearTimeout(controlsHideTimer);
-      controlsHideTimer = setTimeout(function () {
-        if (viewMode === "nowplaying" && !isScreenOff) setControlsVisible(false);
-      }, ms);
-      fetchVolume().catch(function () { /* ignore */ });
-      pollStatusOnce().catch(function () { /* ignore */ });
-    }
-
-    function setView(mode) {
-      viewMode = mode;
-      if (mode === "library") {
-        showHomeMenu(false);
-        setLibraryVisible(true);
-        setNowPlayingVisible(false);
-        setControlsVisible(false);
-        stopStatusPolling();
-      }
-      if (mode === "nowplaying") {
-        setLibraryVisible(false);
-        setNowPlayingVisible(true);
-        setControlsVisible(false);
-      }
-    }
-
-    function isNowPlayingTitle(d) {
-      // Flask returns title="Not Playing" when nothing is playing.
-      return d && d.title && d.title !== "Not Playing" && d.title !== "Nothing Playing";
-    }
-
-    async function stopMusicAndHome() {
-      await fetch("/api/stop", { method: "POST" }).catch(function () { /* ignore */ });
-      stopStatusPolling();
-      setView("library");
-      document.getElementById("msg").textContent = "";
-      document.getElementById("listWrap").style.display = "block";
-      renderList();
-    }
-
-    async function pauseMusic() {
-      await fetch("/api/pause", { method: "POST" }).catch(function () { /* ignore */ });
-    }
-
-    async function resumeMusic() {
-      await fetch("/api/resume", { method: "POST" }).catch(function () { /* ignore */ });
-    }
-
-    async function toggleVideo() {
-      await fetch("/api/video/toggle", { method: "POST" }).catch(function () { /* ignore */ });
-      var btnVideo = document.getElementById("btnVideo");
-      // Label will be corrected by pollStatusOnce().
-      if (btnVideo) btnVideo.textContent = "Toggling...";
-    }
-
-    async function playTrack(path, type) {
-      var res = await fetch("/api/play", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: path, type: type })
-      });
-
-      var data = await res.json();
-      if (!res.ok) {
-        alert(data.error || "Playback failed");
-        return;
-      }
-
-      setView("nowplaying");
-      document.getElementById("npTitle").textContent = (data && data.track && data.track.title) ? data.track.title : "Now playing";
-      document.getElementById("npArtist").textContent = (data && data.track && data.track.artist) ? data.track.artist : "";
-      showControlsTimed(8000);
-      startStatusPolling();
-    }
-
-    function renderList() {
-
-      if (viewMode !== "library") return;
-
-      var wrap = document.getElementById("listWrap");
-
-      var rows = allSongs.slice();
-
-      // CATEGORY FILTER
-      if (currentCategory !== "All") {
-
-        rows = rows.filter(function (s) {
-
-          return (s.category || "All") === currentCategory;
-
+      try {
+        await fetch("/api/volume", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ volume: val })
         });
-      }
+        currentVolume = val;
+        document.getElementById("cbVolDisplay").textContent = currentVolume + "%";
+      } catch (e) { }
+    }
 
-      rows.sort(function (a, b) {
-        return (a.title || a.filename)
-          .toLowerCase()
-          .localeCompare((b.title || b.filename).toLowerCase());
+    // ── Buttons ──
+    document.getElementById("cbMode").onclick = function () {
+      var modes = ["auto", "repeat", "stop"];
+      setMode(modes[(modes.indexOf(playMode) + 1) % 3]);
+      showCbar();
+    };
+    document.getElementById("cbPrev").onclick = function () { playPrev(); };
+    document.getElementById("cbNext").onclick = function () { playNext(); };
+    document.getElementById("cbPlayPause").onclick = function () {
+      var paused = document.getElementById("cbPlayPause").textContent === "▶";
+      fetch("/api/" + (paused ? "resume" : "pause"), { method: "POST" });
+      showCbar();
+    };
+    document.getElementById("cbStop").onclick = function () {
+      fetch("/api/stop", { method: "POST" }).then(function () {
+        hideCbar(); showScreen("home"); checkNowPlaying();
       });
+    };
+    document.getElementById("cbVolUp").onclick = function () { setVolume(currentVolume + 5); showCbar(); };
+    document.getElementById("cbVolDown").onclick = function () { setVolume(currentVolume - 5); showCbar(); };
+    document.getElementById("cbVideo").onclick = function () {
+      fetch("/api/video/toggle", { method: "POST" });
+      showCbar();
+    };
 
-      if (!rows.length) {
-        wrap.innerHTML = '<div class="empty">No media for this filter.</div>';
-        return;
-      }
-
-      wrap.innerHTML = "";
-
-      rows.forEach(function (song) {
-
-        var div = document.createElement("div");
-
-        div.className = "row";
-
-        var title = song.title || song.filename;
-
-        var artist = (song.artist && song.artist !== "Unknown Artist")
-          ? song.artist
-          : "Others";
-
-        var cat = (song.category && song.category !== "All")
-          ? '<span class="badge">' + escapeHtml(song.category) + "</span>"
-          : "";
-
-        div.innerHTML =
-          '<div class="play">&#9654;</div>' +
-          '<div class="meta">' +
-          '<div class="t1">' + escapeHtml(title) + cat + '</div>' +
-          '<div class="t2">' + escapeHtml(artist) + '</div>' +
-          '</div>';
-
-        // PREVENT ACCIDENTAL PLAY DURING SCROLL
-        let moved = false;
-
-        div.addEventListener("touchstart", function () {
-          moved = false;
-        }, { passive: true });
-
-        div.addEventListener("touchmove", function () {
-          moved = true;
-        }, { passive: true });
-
-        div.addEventListener("touchend", function (e) {
-
-          if (moved) return;
-
-          if (viewMode !== "library") return;
-
-          playTrack(song.path, song.type);
-
-        });
-
-        wrap.appendChild(div);
-      });
-    }
-
-
-    async function load() {
-      var wrap = document.getElementById("listWrap");
-      wrap.innerHTML = '<div class="empty">Loading…</div>';
-      try {
-        // Fetch both video and music, merge into allSongs
-        var resV = await fetch("/api/songs?type=video");
-        var resM = await fetch("/api/songs?type=music");
-        var videos = await resV.json();
-        var music  = await resM.json();
-        allSongs = (Array.isArray(videos) ? videos : [])
-                   .concat(Array.isArray(music) ? music : []);
-        renderCategoryChips();
-        // Only render list if still in library mode (not hijacked by watcher yet)
-        if (viewMode === "library") renderList();
-      } catch (e) {
-        wrap.innerHTML = '<div class="empty">Could not load library. Is the server running?</div>';
-      } finally {
-        // Start watcher only after first load attempt completes
-        startPlaybackWatcher();
-      }
-    }
-
-    async function setScreenOff(off) {
-      isScreenOff = !!off;
-      var overlay = document.getElementById("screenOffOverlay");
-      overlay.style.display = isScreenOff ? "flex" : "none";
-
-      // Call hardware API to actually turn off the backlight
-      try {
-        await fetch("/api/system/screen_toggle", { method: "POST" });
-      } catch (e) {
-        console.error("Backlight toggle failed:", e);
-      }
-
-      if (isScreenOff) {
-        setControlsVisible(false);
-        setNowPlayingVisible(false);
-        setLibraryVisible(false);
-        showHomeMenu(false);
-      }
-
-      var btn = document.getElementById("homeBtnScreenToggle");
-      if (btn) btn.textContent = isScreenOff ? "Turn Screen ON" : "Screen Backlight OFF";
-    }
-
-    async function wakeFromScreenOff() {
-      if (!isScreenOff) return;
-      setScreenOff(false);
-
-      try {
-        var d = await (await fetch("/api/status")).json();
-        if (d && isNowPlayingTitle(d)) {
-          setView("nowplaying");
-          document.getElementById("npTitle").textContent = d.title || "Now playing";
-          document.getElementById("npArtist").textContent = d.artist || "";
-          showControlsTimed(6000);
-          startStatusPolling();
-        } else {
-          setView("library");
-          load();
-          startPlaybackWatcher();
-        }
-      } catch (e) {
-        setView("library");
-        load();
-        startPlaybackWatcher();
-      }
-    }
-
-    // Buttons
-    function goHomeAndClose() {
-      if (isScreenOff) return;
-      // Tell server to stop
-      fetch("/api/stop", { method: "POST" }).catch(function(){});
-      // Try JS close first
-      window.close();
-      // Use server-side kill as guaranteed fallback
-      fetch("/api/quit_browser", { method: "POST" }).catch(function(){});
-    }
-
-    document.getElementById("topHomeBtn").addEventListener("touchstart", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      goHomeAndClose();
-    }, { passive: false });
-
-    document.getElementById("topMenuBtn").addEventListener("click", function () {
-      if (isScreenOff) return;
-      viewMode = "home";
-      showHomeMenu(true);
-    });
-
-    document.getElementById("homeBtnGoMain").addEventListener("click", function () {
-      showHomeMenu(false);
-      setView("library");
-      load();
-      startPlaybackWatcher();
-    });
-
-    document.getElementById("homeBtnBack").addEventListener("click", function () {
-      showHomeMenu(false);
-      if (viewMode === "nowplaying") setView("nowplaying");
-      else setView("library");
-    });
-
-    document.getElementById("homeBtnScreenToggle").addEventListener("click", function () {
-      setScreenOff(!isScreenOff);
-    });
-
-    var voiceActive = false;
-    document.getElementById("homeBtnVoiceToggle").addEventListener("click", async function () {
-      voiceActive = !voiceActive;
-      var btn = document.getElementById("homeBtnVoiceToggle");
-      try {
-        await fetch("/api/voice/toggle", { 
-          method: "POST", 
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({ enabled: voiceActive }) 
-        });
-        btn.textContent = "Voice Control: " + (voiceActive ? "ON" : "OFF");
-        btn.style.background = voiceActive ? "rgba(100,255,100,0.3)" : "rgba(100,255,100,0.15)";
-      } catch (e) {
-        console.error("Voice toggle failed", e);
-      }
-    });
-
-    document.getElementById("btnHomeNow").addEventListener("click", function () {
-      stopMusicAndHome().catch(function () { /* ignore */ });
-    });
-
-    // Helper: stop touch bubbling to document for all control buttons
-    ["btnPlay","btnPause","btnStop","btnVideo","btnVolUp","btnVolDown","btnHomeNow"].forEach(function(id) {
-      var el = document.getElementById(id);
-      if (el) el.addEventListener("touchstart", function(e) { e.stopPropagation(); }, { passive: false });
-    });
-
-    document.getElementById("btnPlay").addEventListener("click", function (e) {
-      e.stopPropagation();
-      if (viewMode !== "nowplaying") return;
-      resumeMusic().then(function () { showControlsTimed(10000); }).catch(function () {});
-    });
-
-    document.getElementById("btnPause").addEventListener("click", function (e) {
-      e.stopPropagation();
-      if (viewMode !== "nowplaying") return;
-      pauseMusic().then(function () { showControlsTimed(10000); }).catch(function () {});
-    });
-
-    document.getElementById("btnStop").addEventListener("click", function (e) {
-      e.stopPropagation();
-      if (viewMode !== "nowplaying") return;
-      stopMusicAndHome().catch(function () {});
-    });
-
-    document.getElementById("btnVideo").addEventListener("click", function (e) {
-      e.stopPropagation();
-      if (viewMode !== "nowplaying") return;
-      toggleVideo().then(function () { showControlsTimed(10000); }).catch(function () {});
-    });
-
-    document.getElementById("btnVolUp").addEventListener("click", function (e) {
-      e.stopPropagation();
-      if (viewMode !== "nowplaying") return;
-      setVolume(currentVolume + 5).then(function () { showControlsTimed(12000); }).catch(function () {});
-    });
-
-    document.getElementById("btnVolDown").addEventListener("click", function (e) {
-      e.stopPropagation();
-      if (viewMode !== "nowplaying") return;
-      setVolume(currentVolume - 5).then(function () { showControlsTimed(12000); }).catch(function () {});
-    });
-
-    // When browser tab regains focus (user returns from mpv), check if still playing
-    document.addEventListener("visibilitychange", function () {
-      if (document.hidden || isScreenOff) return;
-      fetch("/api/status")
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          if (d && d.status !== "error" && isNowPlayingTitle(d)) {
-            if (viewMode !== "nowplaying") setView("nowplaying");
-            document.getElementById("npTitle").textContent = d.title || "Now playing";
-            document.getElementById("npArtist").textContent = d.artist || "";
-            startStatusPolling();
-            showControlsTimed(10000);
-          }
-        }).catch(function () {});
-    });
-
-    // Touch behavior
-    document.addEventListener("touchstart", function (e) {
-      if (isScreenOff) {
-        wakeFromScreenOff();
-        return;
-      }
-
-      if (viewMode === "nowplaying") {
-        var controls = document.getElementById("controlsBar");
-        if (controls && controls.contains(e.target)) return;
-        showControlsTimed(10000);
-        return;
-      }
-
-      // Proactive check: if we touch in library, see if server is playing
-      fetch("/api/status")
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          if (d && d.status !== "error" && isNowPlayingTitle(d)) {
-            lastStatus = d;
-            setView("nowplaying");
-            document.getElementById("npTitle").textContent = d.title || "Now playing";
-            document.getElementById("npArtist").textContent = d.artist || "";
-            startStatusPolling();
-            showControlsTimed(10000);
-          }
-        }).catch(function () {});
+    // Global touch/click → show cbar on any screen when media is active
+    document.body.addEventListener("touchstart", function (e) {
+      var bar = document.getElementById("cbar");
+      if (bar && bar.contains(e.target)) return;
+      if (wasPlaying) showCbar();
     }, { passive: true });
+    document.body.addEventListener("click", function (e) {
+      var bar = document.getElementById("cbar");
+      if (bar && bar.contains(e.target)) return;
+      if (wasPlaying) showCbar();
+    });
 
+    // ── Screen off overlay ──
     document.getElementById("screenOffOverlay").addEventListener("touchstart", function (e) {
       e.preventDefault();
-      wakeFromScreenOff();
+      isScreenOff = false;
+      document.getElementById("screenOffOverlay").style.display = "none";
+      fetch("/api/system/screen_toggle", { method: "POST" }).catch(function () { });
     }, { passive: false });
 
-    // Initial view — startPlaybackWatcher is called inside load() after songs fetch
-    setView("library");
-    load();
+    // ── Update volume display in cbar ──
+    var _origSetVolume = setVolume;
+    setVolume = async function (val) {
+      await _origSetVolume(val);
+      document.getElementById("cbVolDisplay").textContent = currentVolume + "%";
+    };
+    var _origFetchVolume = fetchVolume;
+    fetchVolume = async function () {
+      await _origFetchVolume();
+      document.getElementById("cbVolDisplay").textContent = currentVolume + "%";
+    };
+
+    // ── Update renderList to track filteredSongs & index ──
+    var _origRenderList = renderList;
+    renderList = function () {
+      _origRenderList();
+      // Rebuild filteredSongs to match current category & album for prev/next
+      filteredSongs = allSongs.slice();
+      if (currentCategory !== "All") {
+        filteredSongs = filteredSongs.filter(function (s) { return (s.category || "All") === currentCategory; });
+      }
+      
+      if (currentLibraryType === "music" && currentAlbum !== null) {
+        filteredSongs = filteredSongs.filter(function(s) {
+          var key = (s.album && s.album !== "Unknown Album") ? s.album : (s.artist && s.artist !== "Others" && s.artist !== "Unknown Artist" ? s.artist + " \u2013 Singles" : "Unknown Album");
+          return key === currentAlbum;
+        });
+        filteredSongs.sort(function (a, b) {
+          return (a.track_number || 0) - (b.track_number || 0);
+        });
+      } else {
+        filteredSongs.sort(function (a, b) {
+          return (a.title || a.filename).toLowerCase().localeCompare((b.title || b.filename).toLowerCase());
+        });
+      }
+    };
+
+    // ── Patch playTrack call in renderList rows to pass index ──
+    var _origLoadLibrary = loadLibrary;
+    loadLibrary = async function () {
+      await _origLoadLibrary();
+      // Re-attach click with index after load
+      var rows = document.querySelectorAll("#listWrap .row");
+      rows.forEach(function (row, i) {
+        row.addEventListener("click", function () { currentIndex = i; });
+      });
+    };
+
+    // ── Clock Logic ──
+    function updateClock() {
+      var now = new Date();
+
+      // TIME (12-hour with AM/PM)
+      var timeOptions = {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      };
+
+      // DATE
+      var dateOptions = {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      };
+
+      // Example: 9:42 PM
+      var timeStr = now.toLocaleTimeString('en-US', timeOptions);
+
+      // Example: SAT, 16 MAY 2026
+      var dateStr = now
+        .toLocaleDateString('en-GB', dateOptions)
+        .replace(',', '')
+        .toUpperCase();
+
+      document.getElementById("clockTime").textContent = timeStr;
+      document.getElementById("clockDate").textContent = dateStr;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // ── Favorites Screen ──
+    async function loadFavorites() {
+      var wrap = document.getElementById("favListWrap");
+      if (!wrap) return;
+      wrap.innerHTML = '<div class="empty">Loading favorites...</div>';
+      try {
+        var res = await fetch("/api/songs");
+        var data = await res.json();
+        var favSongs = Array.isArray(data) ? data.filter(function (s) {
+          return (s.rating !== undefined && s.rating !== null && Number(s.rating) >= 3);
+        }) : [];
+
+        if (!favSongs.length) {
+          wrap.innerHTML = '<div class="empty">No favorites yet.<br><small style="color:var(--muted);font-weight:400;">Rate songs 3★ or above in the desktop editor to see them here.</small></div>';
+          return;
+        }
+
+        // Sort by rating desc, then title
+        favSongs.sort(function (a, b) {
+          if (Number(b.rating) !== Number(a.rating)) return Number(b.rating) - Number(a.rating);
+          return (a.title || a.filename).toLowerCase().localeCompare((b.title || b.filename).toLowerCase());
+        });
+
+        wrap.innerHTML = "";
+        favSongs.forEach(function (song, index) {
+          var div = document.createElement("div");
+          div.className = "row";
+          var title = song.title || song.filename;
+          var artist = (song.artist && song.artist !== "Unknown Artist") ? song.artist : "Others";
+          var stars = Number(song.rating) || 0;
+          var starStr = "";
+          for (var i = 0; i < 3; i++) starStr += (i < stars ? "★" : "☆");
+          div.innerHTML =
+            '<div class="play-icon">&#9654;</div>' +
+            '<div class="meta">' +
+            '<div class="t1">' + escapeHtml(title) + '<span class="star-badge">' + starStr + '</span></div>' +
+            '<div class="t2">' + escapeHtml(artist) + '</div>' +
+            '</div>';
+
+          // Keep a local filtered list for prev/next in favorites context
+          div.addEventListener("click", (function (s, i) {
+            return function () {
+              filteredSongs = favSongs.slice();
+              currentIndex = i;
+              playTrack(s.path, s.type);
+            };
+          })(song, index));
+
+          wrap.appendChild(div);
+        });
+      } catch (e) {
+        wrap.innerHTML = '<div class="empty">Connection Error</div>';
+      }
+    }
+
+    // ── Init ──
+    showScreen("home");
+    checkNowPlaying();
+    startStatusPolling();
   </script>
 </body>
 

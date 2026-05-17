@@ -24,13 +24,14 @@ python3 voice_controller.py
 ```
 
 ### Voice Commands
-1. Say **"Hello Telefunken"** (Wake Word).
-2. Wait for the "Listening..." prompt.
+1. Wake word: **"Hello Sarawak"**
+2. Wait for the "Hello!!" response on screen.
 3. Say your command:
-   - *"Play [Song Name]"* (e.g., "Play Bohemian Rhapsody")
-   - *"Volume Up"* / *"Louder"*
-   - *"Volume Down"* / *"Softer"*
-   - *"Stop"* / *"Pause"* / *"Resume"*
+   - *"Play [Song/Artist Name]"* (e.g., "Play Taylor Swift")
+   - *"Good Morning"*
+   - *"Thank you"* (Returns to player screen)
+   - *"Volume Up / Down"*
+   - *"Stop / Pause / Resume"*
 
 ## Safety Features
 - **Decoupled**: If this script crashes, the music keeps playing.

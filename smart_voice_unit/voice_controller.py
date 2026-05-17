@@ -25,7 +25,7 @@ except ImportError:
     sys.exit(1)
 
 # --- Configuration ---
-WAKE_WORD = "TELEFUNKEN"
+WAKE_WORD = "HELLO SARAWAK"
 BASE_URL = "http://127.0.0.1:5000"
 MUSIC_DIR = Path.home() / "Music"
 
@@ -66,7 +66,7 @@ def get_asr_config():
 
 class VoiceAssistant:
     def __init__(self):
-        print(f"[*] Initializing Smart Voice Unit...")
+        print(f"[*] Initializing Sarawak Voice Unit (REJANG system)...")
         
         # Check models
         if not KWS_DIR.exists() or not ASR_DIR.exists():
@@ -78,9 +78,8 @@ class VoiceAssistant:
         self.check_api_status()
 
         # 1. Create Keyword Spotter
-        # Sherpa-onnx KWS requires keywords to be tokens separated by spaces
-        # We split 'TELEFUNKEN' into 'T E L E F U N K E N'
-        tokens = " ".join(list(WAKE_WORD.upper()))
+        # Tokens for 'HELLO SARAWAK'
+        tokens = " ".join(list(WAKE_WORD.replace(" ", "").upper()))
         with open(VOICE_UNIT_DIR / "keywords.txt", "w") as f:
             f.write(f"{tokens} :1.5 #0.45\n")
             
@@ -89,12 +88,24 @@ class VoiceAssistant:
         
         self.kws_stream = self.kws.create_stream()
         self.pa = pyaudio.PyAudio()
+        self.state = "IDLE"
+        self.target_artist = ""
+
+    def send_update(self, sarawak="", me="", awake=None):
+        """Send message updates to the Flask UI."""
+        try:
+            payload = {}
+            if sarawak: payload["sarawak"] = sarawak
+            if me: payload["me"] = me
+            if awake is not None: payload["awake"] = awake
+            requests.post(f"{BASE_URL}/api/voice/message", json=payload, timeout=0.5)
+        except: pass
 
     def check_api_status(self):
         """Verify the main music console is reachable."""
         print(f"[*] Connecting to Music Console at {BASE_URL}...")
         try:
-            r = requests.get(f"{BASE_URL}/status", timeout=2)
+            r = requests.get(f"{BASE_URL}/api/ping", timeout=2)
             if r.status_code == 200:
                 print("[✓] Music Console connected.")
             else:
@@ -108,7 +119,6 @@ class VoiceAssistant:
         for i in range(self.pa.get_device_count()):
             dev = self.pa.get_device_info_by_index(i)
             name = dev.get('name', '').lower()
-            # XVF3800 usually shows up as "XMOS" or "ReSpeaker"
             if any(key in name for key in ['respeaker', 'xmos', 'xv']):
                 print(f"[+] Found Mic Array: {dev['name']} (Index {i})")
                 return i
@@ -118,40 +128,76 @@ class VoiceAssistant:
     def execute_command(self, text):
         text = text.lower()
         print(f"[*] Command recognized: '{text}'")
+        self.send_update(me=text)
         
         try:
-            # 1. Volume Controls
+            # 0. Handle follow-up state
+            if self.state == "WAITING_FOR_SONG":
+                if any(word in text for word in ["any", "just"]):
+                    self.send_update(sarawak=f"Playing any song by {self.target_artist}")
+                    self.play_by_search(self.target_artist)
+                    self.state = "IDLE"
+                else:
+                    self.send_update(sarawak=f"Noted. Looking for {text} by {self.target_artist}")
+                    self.play_by_search(f"{self.target_artist} {text}")
+                    self.state = "IDLE"
+                
+                # After playback starts, we go back to sleep mode
+                time.sleep(2)
+                self.send_update(awake=False)
+                return
+
+            # 1. Special Sarawak Commands
+            if "good morning" in text:
+                self.send_update(sarawak="Good morning! I am Sarawak, your REJANG system assistant.")
+                return
+
+            if "thank you" in text:
+                self.send_update(sarawak="You're welcome! Returning to player.", awake=False)
+                # We DON'T toggle the voice service off anymore, just the UI (awake=False)
+                return
+
+            # 2. Volume Controls
             if any(word in text for word in ["louder", "increase", "up"]):
                 current = self.get_current_vol()
-                requests.post(f"{BASE_URL}/volume_set", json={"volume": min(100, current + 15)}, timeout=1)
-                print("[✓] Action: Volume Up")
+                requests.post(f"{BASE_URL}/api/volume", json={"volume": min(100, current + 15)}, timeout=1)
+                self.send_update(sarawak="Volume increased.")
                 return
 
             if any(word in text for word in ["lower", "softer", "down"]):
                 current = self.get_current_vol()
-                requests.post(f"{BASE_URL}/volume_set", json={"volume": max(0, current - 15)}, timeout=1)
-                print("[✓] Action: Volume Down")
+                requests.post(f"{BASE_URL}/api/volume", json={"volume": max(0, current - 15)}, timeout=1)
+                self.send_update(sarawak="Volume decreased.")
                 return
 
-            # 2. Playback Controls
+            # 3. Playback Controls
             if "stop" in text:
-                requests.post(f"{BASE_URL}/stop", timeout=1)
-                print("[✓] Action: Stop")
+                requests.post(f"{BASE_URL}/api/stop", timeout=1)
+                self.send_update(sarawak="Playback stopped.", awake=False)
                 return
                 
             if "pause" in text:
-                requests.post(f"{BASE_URL}/pause", timeout=1)
-                print("[✓] Action: Pause")
+                requests.post(f"{BASE_URL}/api/pause", timeout=1)
+                self.send_update(sarawak="Paused.")
                 return
 
             if "resume" in text or "play" in text:
-                # If just "play", resume. If "play something", search.
+                if "taylor swift" in text:
+                    self.send_update(sarawak='Noted "Taylor Swift", any particular song?')
+                    self.state = "WAITING_FOR_SONG"
+                    self.target_artist = "Taylor Swift"
+                    return
+
                 query = text.split("play")[-1].strip()
                 if query and query != "music":
+                    self.send_update(sarawak=f"Searching for {query}...")
                     self.play_by_search(query)
                 else:
-                    requests.post(f"{BASE_URL}/resume", timeout=1)
-                    print("[✓] Action: Resume Playback")
+                    requests.post(f"{BASE_URL}/api/resume", timeout=1)
+                    self.send_update(sarawak="Resuming.")
+                
+                time.sleep(1)
+                self.send_update(awake=False)
                 return
 
         except Exception as e:
@@ -160,12 +206,15 @@ class VoiceAssistant:
     def play_by_search(self, query):
         """Fuzzy match song name and play."""
         try:
-            songs = [f.name for f in MUSIC_DIR.iterdir() if f.suffix.lower() in ('.mp3', '.mkv', '.mp4', '.flac')]
+            r = requests.get(f"{BASE_URL}/api/songs", timeout=2)
+            if r.status_code != 200: return
+            songs_data = r.json()
+            songs = [s['title'] for s in songs_data]
             match = process.extractOne(query, songs, scorer=fuzz.WRatio)
             if match and match[1] > 65:
-                song_name = match[0]
-                requests.post(f"{BASE_URL}/play", json={"filename": song_name}, timeout=1)
-                print(f"[✓] Action: Playing '{song_name}' ({match[1]}% match)")
+                target = next(s for s in songs_data if s['title'] == match[0])
+                requests.post(f"{BASE_URL}/api/play", json={"path": target['path'], "type": target['type']}, timeout=1)
+                print(f"[✓] Action: Playing '{target['title']}'")
             else:
                 print(f"[!] No match for '{query}'")
         except Exception as e:
@@ -173,7 +222,7 @@ class VoiceAssistant:
 
     def get_current_vol(self):
         try:
-            r = requests.get(f"{BASE_URL}/status", timeout=1)
+            r = requests.get(f"{BASE_URL}/api/volume", timeout=1)
             return r.json().get('volume', 50)
         except: return 50
 
@@ -192,7 +241,7 @@ class VoiceAssistant:
                 frames_per_buffer=chunk_size
             )
             
-            print(f"\n[>>>] Smart Voice Unit ACTIVE [<<<]")
+            print(f"\n[>>>] Sarawak Voice Unit ACTIVE [<<<]")
             print(f"Say: '{WAKE_WORD}' followed by a command.\n")
             
             while True:
@@ -207,6 +256,8 @@ class VoiceAssistant:
                 keyword = self.kws.get_result(self.kws_stream)
                 if keyword:
                     print(f"\n[!] WAKE WORD DETECTED: {keyword}")
+                    # Signal UI to wake up
+                    self.send_update(sarawak="Hello!!", awake=True)
                     self.process_voice_command(stream)
                     # Reset KWS
                     self.kws_stream = self.kws.create_stream()

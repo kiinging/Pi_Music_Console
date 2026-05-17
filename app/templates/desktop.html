@@ -177,7 +177,7 @@
         }
 
         .track-list {
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
         }
 
@@ -197,12 +197,38 @@
 
         .track-item-title {
             font-weight: 600;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
+            font-size: 1rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .track-item-sub {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--text-dim);
+            font-weight: 400;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tech-badge {
+            background: rgba(157, 78, 221, 0.15);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 0.6rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .tech-badge.hires {
+            background: rgba(201, 169, 98, 0.15);
+            color: #c9a962;
+            border-color: #c9a962;
         }
 
         .media-tabs {
@@ -228,6 +254,28 @@
             color: white;
             border-color: transparent;
             box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        /* Compact Header Layout */
+        .collection-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .hamburger-btn {
@@ -361,47 +409,120 @@
             border: 1px solid #ff453a;
         }
 
-        /* Home Menu (3 big buttons) */
+        /* Premium Home Menu */
         .home-menu {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: radial-gradient(circle at 20% 30%, #1e1e2f, #0a0a0a);
+            background: radial-gradient(circle at center, #151522 0%, #07070a 100%);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            gap: 30px;
             z-index: 200;
+            padding: 20px;
         }
 
-        .home-btn {
-            width: 80%;
-            max-width: 280px;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(15px);
-            border: 1px solid var(--glass-border);
-            border-radius: 60px;
-            padding: 20px 0;
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: white;
+        .home-header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .home-header h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 3rem;
+            font-weight: 300;
+            letter-spacing: 2px;
+            margin: 0;
+            background: linear-gradient(90deg, #fff, #b39ddb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .home-header p {
+            color: var(--text-dim);
+            font-size: 1rem;
+            margin-top: 10px;
+            letter-spacing: 1px;
+        }
+
+        .home-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .home-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             text-align: center;
             cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            text-decoration: none;
+            color: white;
+            position: relative;
+            overflow: hidden;
         }
 
-        .home-btn:active {
-            transform: scale(0.96);
-            background: rgba(255, 255, 255, 0.2);
+        .home-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
         }
 
-        .home-btn i {
-            margin-right: 15px;
-            font-size: 2rem;
-            vertical-align: middle;
+        .home-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 40px rgba(157, 78, 221, 0.15);
         }
+        
+        .home-card:hover::before { opacity: 1; }
+        .home-card:active { transform: scale(0.98); }
+
+        .home-card i {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            color: var(--accent);
+            transition: transform 0.3s;
+        }
+        
+        .home-card:hover i { transform: scale(1.1); }
+
+        .home-card h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.3rem;
+            margin: 0 0 5px 0;
+            font-weight: 600;
+        }
+
+        .home-card p {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            margin: 0;
+        }
+        
+        /* Specific card accents */
+        .card-library i { color: #9d4edd; }
+        .card-network i { color: #00f5d4; }
+        .card-youtube i { color: #ff0000; }
+        .card-master i { color: #ff9f1c; }
+        .card-screen i { color: #38b000; }
+        .card-exit i { color: #ef233c; }
 
         /* Home icon inside app view */
         .home-icon {
@@ -422,21 +543,93 @@
             height: 100vh;
             position: relative;
         }
+
+        /* ── Album Grid (Music Tab) ── */
+        .album-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 18px;
+            padding: 4px 0 16px;
+        }
+        .album-card {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform .2s, box-shadow .2s;
+        }
+        .album-card:hover { transform: translateY(-4px); box-shadow: 0 14px 30px rgba(157,78,221,.35); }
+        .album-card:active { transform: scale(.96); }
+        .album-cover-placeholder {
+            width: 100%; aspect-ratio: 1/1;
+            background: linear-gradient(135deg,#1a1a2e,#2d1f4e);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.8rem;
+        }
+        .album-cover-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block; }
+        .album-info { padding: 10px 12px 12px; }
+        .album-title { font-weight: 600; font-size: .88rem; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .album-artist { font-size: .75rem; color: var(--text-dim); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .album-count { font-size: .68rem; color: var(--accent); margin-top: 5px; font-weight: 600; }
+
+        /* ── Album Tracklist ── */
+        .album-back-row { display: flex; align-items: center; gap: 8px; color: var(--accent); cursor: pointer; font-weight: 600; padding: 4px 0 14px; }
+        .album-back-row:hover { opacity: .75; }
+        .album-header-card { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 14px; padding: 14px 16px; display: flex; gap: 16px; align-items: center; margin-bottom: 1rem; }
+        .album-header-art { width: 72px; height: 72px; border-radius: 10px; background: linear-gradient(135deg,#1a1a2e,#2d1f4e); display: flex; align-items: center; justify-content: center; font-size: 2rem; flex-shrink: 0; overflow: hidden; }
+        .album-header-art img { width: 100%; height: 100%; object-fit: cover; }
+        .album-header-info h3 { margin: 0 0 4px; font-size: 1.05rem; }
+        .album-header-info p { margin: 0; color: var(--text-dim); font-size: .82rem; }
+        .track-item .track-number { width: 30px; text-align: right; color: var(--text-dim); font-size: .85rem; flex-shrink: 0; font-variant-numeric: tabular-nums; margin-right: 12px; }
+        .track-item.playing .track-number { color: var(--accent); }
+        .track-item.playing { border-left: 2px solid var(--accent); background: rgba(157,78,221,.07); }
+        
+        /* Album edit button */
+        .album-edit-btn { margin-top: 8px; font-size: 0.75rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 4px; text-align: center; color: white; }
+        .album-edit-btn:hover { background: rgba(255,255,255,0.2); }
     </style>
 </head>
 
 <body>
 
-    <!-- HOME MENU -->
+    <!-- PREMIUM HOME MENU -->
     <div id="homeMenu" class="home-menu">
-        <div class="home-btn" onclick="showMusicLibrary()"><i class="fas fa-folder-music"></i> Music Library</div>
-        <div class="home-btn" onclick="showNetworkModal()"><i class="fas fa-network-wired"></i> Network</div>
-        <div class="home-btn" onclick="showYoutubeModal()"><i class="fab fa-youtube"></i> YouTube</div>
-        <div class="home-btn" id="voiceToggleBtn" onclick="toggleVoiceControl()" style="background: rgba(100,255,100,0.15); border-color: rgba(100,255,100,0.3);">
-            <i class="fas fa-microphone"></i> Voice Control: OFF
+        <div class="home-header">
+            <h1>Pi Music Console</h1>
+            <p>High-Fidelity Audio Experience</p>
         </div>
-        <div class="home-btn" style="background: rgba(255,100,100,0.15); border-color: rgba(255,100,100,0.3);" onclick="toggleHardwareScreen()">
-            <i class="fas fa-power-off"></i> Screen Backlight
+        <div class="home-grid">
+            <div class="home-card card-library" onclick="showMusicLibrary()">
+                <i class="fas fa-folder-music"></i>
+                <h3>My Collection</h3>
+                <p>Browse Local Audio & Video</p>
+            </div>
+            <div class="home-card card-youtube" onclick="showYoutubeModal()">
+                <i class="fab fa-youtube"></i>
+                <h3>YouTube</h3>
+                <p>Stream Video Online</p>
+            </div>
+            <div class="home-card card-network" onclick="showNetworkModal()">
+                <i class="fas fa-network-wired"></i>
+                <h3>Network</h3>
+                <p>Wi-Fi & Ethernet Settings</p>
+            </div>
+            <div class="home-card card-master" id="masterControlBtn" onclick="toggleMasterControl()">
+                <i class="fas fa-crown"></i>
+                <h3>PC Master Mode</h3>
+                <p id="masterControlStatus">Currently: OFF</p>
+            </div>
+            <div class="home-card card-screen" onclick="toggleHardwareScreen()">
+                <i class="fas fa-power-off"></i>
+                <h3>Screen Backlight</h3>
+                <p>Toggle Display Hardware</p>
+            </div>
+            <div class="home-card card-exit" onclick="powerDownPi()">
+                <i class="fas fa-power-off"></i>
+                <h3>Power Down Pi</h3>
+                <p>Safely shutdown system</p>
+            </div>
         </div>
     </div>
 
@@ -444,24 +637,43 @@
     <div id="appView" class="app-view">
         <div class="home-icon" onclick="goHome()"><i class="fas fa-arrow-left"></i> Home</div>
 
-        <section class="now-playing">
+        <section class="now-playing" style="position: relative;">
+            <img id="desktopCover" src="" style="position: absolute; right: 30px; top: 25px; width: 120px; height: 120px; border-radius: 12px; object-fit: cover; box-shadow: 0 8px 24px rgba(0,0,0,0.5); display: none;">
             <h1 id="playing-title" class="track-title">Select a Track</h1>
             <div id="playing-artist" class="track-artist">Ready to Play</div>
             <div id="playing-badges" class="metadata-badges"></div>
             <div class="controls">
                 <div class="controls-group">
-                    <button class="btn-circle" style="background: var(--success); color: black;"
-                        onclick="resumeMusic()">▶</button>
-                    <button class="btn-circle" onclick="pauseMusic()">⏸</button>
-                    <button class="btn-circle" onclick="stopMusic()">⏹</button>
+                    <button class="btn-circle" id="btn-repeat" onclick="toggleRepeatMode()" title="Next Mode">
+                        <i class="fas fa-retweet"></i>
+                    </button>
+                    
+                    <button class="btn-circle" onclick="playPrevious()" title="Previous">
+                        <i class="fas fa-step-backward"></i>
+                    </button>
+
+                    <button class="btn-circle" id="btn-play-pause" style="background: var(--accent); color: white; width: 50px; height: 50px; font-size: 1.4rem;"
+                        onclick="togglePlayPause()">▶</button>
+
+                    <button class="btn-circle" onclick="stopMusicAndReturn()" title="Stop">
+                        <i class="fas fa-stop"></i>
+                    </button>
+
+                    <button class="btn-circle" onclick="playNext()" title="Next">
+                        <i class="fas fa-step-forward"></i>
+                    </button>
                 </div>
+                
                 <div class="volume-btn-group">
                     <button class="btn-circle" onclick="volumeDown()">−</button>
                     <span id="volume-percent">50%</span>
                     <button class="btn-circle" onclick="volumeUp()">+</button>
                 </div>
+
                 <button id="btn-video" class="btn-circle" style="background: var(--accent)"
-                    onclick="toggleVideo()">📺</button>
+                    onclick="toggleVideo()" title="Toggle Video Stream">📺</button>
+                <button id="voiceToggleBtn" class="btn-circle" style="background: rgba(100,255,100,0.15); color: #64ff64;"
+                    onclick="toggleVoiceControl()" title="Toggle Voice Commands">🎤</button>
             </div>
             <div class="seek-container">
                 <span id="seek-current">0:00</span>
@@ -473,33 +685,38 @@
         </section>
 
         <div class="track-list-container">
-            <div
-                style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                <h2 style="margin:0;">My Collection</h2>
-                <div class="filter-group" style="display: flex; gap: 5px;">
-                    <button class="filter-btn" onclick="filterByStars(3)">★★★</button>
-                    <button class="filter-btn" onclick="filterByStars(2)">★★</button>
-                    <button class="filter-btn" onclick="filterByStars(1)">★</button>
-                    <button class="filter-btn" onclick="filterByStars(-1)">No Star</button>
-                    <button class="filter-btn active" onclick="filterByStars(0)">All</button>
+            <div class="collection-header">
+                <div class="header-left" style="display:flex; align-items:center; gap: 15px; flex-wrap: wrap;">
+                    <h2 style="margin:0;">My Collection</h2>
+                    <div class="media-tabs" style="padding:0; margin:0; display:flex; align-items:center; gap: 5px;">
+                        <button class="tab-btn" id="tab-music" onclick="switchTab('music')">Music</button>
+                        <button class="tab-btn active" id="tab-video" onclick="switchTab('video')">Video</button>
+                    </div>
+                    <!-- Inline Category Filter -->
+                    <div id="inline-category-filter" style="display: flex; gap: 5px; border-left: 1px solid var(--glass-border); padding-left: 15px;">
+                        <button class="filter-btn active" onclick="filterByCategory('All')">All</button>
+                        <button class="filter-btn" onclick="filterByCategory('Pop')">Pop</button>
+                        <button class="filter-btn" onclick="filterByCategory('Rock')">Rock</button>
+                        <button class="filter-btn" onclick="filterByCategory('Classical')">Classical</button>
+                        <button class="filter-btn" onclick="filterByCategory('Spanish')">Spanish</button>
+                        <button class="filter-btn" onclick="filterByCategory('Chinese')">Chinese</button>
+                    </div>
                 </div>
-                <button id="toggle-edit-btn" class="tab-btn" onclick="toggleEditMode()" style="padding:6px 15px;">Edit
-                    Off</button>
+                
+                <div class="header-right">
+                    <div class="filter-group" id="star-filter-group" style="display: flex; gap: 5px;">
+                        <button class="filter-btn" onclick="filterByStars(3)">★★★</button>
+                        <button class="filter-btn" onclick="filterByStars(2)">★★</button>
+                        <button class="filter-btn" onclick="filterByStars(1)">★</button>
+                        <button class="filter-btn" onclick="filterByStars(-1)">No Star</button>
+                        <button class="filter-btn active" onclick="filterByStars(0)">All</button>
+                    </div>
+                    <button id="toggle-edit-btn" class="tab-btn" onclick="toggleEditMode()" style="padding:6px 15px;">Edit Off</button>
+                </div>
             </div>
-            <div class="media-tabs">
-                <button class="tab-btn" onclick="switchTab('music')">Music</button>
-                <button class="tab-btn active" onclick="switchTab('video')">Video</button>
-            </div>
-            <div class="filter-bar" id="category-filter-bar">
-                <button class="filter-btn active" onclick="filterByCategory('All')">All Categories</button>
-                <button class="filter-btn" onclick="filterByCategory('Pop')">Pop</button>
-                <button class="filter-btn" onclick="filterByCategory('Rock')">Rock</button>
-                <button class="filter-btn" onclick="filterByCategory('Classical')">Classical</button>
-                <button class="filter-btn" onclick="filterByCategory('Spanish')">Spanish</button>
-                <button class="filter-btn" onclick="filterByCategory('Chinese')">Chinese</button>
-            </div>
+
             <div class="filter-bar" id="artist-filter-bar"
-                style="border-top:1px solid var(--glass-border); padding-top:10px;"></div>
+                style="padding-top:0px; display: none;"></div>
             <div id="track-list" class="track-list">Loading Media Library...</div>
         </div>
     </div>
@@ -508,8 +725,8 @@
     <div id="edit-modal" class="modal-overlay">
         <div class="modal-content">
             <h3>Edit Song Details</h3>
+            <input id="edit-title" placeholder="Display Title" class="form-input">
             <div style="display:none;"><input id="edit-filename" class="form-input"></div>
-            <input id="edit-title" placeholder="Title" class="form-input">
             <input id="edit-artist" placeholder="Artist" class="form-input">
             <select id="edit-category" class="form-input">
                 <option>All</option>
@@ -521,9 +738,9 @@
             </select>
             <input id="edit-year" placeholder="Year" class="form-input">
             <div class="star-rating" id="edit-stars">
-                <span class="star" data-value="1">★</span>
-                <span class="star" data-value="2">★</span>
-                <span class="star" data-value="3">★</span>
+                <span class="star" data-value="1" onclick="setEditRating(1)">★</span>
+                <span class="star" data-value="2" onclick="setEditRating(2)">★</span>
+                <span class="star" data-value="3" onclick="setEditRating(3)">★</span>
             </div>
             <div class="modal-actions">
                 <button class="btn-secondary" onclick="closeModal()">Cancel</button>
@@ -565,6 +782,7 @@
         let currentCategory = 'All';
         let currentArtist = 'All';
         let currentStars = 0;
+        let currentAlbum = null; // null=album grid, string=open album tracklist
         let allSongs = [];
         let editingPath = null;
         let originalFilename = null;
@@ -572,6 +790,17 @@
         let currentDuration = 0;
         let seekDragging = false;
         let videoEnabled = true;
+        let repeatMode = 0; // 0: Next Mode, 1: Repeat Mode, 2: Play Once
+        let currentPath = null;
+        let isPaused = true;
+
+        // Helper to normalize artist names
+        function getArtistName(song) {
+            if (!song.artist || song.artist === 'Unknown Artist' || song.artist.trim() === '' || song.artist === 'Others') return 'Others';
+            return song.artist;
+        }
+
+        let editingAlbum = null;
 
         function syncUI() {
             const btn = document.getElementById('toggle-edit-btn');
@@ -581,9 +810,22 @@
         function toggleEditMode() { isEditMode = !isEditMode; syncUI(); renderTracks(allSongs); }
         function switchTab(type) {
             currentMediaType = type;
+            currentCategory = 'All';
+            currentArtist = 'All';
+            currentStars = 0;
+            currentAlbum = null;
             document.querySelectorAll('.media-tabs .tab-btn').forEach(btn => btn.classList.remove('active'));
-            if (type === 'music') document.querySelector('.media-tabs .tab-btn:first-child').classList.add('active');
-            else document.querySelector('.media-tabs .tab-btn:last-child').classList.add('active');
+            if (type === 'music') document.getElementById('tab-music').classList.add('active');
+            else document.getElementById('tab-video').classList.add('active');
+            
+            // Hide stars filter for music mode
+            if (type === 'music') {
+                document.getElementById('star-filter-group').style.display = 'none';
+                document.getElementById('artist-filter-bar').style.display = 'none';
+            } else {
+                document.getElementById('star-filter-group').style.display = 'flex';
+                document.getElementById('artist-filter-bar').style.display = '';
+            }
             refreshList();
         }
         async function refreshList() {
@@ -599,7 +841,7 @@
         }
         function filterByCategory(cat) {
             currentCategory = cat;
-            document.querySelectorAll('#category-filter-bar .filter-btn').forEach(btn => btn.classList.toggle('active', btn.innerText === (cat === 'All' ? 'All Categories' : cat)));
+            document.querySelectorAll('#inline-category-filter .filter-btn').forEach(btn => btn.classList.toggle('active', btn.innerText === cat || (cat==='All' && btn.innerText==='All')));
             currentArtist = 'All';
             renderArtistFilters(allSongs);
             renderTracks(allSongs);
@@ -615,35 +857,122 @@
         function updateModalStars(val) { document.querySelectorAll('#edit-stars .star').forEach(s => s.classList.toggle('active', parseInt(s.dataset.value) <= val)); }
         function renderArtistFilters(songs) {
             let filtered = (currentCategory === 'All') ? songs : songs.filter(s => s.category === currentCategory);
-            let artists = ['All', ...new Set(filtered.map(s => s.artist && s.artist !== 'Unknown Artist' ? s.artist : 'Others'))];
+            let artists = ['All', ...new Set(filtered.map(s => getArtistName(s)))];
             const container = document.getElementById('artist-filter-bar');
             container.innerHTML = artists.map(a => `<button class="filter-btn ${currentArtist === a ? 'active' : ''}" onclick="filterByArtist('${a.replace(/'/g, "\\'")}')">${a === 'All' ? 'All Artists' : a}</button>`).join('');
         }
         function renderTracks(songs) {
             let filtered = songs;
-            if (currentStars !== 0) filtered = filtered.filter(s => currentStars === -1 ? (!s.rating || s.rating === 0) : s.rating === currentStars);
+            if (currentStars !== 0) filtered = filtered.filter(s => currentStars === -1 ? (!s.rating||s.rating===0) : s.rating===currentStars);
             if (currentCategory !== 'All') filtered = filtered.filter(s => s.category === currentCategory);
-            if (currentArtist !== 'All') filtered = filtered.filter(s => (s.artist || 'Others') === currentArtist);
-            const container = document.getElementById('track-list');
-            if (!filtered.length) { container.innerHTML = '<div>No matching media</div>'; return; }
-            container.innerHTML = filtered.map(song => {
-                const artist = (song.artist && song.artist !== 'Unknown Artist') ? song.artist : 'Others';
+            if (currentArtist !== 'All') filtered = filtered.filter(s => getArtistName(s) === currentArtist);
+            const c = document.getElementById('track-list');
+            if (!filtered.length) { c.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-dim)">No matching media found</div>'; return; }
+            if (currentMediaType === 'music') {
+                if (currentAlbum === null) renderAlbumGrid(filtered, c);
+                else renderAlbumTracks(filtered, c);
+            } else {
+                renderVideoList(filtered, c);
+            }
+        }
+
+        function renderAlbumGrid(songs, container) {
+            const albums = {};
+            songs.forEach(s => {
+                const key = (s.album && s.album !== 'Unknown Album') ? s.album : (getArtistName(s) !== 'Others' ? getArtistName(s) + ' – Singles' : 'Unknown Album');
+                if (!albums[key]) albums[key] = { name: key, artist: getArtistName(s), songs: [], coverPath: s.path };
+                albums[key].songs.push(s);
+            });
+            const list = Object.values(albums).sort((a,b) => a.name.localeCompare(b.name));
+            container.innerHTML = '<div class="album-grid">' + list.map(al => {
+                const coverUrl = '/api/cover?path=' + encodeURIComponent(al.coverPath);
+                const category = al.songs[0].category || 'All';
+                const catBadge = (category && category !== 'All') ? `<span style="background:var(--accent);color:white;padding:2px 6px;border-radius:10px;font-size:.6rem;margin-left:5px;">${category}</span>` : '';
+                const editBtn = isEditMode ? `<div class="album-edit-btn" onclick="prepareAlbumEdit(event, '${al.name.replace(/'/g,"\\'").replace(/\\/g,'\\\\')}', '${category}')"><i class="fas fa-edit"></i> Edit Category</div>` : '';
+                return `<div class="album-card" onclick="openAlbum('${al.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">
+                    <img class="album-cover-img" src="${coverUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" style="display:block">
+                    <div class="album-cover-placeholder" style="display:none">💿</div>
+                    <div class="album-info">
+                        <div class="album-title">${al.name}</div>
+                        <div class="album-artist">${al.artist}${catBadge}</div>
+                        <div class="album-count">${al.songs.length} track${al.songs.length!==1?'s':''}</div>
+                        ${editBtn}
+                    </div>
+                </div>`;
+            }).join('') + '</div>';
+        }
+
+        function openAlbum(name) {
+            currentAlbum = name;
+            renderTracks(allSongs);
+        }
+
+        function renderAlbumTracks(songs, container) {
+            const tracks = songs
+                .filter(s => {
+                    const key = (s.album && s.album !== 'Unknown Album') ? s.album : (getArtistName(s) !== 'Others' ? getArtistName(s) + ' – Singles' : 'Unknown Album');
+                    return key === currentAlbum;
+                })
+                .sort((a,b) => ((a.track_number||0) - (b.track_number||0)) || (a.title||'').localeCompare(b.title||''));
+            const first = tracks[0];
+            const coverUrl = first ? '/api/cover?path=' + encodeURIComponent(first.path) : '';
+            const totalDur = tracks.reduce((t,s) => t + (s.tech && s.tech.duration ? parseFloat(s.tech.duration) : 0), 0);
+            const durStr = totalDur > 0 ? ' • ' + Math.floor(totalDur/60) + ' min' : '';
+            container.innerHTML =
+                `<div class="album-back-row" onclick="currentAlbum=null;renderTracks(allSongs)"><i class="fas fa-arrow-left"></i> All Albums</div>
+                <div class="album-header-card">
+                    <div class="album-header-art">
+                        <img src="${coverUrl}" onerror="this.parentElement.innerHTML='💿'" style="width:100%;height:100%;object-fit:cover;border-radius:8px">
+                    </div>
+                    <div class="album-header-info">
+                        <h3>${currentAlbum}</h3>
+                        <p>${first ? getArtistName(first) : ''} • ${tracks.length} tracks${durStr}</p>
+                    </div>
+                </div>` +
+                tracks.map((s, i) => {
+                    const title = s.title || s.filename;
+                    const num = s.track_number || (i + 1);
+                    const fmt = (s.tech && s.tech.format || '').toUpperCase();
+                    const sr = s.tech && s.tech.sample_rate ? ` • ${(s.tech.sample_rate/1000).toFixed(1)}kHz` : '';
+                    const br = s.tech && s.tech.bit_rate ? ` • ${Math.round(s.tech.bit_rate/1000)}kbps` : '';
+                    const hires = s.tech && s.tech.sample_rate >= 88200 ? '<span class="tech-badge hires">HI-RES</span> ' : '';
+                    const b24 = s.tech && s.tech.bit_depth >= 24 ? '<span class="tech-badge">24BIT</span> ' : '';
+                    
+                    const isPlaying = s.path === currentPath;
+                    const editBtn = isEditMode ? `<div class="hamburger-btn" onclick="prepareEdit(event,this,'${title.replace(/'/g,"\\'")}','${getArtistName(s).replace(/'/g,"\\'")}','${s.category}','${s.year||''}','${s.filename.replace(/'/g,"\\'")}',${s.rating||0})">☰</div>` : '';
+                    return `<div class="track-item${isPlaying?' playing':''}" onclick="onTrackClick(event,this)" data-path="${s.path.replace(/"/g,'&quot;')}" data-type="${s.type}">
+                        <div class="track-number">${isPlaying ? '<i class="fas fa-volume-up" style="font-size:.7rem"></i>' : String(num).padStart(2,'0')}</div>
+                        <div class="track-info" style="flex:1">
+                            <div class="track-item-title"><span>${title}</span> ${hires}${b24}</div>
+                            <div class="track-item-sub"><span style="color:var(--text-dim)">${fmt}${sr}${br}</span></div>
+                        </div>
+                        ${editBtn}
+                    </div>`;
+                }).join('');
+        }
+
+        function renderVideoList(songs, container) {
+            container.innerHTML = songs.map(song => {
+                const artist = getArtistName(song);
                 const title = song.title || song.filename;
-                const catBadge = (song.category && song.category !== 'All') ? `<span style="background:var(--accent); color:white; padding:2px 8px; border-radius:10px; font-size:0.6rem; margin-left:8px;">${song.category}</span>` : '';
-                const artBadge = isEditMode ? `<span style="background:#4a4a4a; color:white; padding:2px 8px; border-radius:10px; font-size:0.6rem; margin-left:8px;">👤 ${artist}</span>` : '';
-                const starsHtml = song.rating ? `<div class="track-item-stars">${'★'.repeat(song.rating)}</div>` : '';
-                const techInfo = (song.tech.format || 'UNK').toUpperCase() + (song.tech.sample_rate ? ` • ${(song.tech.sample_rate / 1000).toFixed(1)}kHz` : '') + (song.tech.bit_rate ? ` • ${Math.round(song.tech.bit_rate / 1000)}kbps` : '');
-                // FIX: path is stored in data-path attribute, with double quotes. Apostrophe inside is safe.
-                // We must NOT replace ' with \' in the attribute value.
-                return `
-            <div class="track-item" onclick="onTrackClick(event, this)" data-path="${song.path.replace(/"/g, '&quot;')}" data-type="${song.type}">
-                <div class="track-info">
-                    <span class="track-item-title">${title}${catBadge}${artBadge}</span>
-                    <span class="track-item-sub">${artist} • ${techInfo}</span>
-                    ${starsHtml}
-                </div>
-                <div class="hamburger-btn" onclick="prepareEdit(event, this, '${title.replace(/'/g, "\\'")}', '${artist.replace(/'/g, "\\'")}', '${song.category}', '${song.year || ''}', '${song.filename.replace(/'/g, "\\'")}', ${song.rating || 0})">☰</div>
-            </div>`;
+                let badges = [];
+                const fmt = (song.tech.format || '').toUpperCase();
+                if (fmt) badges.push(`<span class="tech-badge">${fmt}</span>`);
+                if (song.tech.sample_rate >= 88200) badges.push('<span class="tech-badge hires">HI-RES</span>');
+                if (song.tech.bit_depth >= 24) badges.push('<span class="tech-badge">24BIT</span>');
+                const catBadge = (song.category && song.category !== 'All') ? `<span style="background:var(--accent);color:white;padding:2px 8px;border-radius:10px;font-size:.6rem;margin-left:8px">${song.category}</span>` : '';
+                const artBadge = isEditMode ? `<span style="background:#4a4a4a;color:white;padding:2px 8px;border-radius:10px;font-size:.6rem;margin-left:8px">👤 ${artist}</span>` : '';
+                const starsHtml = song.rating ? `<span style="color:#ffcc00;font-size:.72rem;margin-left:8px;">${'★'.repeat(song.rating)}</span>` : '';
+                const srText = song.tech.sample_rate ? ` • ${(song.tech.sample_rate/1000).toFixed(1)}kHz` : '';
+                const brText = song.tech.bit_rate ? ` • ${Math.round(song.tech.bit_rate/1000)}kbps` : '';
+                const techInfo = `<span style="color:var(--text-dim)">${badges.join(' ')} ${srText}${brText}</span>`;
+                return `<div class="track-item" onclick="onTrackClick(event,this)" data-path="${song.path.replace(/"/g,'&quot;')}" data-type="${song.type}">
+                    <div class="track-info">
+                        <div class="track-item-title"><span>${title}</span>${catBadge}${artBadge}${starsHtml}</div>
+                        <div class="track-item-sub"><span>${artist}</span><span>|</span>${techInfo}</div>
+                    </div>
+                    <div class="hamburger-btn" onclick="prepareEdit(event,this,'${title.replace(/'/g,"\\'")}','${artist.replace(/'/g,"\\'")}','${song.category}','${song.year||''}','${song.filename.replace(/'/g,"\\'")}',${song.rating||0})">☰</div>
+                </div>`;
             }).join('');
         }
         function onTrackClick(e, el) { if (isEditMode) return; playTrack(el.getAttribute('data-path'), el.getAttribute('data-type')); }
@@ -654,43 +983,127 @@
                 if (data.status === 'success') { updateNowPlaying(data.track); videoEnabled = true; updateVideoButton(); }
             } catch (e) { console.error(e); }
         }
+
+        function prepareAlbumEdit(e, albumName, category) {
+            e.stopPropagation();
+            editingAlbum = albumName;
+            editingPath = null;
+            document.querySelector('#edit-modal h3').innerText = 'Edit Album Category';
+            document.getElementById('edit-title').style.display = 'none';
+            document.getElementById('edit-artist').style.display = 'none';
+            document.getElementById('edit-year').style.display = 'none';
+            document.getElementById('edit-stars').style.display = 'none';
+            document.getElementById('edit-category').value = category || 'All';
+            document.getElementById('edit-modal').style.display = 'flex';
+        }
+
         function prepareEdit(e, el, title, artist, cat, year, filename, rating) {
             e.stopPropagation();
+            editingAlbum = null;
             editingPath = el.closest('.track-item').getAttribute('data-path');
             originalFilename = filename;
             currentEditRating = rating;
             updateModalStars(rating);
+            document.querySelector('#edit-modal h3').innerText = 'Edit Song Details';
+            document.getElementById('edit-title').style.display = 'block';
+            document.getElementById('edit-artist').style.display = 'block';
+            document.getElementById('edit-year').style.display = 'block';
+            document.getElementById('edit-stars').style.display = 'block';
             document.getElementById('edit-filename').value = filename;
             document.getElementById('edit-title').value = title;
             document.getElementById('edit-artist').value = (artist === 'Others') ? '' : artist;
             document.getElementById('edit-category').value = cat || 'All';
-            document.getElementById('edit-year').value = year || '';
+            document.getElementById('edit-year').value = year;
             document.getElementById('edit-modal').style.display = 'flex';
         }
+
         function closeModal() { document.getElementById('edit-modal').style.display = 'none'; }
         async function saveSongDetails() {
-            const payload = { path: editingPath, title: document.getElementById('edit-title').value, artist: document.getElementById('edit-artist').value || 'Unknown Artist', category: document.getElementById('edit-category').value, year: document.getElementById('edit-year').value, rating: currentEditRating };
-            const newFile = document.getElementById('edit-filename').value;
-            if (newFile !== originalFilename && newFile.trim() !== "") {
-                if (!confirm("Rename file?")) return;
-                const res = await fetch('/api/songs/rename', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: editingPath, new_filename: newFile, type: currentMediaType }) });
-                if ((await res.json()).status === 'success') { closeModal(); refreshList(); return; }
+            const cat = document.getElementById('edit-category').value;
+            
+            if (editingAlbum) {
+                const tracks = allSongs.filter(s => {
+                    const key = (s.album && s.album !== 'Unknown Album') ? s.album : (getArtistName(s) !== 'Others' ? getArtistName(s) + ' – Singles' : 'Unknown Album');
+                    return key === editingAlbum;
+                });
+                try {
+                    for (let t of tracks) {
+                        await fetch('/api/songs/update', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                path: t.path,
+                                title: t.title || t.filename, 
+                                artist: t.artist || 'Unknown Artist', 
+                                category: cat, 
+                                year: t.year || '', 
+                                rating: t.rating || 0
+                            })
+                        });
+                    }
+                } catch (e) { alert('Save failed'); }
+            } else {
+                const title = document.getElementById('edit-title').value || originalFilename;
+                const artist = document.getElementById('edit-artist').value || 'Others';
+                const year = document.getElementById('edit-year').value;
+                const rating = currentEditRating;
+
+                try {
+                    await fetch('/api/songs/update', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            path: editingPath,
+                            title, artist, category: cat, year, rating
+                        })
+                    });
+                } catch (e) { alert('Save failed'); }
             }
-            await fetch('/api/songs/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            closeModal(); refreshList();
+            closeModal();
+            refreshList();
         }
+
         async function deleteSong() { if (!confirm("Delete permanently?")) return; await fetch('/api/songs/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: editingPath, type: currentMediaType }) }); closeModal(); refreshList(); }
-        async function stopMusic() { await fetch('/api/stop', { method: 'POST' }); refreshList(); }
+        async function stopMusic() { await fetch('/api/stop', { method: 'POST' }); currentPath = null; refreshList(); }
+        async function stopMusicAndReturn() {
+            await stopMusic();
+            // Stays in the current collection list
+        }
         async function pauseMusic() { await fetch('/api/pause', { method: 'POST' }); }
         async function resumeMusic() { await fetch('/api/resume', { method: 'POST' }); }
+        
         async function fetchVolume() { const res = await fetch('/api/volume'); const data = await res.json(); document.getElementById('volume-percent').innerText = Math.round(data.volume) + '%'; }
         async function updateVolume(val) { val = Math.min(100, Math.max(0, val)); document.getElementById('volume-percent').innerText = val + '%'; await fetch('/api/volume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ volume: val }) }); }
-        async function volumeUp() { let v = parseInt(document.getElementById('volume-percent').innerText); if (isNaN(v)) v = 50; await updateVolume(Math.min(100, v + 1)); }
-        async function volumeDown() { let v = parseInt(document.getElementById('volume-percent').innerText); if (isNaN(v)) v = 50; await updateVolume(Math.max(0, v - 1)); }
+        async function volumeUp() { let v = parseInt(document.getElementById('volume-percent').innerText); if (isNaN(v)) v = 50; await updateVolume(Math.min(100, v + 2)); }
+        async function volumeDown() { let v = parseInt(document.getElementById('volume-percent').innerText); if (isNaN(v)) v = 50; await updateVolume(Math.max(0, v - 2)); }
+        
         async function toggleVideo() { videoEnabled = !videoEnabled; await fetch('/api/video/toggle', { method: 'POST' }); updateVideoButton(); }
         function updateVideoButton() { const btn = document.getElementById('btn-video'); if (btn) btn.style.background = videoEnabled ? 'var(--accent)' : 'transparent'; }
         function formatTime(s) { if (!s || isNaN(s)) return '0:00'; return Math.floor(s / 60) + ':' + Math.floor(s % 60).toString().padStart(2, '0'); }
-        function updateNowPlaying(track) { if (!track) return; document.getElementById('playing-title').innerText = track.title || "Unknown"; document.getElementById('playing-artist').innerText = track.artist || ""; const badges = document.getElementById('playing-badges'); if (badges && track.tech) badges.innerHTML = `<span style="color:var(--accent)">▶ PLAYING</span> • ${(track.tech.format || 'UNK').toUpperCase()} ${track.tech.sample_rate ? `• ${(track.tech.sample_rate / 1000).toFixed(1)}kHz` : ''} ${track.tech.bit_rate ? `• ${Math.round(track.tech.bit_rate / 1000)}kbps` : ''}`; }
+        
+        function updateNowPlaying(track) { 
+            if (!track) return; 
+            currentPath = track.path; 
+            document.getElementById('playing-title').innerText = track.title || "Unknown"; 
+            document.getElementById('playing-artist').innerText = track.artist || ""; 
+            const badges = document.getElementById('playing-badges'); 
+            if (badges && track.tech) badges.innerHTML = `<span style="color:var(--accent)">▶ PLAYING</span> • ${(track.tech.format || 'UNK').toUpperCase()} ${track.tech.sample_rate ? `• ${(track.tech.sample_rate / 1000).toFixed(1)}kHz` : ''} ${track.tech.bit_rate ? `• ${Math.round(track.tech.bit_rate / 1000)}kbps` : ''}`; 
+            
+            // Album Cover Logic
+            const coverImg = document.getElementById("desktopCover");
+            if (track.path && coverImg) {
+                const newSrc = "/api/cover?path=" + encodeURIComponent(track.path);
+                if (coverImg.getAttribute("data-path") !== track.path) {
+                    coverImg.setAttribute("data-path", track.path);
+                    coverImg.onload = () => coverImg.style.display = "block";
+                    coverImg.onerror = () => coverImg.style.display = "none";
+                    coverImg.src = newSrc;
+                }
+            } else if (coverImg) {
+                coverImg.style.display = "none";
+            }
+        }
+
         async function pollStatus() {
             try {
                 const res = await fetch('/api/status');
@@ -698,24 +1111,91 @@
                 if (d.status !== 'error') {
                     if (d.title !== document.getElementById('playing-title').innerText) updateNowPlaying(d);
                     if (d.video_enabled !== undefined) { videoEnabled = d.video_enabled; updateVideoButton(); }
+                    
+                    isPaused = d.paused;
+                    document.getElementById('btn-play-pause').innerText = isPaused ? "▶" : "⏸";
+
                     currentDuration = d.duration || 0;
+                    let currentPos = d.position || 0;
+
+                    // AUTO-NEXT LOGIC
+                    if (currentDuration > 0 && currentPos > 0 && (currentDuration - currentPos) < 1.8) {
+                        if (repeatMode === 0) {
+                             playNext(); // Next Mode
+                        } else if (repeatMode === 1) {
+                             playTrack(currentPath, currentMediaType); // Repeat same track
+                        } else if (repeatMode === 2) {
+                             stopMusic(); // Play Once
+                        }
+                    }
+
                     if (!seekDragging && currentDuration) {
                         document.getElementById('seek-total').innerText = formatTime(currentDuration);
-                        document.getElementById('seek-current').innerText = formatTime(d.position);
-                        document.getElementById('seek-slider').value = (d.position / currentDuration) * 100;
+                        document.getElementById('seek-current').innerText = formatTime(currentPos);
+                        document.getElementById('seek-slider').value = (currentPos / currentDuration) * 100;
                     }
+                } else {
+                    document.getElementById('btn-play-pause').innerText = "▶";
                 }
             } catch (e) { }
             setTimeout(pollStatus, 1500);
         }
+
+        function getFilteredSongs() {
+            let filtered = allSongs;
+            if (currentStars !== 0) filtered = filtered.filter(s => currentStars === -1 ? (!s.rating || s.rating === 0) : s.rating === currentStars);
+            if (currentCategory !== 'All') filtered = filtered.filter(s => s.category === currentCategory);
+            if (currentArtist !== 'All') filtered = filtered.filter(s => getArtistName(s) === currentArtist);
+            // When inside an album, only navigate within that album's tracks
+            if (currentMediaType === 'music' && currentAlbum !== null) {
+                filtered = filtered.filter(s => {
+                    const key = (s.album && s.album !== 'Unknown Album') ? s.album : (getArtistName(s) !== 'Others' ? getArtistName(s) + ' – Singles' : 'Unknown Album');
+                    return key === currentAlbum;
+                }).sort((a,b) => ((a.track_number||0)-(b.track_number||0)) || (a.title||'').localeCompare(b.title||''));
+            }
+            return filtered;
+        }
+
+        async function playNext() {
+            const songs = getFilteredSongs();
+            if (!songs.length) return;
+            let idx = songs.findIndex(s => s.path === currentPath);
+            idx = (idx + 1) % songs.length;
+            playTrack(songs[idx].path, songs[idx].type);
+        }
+
+        async function playPrevious() {
+            const songs = getFilteredSongs();
+            if (!songs.length) return;
+            let idx = songs.findIndex(s => s.path === currentPath);
+            idx = (idx - 1 + songs.length) % songs.length;
+            playTrack(songs[idx].path, songs[idx].type);
+        }
+
+        async function togglePlayPause() {
+            if (isPaused) resumeMusic();
+            else pauseMusic();
+        }
+
+        function toggleRepeatMode() {
+            repeatMode = (repeatMode + 1) % 3;
+            const btn = document.getElementById('btn-repeat');
+            const icons = [
+                '<i class="fas fa-retweet"></i>', 
+                '<div style="position:relative;display:inline-flex;align-items:center;justify-content:center;"><i class="fas fa-retweet"></i><span style="position:absolute;font-size:0.5rem;font-weight:800;font-family:sans-serif;">1</span></div>', 
+                '<i class="far fa-dot-circle"></i>'
+            ];
+            const labels = ["Next Mode (Flow)", "Repeat Track", "Play Once"];
+            btn.innerHTML = icons[repeatMode];
+            btn.title = labels[repeatMode];
+        }
+
         async function onSeekRelease() { seekDragging = false; const pos = (document.getElementById('seek-slider').value / 100) * currentDuration; await fetch('/api/seek', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ position: pos }) }); }
         function updateSeekDisplay(val) { if (currentDuration) document.getElementById('seek-current').innerText = formatTime((val / 100) * currentDuration); }
 
-        // ---------- HOME SCREEN NAVIGATION ----------
         function goHome() { document.getElementById('homeMenu').style.display = 'flex'; document.getElementById('appView').style.display = 'none'; }
         function showMusicLibrary() { document.getElementById('homeMenu').style.display = 'none'; document.getElementById('appView').style.display = 'flex'; refreshList(); }
 
-        // ---------- NETWORK FUNCTIONS (requires backend routes) ----------
         let selectedWifiSSID = null;
         async function scanWifi() { const res = await fetch('/api/network/wifi/scan'); const data = await res.json(); if (data.error) { document.getElementById('wifi-list').innerHTML = `<div>${data.error}</div>`; return; } document.getElementById('wifi-list').innerHTML = data.map(net => `<div class="filter-btn" style="display:block;margin:5px 0;" onclick="selectWifi('${net.ssid.replace(/'/g, "\\'")}')">📶 ${net.ssid} (${net.signal}%) ${net.secure ? '🔒' : ''}</div>`).join(''); }
         function selectWifi(ssid) { selectedWifiSSID = ssid; alert(`Selected ${ssid}. Enter password and click Connect.`); }
@@ -725,7 +1205,6 @@
         function showNetworkModal() { document.getElementById('networkModal').style.display = 'flex'; scanWifi(); updateNetworkStatus(); }
         function closeNetworkModal() { document.getElementById('networkModal').style.display = 'none'; }
 
-        // ---------- YOUTUBE FUNCTIONS ----------
         function showYoutubeModal() { document.getElementById('youtubeModal').style.display = 'flex'; }
         function closeYoutubeModal() { document.getElementById('youtubeModal').style.display = 'none'; }
         async function playYoutube() { let url = document.getElementById('youtube-url').value.trim(); if (!url) return alert('Enter URL or search term'); if (!url.startsWith('http')) url = 'ytsearch:' + url; const res = await fetch('/api/youtube/play', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) }); const data = await res.json(); if (data.status === 'playing') closeYoutubeModal(); else alert(data.error); }
@@ -743,19 +1222,57 @@
             voiceActive = !voiceActive;
             const btn = document.getElementById('voiceToggleBtn');
             try {
-                const res = await fetch('/api/voice/toggle', { 
+                await fetch('/api/voice/toggle', { 
                     method: 'POST', 
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ enabled: voiceActive }) 
                 });
-                const data = await res.json();
-                btn.innerHTML = `<i class="fas fa-microphone"></i> Voice Control: ${voiceActive ? 'ON' : 'OFF'}`;
-                btn.style.background = voiceActive ? 'rgba(100,255,100,0.3)' : 'rgba(100,255,100,0.15)';
+                btn.style.background = voiceActive ? 'rgba(100,255,100,0.4)' : 'rgba(100,255,100,0.15)';
+                btn.style.boxShadow = voiceActive ? '0 0 15px rgba(100,255,100,0.5)' : 'none';
             } catch (e) { alert('Voice service failed to respond.'); }
         }
 
-        // Initial load
-        window.onload = () => { syncUI(); fetchSongs(); pollStatus(); fetchVolume(); };
+        let masterActive = false;
+        async function toggleMasterControl() {
+            masterActive = !masterActive;
+            const statusText = document.getElementById('masterControlStatus');
+            const card = document.getElementById('masterControlBtn');
+            try {
+                await fetch('/api/system/mode', { 
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ mode: masterActive ? 'PC_MASTER' : 'AUTO' }) 
+                });
+                if (statusText) statusText.innerText = `Currently: ${masterActive ? 'ON' : 'OFF'}`;
+                card.style.background = masterActive ? 'rgba(255,150,50,0.1)' : '';
+                card.style.borderColor = masterActive ? 'rgba(255,150,50,0.3)' : '';
+            } catch (e) { alert('Failed to set control mode.'); }
+        }
+
+        async function powerDownPi() {
+            if (!confirm("Safely power down the Pi 5?")) return;
+            await fetch('/api/stop', { method: 'POST' }).catch(() => {});
+            await fetch('/api/system/shutdown', { method: 'POST' }).catch(() => {});
+            window.close();
+            fetch('/api/quit_browser', { method: 'POST' }).catch(() => {});
+        }
+
+        window.onload = () => { 
+            document.getElementById('homeMenu').style.display = 'flex';
+            document.getElementById('appView').style.display = 'none';
+            // Default tab is Music
+            currentMediaType = 'music';
+            document.getElementById('tab-music').classList.add('active');
+            document.getElementById('tab-video').classList.remove('active');
+            
+            // Hide star filter and artist filter for music mode default
+            document.getElementById('star-filter-group').style.display = 'none';
+            document.getElementById('artist-filter-bar').style.display = 'none';
+            syncUI(); 
+            fetchSongs(); 
+            pollStatus(); 
+            fetchVolume(); 
+        };
     </script>
 </body>
 

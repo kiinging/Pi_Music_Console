@@ -7,8 +7,11 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# 1. Cleanup old processes
+# 1. Cleanup & Signal Handling
 echo "[1/3] Cleaning up..."
+# Trap Ctrl+C (SIGINT) and SIGTERM to kill background processes
+trap "echo -e '\n🛑 Stopping Rejang Console...'; sudo killall python3 chromium chromium-browser weston 2>/dev/null; exit" INT TERM
+
 sudo killall weston 2>/dev/null
 sudo killall chromium-browser 2>/dev/null
 sudo killall chromium 2>/dev/null
@@ -21,11 +24,17 @@ mkdir -p $XDG_RUNTIME_DIR
 chmod 700 $XDG_RUNTIME_DIR
 export WAYLAND_DISPLAY=wayland-0
 
+# Force Backlight ON (DSI/CSI Screen)
+echo "Setting backlight to ON..."
+for p in /sys/class/backlight/*/bl_power; do
+    if [ -f "$p" ]; then sudo sh -c "echo 0 > $p"; fi
+done
+
 # 3. Start Weston Fresh
 echo "[2/3] Starting Weston Compositor..."
 cd "$SCRIPT_DIR"
 # Force socket name to wayland-0
-weston --backend=drm-backend.so --shell=kiosk-shell.so --socket=wayland-0 --config="$SCRIPT_DIR/weston.ini" > /tmp/weston.log 2>&1 &
+weston --backend=drm-backend.so --shell=desktop-shell.so --socket=wayland-0 --drm-device=card0 --config="$SCRIPT_DIR/weston.ini" > /tmp/weston.log 2>&1 &
 
 # Wait for Wayland socket to appear (max 10 seconds)
 echo "Waiting for Wayland socket..."
@@ -64,23 +73,22 @@ for i in {1..15}; do
 done
 
 # 5. Determine Browser Command
-BROWSER_CMD="chromium-browser"
-if ! command -v $BROWSER_CMD &> /dev/null; then
-    BROWSER_CMD="chromium"
-fi
+BROWSER_CMD="chromium"
 
 # 6. Start Chromium in Kiosk Mode
 if command -v $BROWSER_CMD &> /dev/null; then
     echo "🚀 Launching Local Touch UI using $BROWSER_CMD..."
     # We use a simplified command that works better on modern Debian/Ubuntu
-    $BROWSER_CMD \
+    /usr/bin/chromium \
         --enable-features=UseOzonePlatform \
         --ozone-platform=wayland \
+        --no-sandbox \
+        --user-data-dir=/tmp/chromium-data-$(date +%s) \
         --kiosk \
-        --app=http://localhost:5000/csi \
+        --app="http://127.0.0.1:5000/csi?cachebust=$(date +%s)" \
         --no-first-run \
-        --autoplay-policy=no-user-gesture-required-policy \
-        --disable-features=TranslateUI &
+        --disable-infobars \
+        --disable-session-crashed-bubble > /tmp/chromium.log 2>&1 &
 else
     echo "❌ ERROR: Chromium not found. Please run: sudo apt install -y chromium-browser"
 fi

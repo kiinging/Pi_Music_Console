@@ -1,3 +1,5 @@
+[*] Audio: Found DAC mixer 'Digital' on card 0
+[*] Metadata Scanner: Starting background scan in 5 seconds...
  * Serving Flask app 'main'
  * Debug mode: off
 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
@@ -5,57 +7,6 @@
  * Running on http://127.0.0.1:5000
  * Running on http://192.168.1.18:5000
 [33mPress CTRL+C to quit[0m
-127.0.0.1 - - [14/May/2026 10:06:29] "GET /api/ping HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:06:57] "GET / HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:06:57] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
-192.168.1.8 - - [14/May/2026 10:06:57] "GET /api/volume HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:06:57] "GET /api/volume HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:07:05] "GET /api/volume HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:07:23] "GET /api/songs?type=video HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:07:23] "GET /api/songs?type=video HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:07:36] "POST /api/play HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:08:07] "POST /api/play HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:08:56] "POST /api/play HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:09:27] "[33mPOST /api/stop HTTP/1.1[0m" 404 -
-192.168.1.8 - - [14/May/2026 10:09:27] "GET /api/volume HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:09:27] "GET /api/songs?type=video HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:09:29] "[33mPOST /api/stop HTTP/1.1[0m" 404 -
-192.168.1.8 - - [14/May/2026 10:09:29] "GET /api/volume HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:09:29] "GET /api/songs?type=video HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:09:33] "POST /api/video/toggle HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:09:34] "POST /api/video/toggle HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:09:35] "POST /api/video/toggle HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:09:36] "POST /api/video/toggle HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:09:36] "POST /api/video/toggle HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:09:56] "POST /api/system/screen_toggle HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:10:07] "GET /api/volume HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:10:07] "GET /api/songs?type=video HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:10:10] "POST /api/volume HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:10:11] "POST /api/volume HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:10:11] "POST /api/volume HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:10:14] "POST /api/video/toggle HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:10:16] "POST /api/video/toggle HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:10:25] "POST /api/play HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:10:30] "POST /api/video/toggle HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:10:35] "POST /api/video/toggle HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:10:46] "[33mPOST /api/stop HTTP/1.1[0m" 404 -
-192.168.1.8 - - [14/May/2026 10:10:46] "GET /api/volume HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:10:46] "GET /api/songs?type=video HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:10:52] "POST /api/play HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:10:57] "[33mPOST /api/stop HTTP/1.1[0m" 404 -
-192.168.1.8 - - [14/May/2026 10:10:57] "GET /api/volume HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:10:57] "GET /api/songs?type=video HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:10:59] "[33mPOST /api/stop HTTP/1.1[0m" 404 -
-192.168.1.8 - - [14/May/2026 10:10:59] "GET /api/volume HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:10:59] "GET /api/songs?type=video HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:11:00] "[33mPOST /api/stop HTTP/1.1[0m" 404 -
-192.168.1.8 - - [14/May/2026 10:11:00] "GET /api/volume HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:11:00] "GET /api/songs?type=video HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:11:01] "[33mPOST /api/stop HTTP/1.1[0m" 404 -
-192.168.1.8 - - [14/May/2026 10:11:01] "GET /api/volume HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:11:01] "GET /api/songs?type=video HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:11:01] "[33mPOST /api/stop HTTP/1.1[0m" 404 -
-192.168.1.8 - - [14/May/2026 10:11:01] "GET /api/volume HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:11:01] "GET /api/songs?type=video HTTP/1.1" 200 -
-192.168.1.8 - - [14/May/2026 10:11:03] "[33mPOST /api/pause HTTP/1.1[0m" 404 -
-192.168.1.8 - - [14/May/2026 10:11:04] "[33mPOST /api/pause HTTP/1.1[0m" 404 -
+127.0.0.1 - - [17/May/2026 17:12:36] "GET /api/ping HTTP/1.1" 200 -
+127.0.0.1 - - [17/May/2026 17:12:37] "GET /csi?cachebust=1779009156 HTTP/1.1" 200 -
+127.0.0.1 - - [17/May/2026 17:12:37] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -

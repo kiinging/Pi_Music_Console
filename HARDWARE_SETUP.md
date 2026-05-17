@@ -1,3 +1,7 @@
+
+https://github.com/respeaker/reSpeaker_XVF3800_USB_4MIC_ARRAY
+
+
 # Hardware Setup & Manual Testing Guide (Raspberry Pi OS)
 
 This guide describes how to connect the Adafruit PCM5122 DAC and a Rotary Encoder to your Raspberry Pi 5.
@@ -82,3 +86,8 @@ python3 music_player.py
 2.  **Display Orientation**: If your 5" screen is upside down, use the **Screen Configuration** tool in the Raspberry Pi OS menu.
 3.  **Permissions**: Ensure your user is in the `gpio` and `audio` groups (the installer does this).
 4.  **GPIO Chip**: Pi 5 uses the RP1 chip. The code uses `lgpio` (via `gpiozero`) which is the correct backend for this hardware.
+5.  **Chinese/Asian Characters Not Displaying**: If song titles appear as empty squares (tofu) on the Pi's screen, you need to install the CJK fonts. Run this command on your Raspberry Pi:
+    ```bash
+    sudo apt-get install fonts-noto-cjk
+    ```
+    Then restart the browser/interface.

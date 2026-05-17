@@ -2,3 +2,6 @@
 *.onnx
 models/
 smart_voice_unit/models/
+
+# Temporary files
+.lgd-*
