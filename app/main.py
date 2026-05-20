@@ -640,20 +640,45 @@ def system_shutdown():
 def get_audio_details(f_path):
     if f_path in TECH_CACHE: return TECH_CACHE[f_path]
     try:
-        res = subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "stream=codec_type,sample_rate,bits_per_sample,channels:format=format_name,bit_rate,duration", "-of", "json", f_path], timeout=2).decode("utf-8")
-        d = json.loads(res); s = next((x for x in d.get("streams", []) if x.get("codec_type") == "audio"), {}); f = d.get("format", {})
-        TECH_CACHE[f_path] = {"sample_rate": s.get("sample_rate"), "bit_depth": s.get("bits_per_sample"), "format": f.get("format_name"), "bit_rate": f.get("bit_rate"), "duration": float(f.get("duration", 0) or 0)}
+        # Run ffprobe at lowest CPU priority (nice 19) to avoid pegging the CPU
+        res = subprocess.check_output(
+            ["nice", "-n", "19", "ffprobe", "-v", "error",
+             "-show_entries", "stream=codec_type,sample_rate,bits_per_sample,channels:format=format_name,bit_rate,duration",
+             "-of", "json", f_path],
+            timeout=5
+        ).decode("utf-8")
+        d = json.loads(res)
+        s = next((x for x in d.get("streams", []) if x.get("codec_type") == "audio"), {})
+        f = d.get("format", {})
+        TECH_CACHE[f_path] = {
+            "sample_rate": s.get("sample_rate"),
+            "bit_depth":   s.get("bits_per_sample"),
+            "format":      f.get("format_name"),
+            "bit_rate":    f.get("bit_rate"),
+            "duration":    float(f.get("duration", 0) or 0)
+        }
         return TECH_CACHE[f_path]
     except: return {}
 
+# Video extensions that are too slow/large for deep ffprobe scanning at startup
+_VIDEO_EXTS = ('.mp4', '.mkv', '.avi', '.mov', '.webm')
+
 def background_scanner():
-    """Crawls all media sources in the background to build a rich technical metadata cache."""
-    print("[*] Metadata Scanner: Starting background scan in 5 seconds...")
-    time.sleep(5)
+    """
+    Crawls all media sources in the background to build a rich technical
+    metadata cache. Runs at low CPU priority with throttling between files
+    so the Pi stays responsive during normal use.
+    """
+    # Wait for boot to settle before hammering the disk/CPU
+    print("[*] Metadata Scanner: Waiting 30 seconds for system to settle...")
+    time.sleep(30)
+    print("[*] Metadata Scanner: Starting background scan (throttled)...")
     
     state = load_system_state()
     cache = state.get("cache", {})
-    exts = ('.mp3', '.flac', '.wav', '.m4a', '.ogg', '.mp4', '.mkv', '.avi', '.mov', '.webm')
+    # Audio-only extensions for deep scanning (videos are too slow and not needed)
+    audio_exts = ('.mp3', '.flac', '.wav', '.m4a', '.ogg')
+    all_exts   = audio_exts + _VIDEO_EXTS
     
     count = 0
     for source in MEDIA_SOURCES:
@@ -662,34 +687,48 @@ def background_scanner():
         
         for root, _, files in os.walk(b_dir):
             for f in files:
-                if f.lower().endswith(exts):
-                    f_path = os.path.join(root, f)
-                    # Only scan if missing technical info (like bit_rate or sample_rate)
-                    existing_tech = cache.get(f_path, {}).get("tech", {})
-                    if f_path not in cache or not existing_tech.get("sample_rate"):
-                        try:
-                            # 1. Fast tag scan
-                            m = get_track_metadata(f_path)
-                            # 2. Deep technical scan (ffprobe)
-                            t = get_audio_details(f_path)
-                            
-                            cache[f_path] = {
-                                "meta": {
-                                    "title": m["title"], 
-                                    "artist": m["artist"],
-                                    "album": m.get("album", "Unknown Album"),
-                                    "track_number": m.get("track_number", 0)
-                                },
-                                "tech": t
-                            }
-                            count += 1
-                            # Save every 20 files to persist progress
-                            if count % 20 == 0:
-                                state["cache"] = cache
-                                save_system_state(state)
-                                print(f"[*] Metadata Scanner: Progress saved ({count} files)...")
-                        except Exception as e:
-                            print(f"[!] Metadata Scanner Error on {f}: {e}")
+                if not f.lower().endswith(all_exts):
+                    continue
+                    
+                f_path = os.path.join(root, f)
+                is_video = f.lower().endswith(_VIDEO_EXTS)
+                
+                # Only deep-scan AUDIO files — video files skip ffprobe
+                existing_tech = cache.get(f_path, {}).get("tech", {})
+                needs_scan = (f_path not in cache or not existing_tech.get("sample_rate")) and not is_video
+                
+                try:
+                    # 1. Fast tag scan (always)
+                    m = get_track_metadata(f_path)
+                    t = {}
+                    
+                    if needs_scan:
+                        # 2. Deep technical scan via ffprobe (audio files only)
+                        t = get_audio_details(f_path)
+                        count += 1
+                        # Throttle: pause between each file scan to keep CPU sane
+                        time.sleep(0.3)
+                        
+                    # Only update cache if we have new data
+                    if f_path not in cache or needs_scan:
+                        cache[f_path] = {
+                            "meta": {
+                                "title":        m["title"],
+                                "artist":       m["artist"],
+                                "album":        m.get("album", "Unknown Album"),
+                                "track_number": m.get("track_number", 0)
+                            },
+                            "tech": t
+                        }
+
+                    # Save every 20 deep-scanned files to persist progress
+                    if count > 0 and count % 20 == 0:
+                        state["cache"] = cache
+                        save_system_state(state)
+                        print(f"[*] Metadata Scanner: Progress saved ({count} audio files)...")
+                        
+                except Exception as e:
+                    print(f"[!] Metadata Scanner Error on {f}: {e}")
                             
     state["cache"] = cache
     save_system_state(state)
