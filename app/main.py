@@ -671,9 +671,9 @@ def system_shutdown():
 def get_audio_details(f_path):
     if f_path in TECH_CACHE: return TECH_CACHE[f_path]
     try:
-        # Run ffprobe at lowest CPU priority (nice 19) to avoid pegging the CPU
+        # Run ffprobe without nice to ensure it doesn't fail on Windows or timeout unexpectedly
         res = subprocess.check_output(
-            ["nice", "-n", "19", "ffprobe", "-v", "error",
+            ["ffprobe", "-v", "error",
              "-show_entries", "stream=codec_type,sample_rate,bits_per_sample,channels:format=format_name,bit_rate,duration",
              "-of", "json", f_path],
             timeout=5
