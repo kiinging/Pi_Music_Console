@@ -304,8 +304,9 @@ def list_songs():
                         f_path = os.path.join(root, f)
                         rel = os.path.relpath(f_path, b_dir)
                         
-                        # Enforce strict folder segregation based on MEDIA_SOURCES definitions
-                        typ = source["type"]
+                        # Determine type based on extension rather than strict folder segregation
+                        is_video_ext = f.lower().endswith(('.mkv', '.mp4', '.webm', '.avi', '.mov'))
+                        typ = 'video' if is_video_ext else 'music'
                         
                         # Filter by requested type
                         if requested_type and requested_type != typ:
@@ -723,9 +724,9 @@ def background_scanner():
                 f_path = os.path.join(root, f)
                 is_video = f.lower().endswith(_VIDEO_EXTS)
                 
-                # Only deep-scan AUDIO files — video files skip ffprobe
+                # Deep-scan all files to get tech info (including video)
                 existing_tech = cache.get(f_path, {}).get("tech", {})
-                needs_scan = (f_path not in cache or not existing_tech.get("sample_rate")) and not is_video
+                needs_scan = (f_path not in cache or not existing_tech.get("sample_rate"))
                 
                 try:
                     # 1. Fast tag scan (always)
@@ -762,31 +763,6 @@ def background_scanner():
                             
     state["cache"] = cache
     save_system_state(state)
-    
-    # 3. Smart Pruner: Remove metadata/cache for files that no longer exist
-    print("[*] Metadata Scanner: Pruning obsolete entries...")
-    metadata = load_metadata()
-    meta_changed = False
-    
-    # Build a set of all currently existing relative paths
-    existing_rels = set()
-    for source in MEDIA_SOURCES:
-        if os.path.exists(source["path"]):
-            for root, _, files in os.walk(source["path"]):
-                for f in files:
-                    rel = os.path.relpath(os.path.join(root, f), source["path"])
-                    existing_rels.add(rel)
-    
-    # Prune metadata.json
-    for rel_path in list(metadata.keys()):
-        if rel_path not in existing_rels:
-            del metadata[rel_path]
-            meta_changed = True
-            
-    if meta_changed:
-        save_metadata(metadata)
-        print("[*] Metadata Scanner: Obsolete metadata pruned.")
-        
     print(f"[*] Metadata Scanner: Scan complete. Total {count} files updated.")
 
 @app.route("/api/quit_browser", methods=["POST"])
