@@ -94,4 +94,4 @@ else
 fi
 
 echo "✨ System Ready."
-wait
+exit 0

@@ -7,6 +7,7 @@ import logging
 import math
 import sys
 import threading
+import glob
 from pathlib import Path
 from flask import Flask, render_template, jsonify, request, send_file
 
@@ -303,9 +304,8 @@ def list_songs():
                         f_path = os.path.join(root, f)
                         rel = os.path.relpath(f_path, b_dir)
                         
-                        # Determine actual type based on extension
-                        is_video_ext = f.lower().endswith(('.mkv', '.mp4', '.webm', '.avi', '.mov'))
-                        typ = 'video' if is_video_ext else 'music'
+                        # Enforce strict folder segregation based on MEDIA_SOURCES definitions
+                        typ = source["type"]
                         
                         # Filter by requested type
                         if requested_type and requested_type != typ:
@@ -362,14 +362,19 @@ def list_songs():
     songs.sort(key=lambda x: x['title'].lower())
     return jsonify(songs)
 
+MANUAL_STOP = False
+
 @app.route("/api/play", methods=["POST"])
 def play_song():
+    global MANUAL_STOP
+    MANUAL_STOP = False
     data = request.json
     p, t = data.get("path"), data.get("type", "music")
     
     # Auto-wake the screen when playing a video
     if t == "video":
-        paths = ["/sys/class/backlight/rpi_backlight/bl_power", "/sys/class/backlight/10-0045/bl_power"]
+        paths = glob.glob("/sys/class/backlight/*/bl_power")
+        if not paths: paths = ["/sys/class/backlight/rpi_backlight/bl_power", "/sys/class/backlight/10-0045/bl_power"]
         for sp in paths:
             if os.path.exists(sp):
                 try: subprocess.run(["sudo", "sh", "-c", f"echo 0 > {sp}"], check=True)
@@ -391,6 +396,8 @@ def play_song():
 
 @app.route("/api/stop", methods=["POST"])
 def stop():
+    global MANUAL_STOP
+    MANUAL_STOP = True
     player.stop()
     return jsonify({"status": "Stopped"})
 
@@ -470,7 +477,7 @@ def save_metadata(metadata):
 
 @app.route("/api/status")
 def status():
-    if not player.is_alive(): return jsonify({"status": "error"}), 200
+    if not player.is_alive(): return jsonify({"status": "error", "manual_stop": MANUAL_STOP}), 200
     
     # Batch query for all properties at once (Faster, smoother)
     props = ["time-pos", "duration", "pause", "path", "vid"]
@@ -487,7 +494,24 @@ def status():
             if full_path.startswith(source["path"]):
                 path = os.path.relpath(full_path, source["path"])
                 break
-    meta = get_track_metadata(full_path) if full_path else {}
+    tech = {}
+    if full_path:
+        meta = get_track_metadata(full_path)
+        state = load_system_state()
+        cache = state.get("cache", {})
+        p_meta = load_metadata()
+        
+        if full_path in cache:
+            meta.update(cache[full_path].get("meta", {}))
+            tech = cache[full_path].get("tech", {})
+        else:
+            tech = TECH_CACHE.get(full_path, {})
+            
+        if path in p_meta:
+            for field in ["title", "category", "artist", "year", "rating", "album"]:
+                if field in p_meta[path]: meta[field] = p_meta[path][field]
+    else:
+        meta = {}
     
     # Robust video enabled check: Only say False if we explicitly get 'no' or 'false'
     # If the query fails (None), we assume it's still what it was (True by default for videos)
@@ -504,6 +528,7 @@ def status():
         "title": meta.get("title", "Unknown"), 
         "artist": meta.get("artist", "Unknown"), 
         "path": path,
+        "tech": tech,
         "video_enabled": video_enabled, 
         "voice_enabled": VOICE_PROCESS is not None, 
         "voice_messages": VOICE_MESSAGES 
@@ -618,7 +643,12 @@ def system_mode():
 
 @app.route("/api/system/screen_toggle", methods=["POST"])
 def screen_toggle():
-    paths = ["/sys/class/backlight/rpi_backlight/bl_power", "/sys/class/backlight/10-0045/bl_power"]
+    # Dynamically discover backlight control paths
+    paths = glob.glob("/sys/class/backlight/*/bl_power")
+    if not paths:
+        # Fallbacks just in case
+        paths = ["/sys/class/backlight/rpi_backlight/bl_power", "/sys/class/backlight/10-0045/bl_power"]
+        
     for p in paths:
         if os.path.exists(p):
             with open(p, "r") as f: cur = f.read().strip()

@@ -77,16 +77,7 @@ class VoiceAssistant:
         # Safety Check: Is the Music Player API online?
         self.check_api_status()
 
-        # 1. Create Keyword Spotter
-        # Tokens for 'HELLO SARAWAK'
-        tokens = " ".join(list(WAKE_WORD.replace(" ", "").upper()))
-        with open(VOICE_UNIT_DIR / "keywords.txt", "w") as f:
-            f.write(f"{tokens} :1.5 #0.45\n")
-            
-        self.kws = get_kws_config()
         self.recognizer = get_asr_config()
-        
-        self.kws_stream = self.kws.create_stream()
         self.pa = pyaudio.PyAudio()
         self.state = "IDLE"
         self.target_artist = ""
@@ -153,9 +144,10 @@ class VoiceAssistant:
                 return
 
             if "thank you" in text:
-                self.send_update(sarawak="You're welcome! Returning to player.", awake=False)
-                # We DON'T toggle the voice service off anymore, just the UI (awake=False)
-                return
+                self.send_update(sarawak="You're welcome! Turning off.")
+                requests.post(f"{BASE_URL}/api/voice/toggle", json={"enabled": False}, timeout=1)
+                time.sleep(1)
+                sys.exit(0)
 
             # 2. Volume Controls
             if any(word in text for word in ["louder", "increase", "up"]):
@@ -193,11 +185,8 @@ class VoiceAssistant:
                     self.send_update(sarawak=f"Searching for {query}...")
                     self.play_by_search(query)
                 else:
-                    requests.post(f"{BASE_URL}/api/resume", timeout=1)
-                    self.send_update(sarawak="Resuming.")
-                
-                time.sleep(1)
-                self.send_update(awake=False)
+                    self.send_update(sarawak="Playing your 3-star favorites.")
+                    self.play_favorites()
                 return
 
         except Exception as e:
@@ -219,6 +208,24 @@ class VoiceAssistant:
                 print(f"[!] No match for '{query}'")
         except Exception as e:
             print(f"[!] Search Error: {e}")
+
+    def play_favorites(self):
+        """Play a random song that has a 3-star rating."""
+        try:
+            import random
+            r = requests.get(f"{BASE_URL}/api/songs", timeout=2)
+            if r.status_code != 200: return
+            songs_data = r.json()
+            favorites = [s for s in songs_data if s.get('rating') == 3]
+            if favorites:
+                target = random.choice(favorites)
+                requests.post(f"{BASE_URL}/api/play", json={"path": target['path'], "type": target['type']}, timeout=1)
+                print(f"[✓] Action: Playing 3-star favorite '{target['title']}'")
+            else:
+                print("[!] No 3-star favorites found.")
+                requests.post(f"{BASE_URL}/api/resume", timeout=1)
+        except Exception as e:
+            print(f"[!] Favorites Error: {e}")
 
     def get_current_vol(self):
         try:
@@ -242,53 +249,39 @@ class VoiceAssistant:
             )
             
             print(f"\n[>>>] Sarawak Voice Unit ACTIVE [<<<]")
-            print(f"Say: '{WAKE_WORD}' followed by a command.\n")
+            self.send_update(sarawak="I am listening...", awake=True)
+            
+            asr_stream = self.recognizer.create_stream()
+            last_text = ""
             
             while True:
                 data = stream.read(chunk_size, exception_on_overflow=False)
                 samples = list(map(int, (int.from_bytes(data[i:i+2], 'little', signed=True) for i in range(0, len(data), 2))))
                 
-                self.kws_stream.accept_waveform(sample_rate, samples)
+                asr_stream.accept_waveform(sample_rate, samples)
+                while self.recognizer.is_ready(asr_stream):
+                    self.recognizer.decode_stream(asr_stream)
                 
-                while self.kws.is_ready(self.kws_stream):
-                    self.kws.decode_stream(self.kws_stream)
+                is_endpoint = self.recognizer.is_endpoint(asr_stream)
+                text = self.recognizer.get_result(asr_stream).text
                 
-                keyword = self.kws.get_result(self.kws_stream)
-                if keyword:
-                    print(f"\n[!] WAKE WORD DETECTED: {keyword}")
-                    # Signal UI to wake up
-                    self.send_update(sarawak="Hello!!", awake=True)
-                    self.process_voice_command(stream)
-                    # Reset KWS
-                    self.kws_stream = self.kws.create_stream()
+                if text and text != last_text:
+                    self.send_update(me=text, awake=True)
+                    last_text = text
+                    
+                if is_endpoint:
+                    if text:
+                        print(f"\n[+] Command: '{text}'")
+                        self.execute_command(text)
+                        self.recognizer.reset(asr_stream)
+                        last_text = ""
+                    else:
+                        self.recognizer.reset(asr_stream)
                 
         except Exception as e:
             print(f"[!] Mic Error: {e}")
         finally:
             self.pa.terminate()
-
-    def process_voice_command(self, mic_stream):
-        """Switch to full recognition for a few seconds."""
-        asr_stream = self.recognizer.create_stream()
-        start_time = time.time()
-        print("  Listening for command...", end="", flush=True)
-        
-        while time.time() - start_time < 5: # Listen for 5 seconds
-            data = mic_stream.read(1024, exception_on_overflow=False)
-            samples = list(map(int, (int.from_bytes(data[i:i+2], 'little', signed=True) for i in range(0, len(data), 2))))
-            asr_stream.accept_waveform(16000, samples)
-            
-            while self.recognizer.is_ready(asr_stream):
-                self.recognizer.decode_stream(asr_stream)
-            
-            res = self.recognizer.get_result(asr_stream).text
-            if res:
-                print(".", end="", flush=True)
-        
-        full_text = self.recognizer.get_result(asr_stream).text
-        print(f"\n[+] Processing: '{full_text}'")
-        if full_text.strip():
-            self.execute_command(full_text)
 
 if __name__ == "__main__":
     try:

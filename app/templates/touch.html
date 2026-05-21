@@ -340,7 +340,7 @@
 
     .album-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 12px;
       padding: 4px 0 16px;
     }
@@ -700,7 +700,7 @@
     <div class="home-grid">
       <div class="home-tile" id="tileMusic">
         <div class="home-tile-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
         </div>
         <div class="home-tile-label">MUSIC</div>
       </div>
@@ -825,14 +825,14 @@
 
     document.getElementById("tileMusic").addEventListener("click", function () {
       showScreen("library");
-      currentCategory = "All";
+      // currentCategory is intentionally not reset
       currentLibraryType = "music";
       currentAlbum = null;
       loadLibrary("music");
     });
     document.getElementById("tileVideo").addEventListener("click", function () {
       showScreen("library");
-      currentCategory = "All";
+      // currentCategory is intentionally not reset
       currentLibraryType = "video";
       currentAlbum = null;
       loadLibrary("video");
@@ -875,6 +875,7 @@
         var c = (s.category && String(s.category).trim()) || "All";
         if (c && c !== "All") cats[c] = true;
       });
+      if (currentCategory && currentCategory !== "All") cats[currentCategory] = true;
       var list = Object.keys(cats).sort(function (a, b) {
         if (a === "All") return -1; if (b === "All") return 1; return a.localeCompare(b);
       });
@@ -904,16 +905,29 @@
 
       if (currentLibraryType === "music") {
         if (currentAlbum === null) {
-          // Render albums
+          // Separate proper albums from orphan tracks (no album metadata)
           var albums = {};
+          var singles = [];
           filteredSongs.forEach(function(s) {
-            var key = (s.album && s.album !== "Unknown Album") ? s.album : (s.artist && s.artist !== "Others" && s.artist !== "Unknown Artist" ? s.artist + " \u2013 Singles" : "Unknown Album");
-            if (!albums[key]) albums[key] = { name: key, artist: s.artist || "Unknown Artist", songs: [] };
-            albums[key].songs.push(s);
+            var hasAlbum = s.album && s.album !== "Unknown Album";
+            var hasArtist = s.artist && s.artist !== "Others" && s.artist !== "Unknown Artist";
+            if (hasAlbum) {
+              var key = s.album;
+              if (!albums[key]) albums[key] = { name: key, artist: s.artist || "Unknown Artist", songs: [] };
+              albums[key].songs.push(s);
+            } else if (hasArtist) {
+              // Group by artist name when album is missing
+              var key = s.artist;
+              if (!albums[key]) albums[key] = { name: key, artist: key, songs: [] };
+              albums[key].songs.push(s);
+            } else {
+              // Truly orphan — no album, no artist → flat singles list
+              singles.push(s);
+            }
           });
           var list = Object.values(albums).sort(function(a,b) { return a.name.localeCompare(b.name); });
           
-          if (!list.length) {
+          if (!list.length && !singles.length) {
             wrap.innerHTML = '<div class="empty">No media found.<br><button onclick="showScreen(\'home\')" style="margin-top:10px; padding:8px 16px; border-radius:10px; border:1px solid var(--gold); background:transparent; color:var(--gold);">Back Home</button></div>';
             return;
           }
@@ -941,11 +955,38 @@
             grid.appendChild(card);
           });
           wrap.appendChild(grid);
-          return; // Done rendering albums
+
+          // Render singles as a flat list below album grid (no cover card)
+          if (singles.length > 0) {
+            var singlesHeader = document.createElement("div");
+            singlesHeader.style = "padding: 14px 4px 6px; font-size: 0.78rem; font-weight: 900; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase;";
+            singlesHeader.textContent = "Singles / Unknown Album (" + singles.length + ")";
+            wrap.appendChild(singlesHeader);
+
+            singles.sort(function(a,b) { return (a.title||a.filename).toLowerCase().localeCompare((b.title||b.filename).toLowerCase()); });
+            singles.forEach(function(song, index) {
+              var div = document.createElement("div");
+              div.className = "row";
+              div.innerHTML =
+                '<div class="play-icon">&#9654;</div>' +
+                '<div class="meta">' +
+                '<div class="t1">' + escapeHtml(song.title || song.filename) + '</div>' +
+                '<div class="t2">' + escapeHtml(song.artist || "Unknown") + '</div>' +
+                '</div>';
+              div.addEventListener("click", function() {
+                // When playing a single, build filteredSongs = singles so next/prev works
+                filteredSongs = singles;
+                currentIndex = index;
+                playTrack(song.path, song.type);
+              });
+              wrap.appendChild(div);
+            });
+          }
+          return; // Done rendering
         } else {
           // Filter by currentAlbum
           filteredSongs = filteredSongs.filter(function(s) {
-            var key = (s.album && s.album !== "Unknown Album") ? s.album : (s.artist && s.artist !== "Others" && s.artist !== "Unknown Artist" ? s.artist + " \u2013 Singles" : "Unknown Album");
+            var key = (s.album && s.album !== "Unknown Album") ? s.album : (s.artist && s.artist !== "Others" && s.artist !== "Unknown Artist" ? s.artist : "Unknown Album");
             return key === currentAlbum;
           });
         }
@@ -1109,8 +1150,10 @@
         if (stopped) {
           if (wasPlaying) {
             wasPlaying = false;
-            if (playMode === "repeat") { playCurrent(); return; }
-            if (playMode === "auto") { playNext(); return; }
+            if (d && !d.manual_stop) {
+                if (playMode === "repeat") { playCurrent(); return; }
+                if (playMode === "auto") { playNext(); return; }
+            }
             showScreen("home"); hideCbar();
           }
           document.getElementById("miniNowPlaying").style.display = "none";
@@ -1245,7 +1288,7 @@
       
       if (currentLibraryType === "music" && currentAlbum !== null) {
         filteredSongs = filteredSongs.filter(function(s) {
-          var key = (s.album && s.album !== "Unknown Album") ? s.album : (s.artist && s.artist !== "Others" && s.artist !== "Unknown Artist" ? s.artist + " \u2013 Singles" : "Unknown Album");
+          var key = (s.album && s.album !== "Unknown Album") ? s.album : (s.artist && s.artist !== "Others" && s.artist !== "Unknown Artist" ? s.artist : "Unknown Album");
           return key === currentAlbum;
         });
         filteredSongs.sort(function (a, b) {
