@@ -7,41 +7,6 @@
  * Running on http://127.0.0.1:5000
  * Running on http://192.168.8.192:5000
 [33mPress CTRL+C to quit[0m
-127.0.0.1 - - [05/Jul/2026 22:56:50] "GET /api/ping HTTP/1.1" 200 -
-127.0.0.1 - - [05/Jul/2026 22:56:51] "GET /csi?cachebust=1783263410 HTTP/1.1" 200 -
-192.168.8.222 - - [05/Jul/2026 22:56:52] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [05/Jul/2026 22:56:52] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
-192.168.8.222 - - [05/Jul/2026 22:56:52] "GET /api/volume HTTP/1.1" 200 -
-192.168.8.222 - - [05/Jul/2026 22:56:52] "GET /api/volume HTTP/1.1" 200 -
-192.168.8.222 - - [05/Jul/2026 22:56:53] "GET /api/songs?type=music HTTP/1.1" 200 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=1432%20-%20Katy%20Perry/07%20-%20Katy%20Perry%20-%20ALL%20THE%20LOVE.flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=3.0%20-%20Marc%20Anthony/04%20-%20Marc%20Anthony%20-%20Cambio%20de%20Piel.flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=Beethoven_%20Violin%20Concerto;%20Romances%20-%20Anne-Sophie%20Mutter/01%20-%20Anne-Sophie%20Mutter%20-%20Beethoven_%20Violin%20Concerto%20In%20D,%20Op.%2061_%20I.%20Allegro%20ma%20non%20troppo%20-%20Cadenza_%20Fritz%20Kreisler%20(Live).flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=Bizet_%20Carmen,%20WD%2031%20-%20Adriana%20Maliponte/08%20-%20The%20Manhattan%20Opera%20Chorus%20-%20Bizet_%20Carmen,%20Act%20I_%20Carmen,%20sur%20tes%20pas.flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=Dangerous%20-%20Michael%20Jackson/Dangerous%20-%20Michael%20Jackson/08%20-%20Michael%20Jackson%20-%20Black%20or%20White.flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=Greatest%20Hits%20(Deluxe)%20-%20Aerosmith/Greatest%20Hits%20(Deluxe)%20-%20Aerosmith/Disc%201/10%20-%20Aerosmith%20-%20Adam's%20Apple.flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=Greatest%20Hits%20(Deluxe)%20-%20Aerosmith/Greatest%20Hits%20(Deluxe)%20-%20Aerosmith/Disc%202/11%20-%20Aerosmith%20-%20Angel%20(Single%20Version).flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=Greatest%20Hits%20(Deluxe)%20-%20Aerosmith/Greatest%20Hits%20(Deluxe)%20-%20Aerosmith/Disc%203/03%20-%20Aerosmith%20-%20Amazing%20(CHR%20Single%20Edit).flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=Beethoven%20-%209%20Symphonies%20-%20Berliner%20Philharmoniker/Disc%204/01%20-%20Berliner%20Philharmoniker%20-%20Beethoven_%20Symphony%20No.%207%20in%20A%20Major,%20Op.%2092_%20I.%20Poco%20sostenuto%20–%20Vivace%20(Recorded%201962).flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=Beethoven%20-%209%20Symphonies%20-%20Berliner%20Philharmoniker/Disc%205/01%20-%20Berliner%20Philharmoniker%20-%20Beethoven_%20Symphony%20No.%209%20in%20D%20Minor,%20Op.%20125%20_Choral__%20I.%20Allegro%20ma%20non%20troppo,%20un%20poco%20maestoso%20(Recorded%201962).flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=Cantonese%20101%20-%20Various%20Artists/Disc%206/12%20-%20關淑怡%20-%20人生可有知己.flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=Hell%20Freezes%20Over%20(Remaster%202018)%20-%20Eagles/15%20-%20Eagles%20-%20Desperado%20(Live%20On%20MTV,%201994).flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=Hotel%20California%20(2013%20Remaster)%20-%20Eagles/01%20-%20Eagles%20-%20Hotel%20California%20(2013%20Remaster).flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=La%20traviata%20-%20Riccardo%20Muti,%20Renata%20Scotto,%20Alfredo%20Kraus%20%26%20Philharmonia%20Orchestra/09%20-%20Renata%20Scotto,%20Philharmonia%20Orchestra%20and%20Riccardo%20Muti%20-%20La%20traviata,%20Act%20I_%20Ah%20fors'è%20lui.flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=Man’s%20Best%20Friend%20(Bonus%20Track%20Version)%20-%20Sabrina%20Carpenter/Man’s%20Best%20Friend%20(Bonus%20Track%20Version)%20-%20Sabrina%20Carpenter/10%20-%20Sabrina%20Carpenter%20-%20Don’t%20Worry%20I’ll%20Make%20You%20Worry.flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=Metallica%20-%20Metallica/06%20-%20Metallica%20-%20Don't%20Tread%20On%20Me.flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=Mozart_%20Violin%20Concerto%20No.%203%20in%20G%20Major,%20K.%20216;%20Violin%20Concerto%20No.%205%20in%20A%20Major,%20K.%20219%20-%20Anne-Sophie%20Mutter/01%20-%20Anne-Sophie%20Mutter%20-%20Mozart_%20Violin%20Concerto%20No.%203%20in%20G%20Major,%20K.%20216_%20I.%20Allegro.flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=Soy%20el%20Mismo%20-%20Prince%20Royce/07%20-%20Prince%20Royce%20-%20Already%20Missing%20You%20(feat.%20Selena%20Gomez).flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=Teenage%20Dream%20-%20Katy%20Perry/03%20-%20Katy%20Perry%20-%20California%20Gurls.flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=The%20Fame%20-%20Lady%20GaGa/06%20-%20Lady%20GaGa%20-%20Beautiful,%20Dirty,%20Rich.flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=The%20Life%20of%20a%20Showgirl%20-%20Taylor%20Swift/07%20-%20Taylor%20Swift%20-%20Actually%20Romantic.flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=VIDA%20-%20Luis%20Fonsi/12%20-%20Luis%20Fonsi%20-%20Ahí%20Estas%20Tú.flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=Vivaldi_%20The%20Four%20Seasons%20(Live)%20-%20Anne-Sophie%20Mutter/13%20-%20Anne-Sophie%20Mutter%20-%20Tartini_%20Sonata%20for%20Violin%20and%20Continuo%20in%20G%20Minor,%20B.%20g5%20-%20_Il%20trillo%20del%20diavolo__%20I.%20Larghetto%20affettuoso%20(Live).flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=天空%20-%20王菲/07%20-%20王菲%20-%20不變.flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=我只在乎你%20-%20鄧麗君/08%20-%20鄧麗君%20-%20不著痕跡.flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=極品天碟%20鄧麗君%20-%20鄧麗君/14%20-%20鄧麗君%20-%20一個小心願.flac HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "[36mGET /api/cover?path=精選（Remastered）%20-%20蔡琴/02%20-%20Tsai%20Ching%20-%20匆匆%20(Remastered).mp3 HTTP/1.1[0m" 304 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "GET /api/volume HTTP/1.1" 200 -
-192.168.8.222 - - [05/Jul/2026 22:56:54] "GET /api/songs?type=music HTTP/1.1" 200 -
-192.168.8.222 - - [05/Jul/2026 22:57:03] "GET /api/volume HTTP/1.1" 200 -
-192.168.8.222 - - [05/Jul/2026 22:57:04] "GET /api/songs?type=video HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 23:25:32] "GET /api/ping HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 23:25:34] "GET /csi?cachebust=1783265132 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 23:25:34] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -

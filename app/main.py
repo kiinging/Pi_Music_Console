@@ -560,9 +560,7 @@ def status():
         "artist": meta.get("artist", "Unknown"), 
         "path": path,
         "tech": tech,
-        "video_enabled": video_enabled, 
-        "voice_enabled": VOICE_PROCESS is not None, 
-        "voice_messages": VOICE_MESSAGES 
+        "video_enabled": video_enabled
     })
 
 @app.route("/api/video/toggle", methods=["POST"])
@@ -614,52 +612,7 @@ def volume_api():
         return jsonify({"volume": new_val})
     else: return jsonify({"volume": get_current_volume()})
 
-# ── Voice Control (ReSpeaker XVF3800) ────────────────────────────────────────
-
-VOICE_PROCESS = None
-VOICE_MESSAGES = {"sarawak": "", "me": "", "awake": False}
-
-@app.route("/api/voice/toggle", methods=["POST"])
-def voice_toggle():
-    global VOICE_PROCESS, VOICE_MESSAGES
-    enabled = request.json.get("enabled", False)
-    
-    script_path = BASE_DIR / "smart_voice_unit" / "voice_controller.py"
-    
-    if enabled:
-        if VOICE_PROCESS is None:
-            # Start the actual voice controller in background
-            try:
-                VOICE_PROCESS = subprocess.Popen([sys.executable, str(script_path)], 
-                                               cwd=str(BASE_DIR / "smart_voice_unit"))
-                VOICE_MESSAGES = {"sarawak": "", "me": "", "awake": False}
-                return jsonify({"status": "Voice service started", "enabled": True})
-            except Exception as e:
-                return jsonify({"status": f"Error: {str(e)}", "enabled": False}), 500
-    else:
-        if VOICE_PROCESS:
-            VOICE_PROCESS.terminate()
-            VOICE_PROCESS = None
-            VOICE_MESSAGES = {"sarawak": "", "me": "", "awake": False}
-            return jsonify({"status": "Voice service stopped", "enabled": False})
-            
-    return jsonify({"status": "No change", "enabled": VOICE_PROCESS is not None})
-
-@app.route("/api/voice/message", methods=["POST"])
-def voice_message():
-    global VOICE_MESSAGES
-    data = request.json
-    if "sarawak" in data: VOICE_MESSAGES["sarawak"] = data["sarawak"]
-    if "me" in data: VOICE_MESSAGES["me"] = data["me"]
-    if "awake" in data: 
-        VOICE_MESSAGES["awake"] = data["awake"]
-        # If waking up and video is playing, toggle it off
-        if data["awake"]:
-            current_vid = player.query(["get_property", "vid"])
-            if current_vid and str(current_vid).lower() not in ("no", "false", "none", ""):
-                player._send_command(["set", "video", "no"])
-    
-    return jsonify({"status": "success"})
+# ── Voice control functionality removed ──────────────────────────────────────
 
 # ── System Control ──────────────────────────────────────────────────────────
 
