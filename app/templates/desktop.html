@@ -630,10 +630,10 @@
                 <h3>Network</h3>
                 <p>Wi-Fi & Ethernet Settings</p>
             </div>
-            <div class="home-card card-master" id="masterControlBtn" onclick="toggleMasterControl()">
-                <i class="fas fa-crown"></i>
-                <h3>PC Master Mode</h3>
-                <p id="masterControlStatus">Currently: OFF</p>
+            <div class="home-card card-eq" id="eqControlBtn" onclick="showEqModal()">
+                <i class="fas fa-sliders-h"></i>
+                <h3>EQ Settings</h3>
+                <p id="eqControlStatus">Currently: Flat</p>
             </div>
             <div class="home-card card-screen" onclick="toggleHardwareScreen()">
                 <i class="fas fa-power-off"></i>
@@ -780,6 +780,27 @@
         </div>
     </div>
 
+    <!-- EQ Modal -->
+    <div id="eqModal" class="modal-overlay">
+        <div class="modal-content" style="width: 350px;">
+            <h3>EQ Settings</h3>
+            <div style="margin: 20px 0;">
+                <label>Bass (80Hz): <span id="eq-bass-val">0</span> dB</label>
+                <input type="range" id="eq-bass" min="-10" max="10" step="1" value="0" class="form-input" style="width: 100%;" oninput="handleEqInput()" onchange="sendEqUpdate()">
+            </div>
+            <div style="margin: 20px 0;">
+                <label>Mid (1000Hz): <span id="eq-mid-val">0</span> dB</label>
+                <input type="range" id="eq-mid" min="-10" max="10" step="1" value="0" class="form-input" style="width: 100%;" oninput="handleEqInput()" onchange="sendEqUpdate()">
+            </div>
+            <div style="margin: 20px 0;">
+                <label>Treble (9000Hz): <span id="eq-treble-val">0</span> dB</label>
+                <input type="range" id="eq-treble" min="-10" max="10" step="1" value="0" class="form-input" style="width: 100%;" oninput="handleEqInput()" onchange="sendEqUpdate()">
+            </div>
+            <button class="btn-secondary" onclick="resetEq()" style="width: 100%; margin-bottom: 10px;">Reset to Flat</button>
+            <button class="btn-primary" onclick="closeEqModal()" style="width: 100%;">Close</button>
+        </div>
+    </div>
+
     <!-- YouTube Modal -->
     <div id="youtubeModal" class="modal-overlay">
         <div class="modal-content">
@@ -909,7 +930,7 @@
         function renderAlbumGrid(songs, container) {
             const albums = {};
             songs.forEach(s => {
-                const key = (s.album && s.album !== 'Unknown Album') ? s.album : (getArtistName(s) !== 'Others' ? getArtistName(s) + ' – Singles' : 'Unknown Album');
+                const key = (() => { const parts = s.path.split('/'); return parts.length >= 2 ? parts[parts.length - 2] : 'Unknown Album'; })();
                 if (!albums[key]) albums[key] = { name: key, artist: getArtistName(s), songs: [], coverPath: s.path };
                 albums[key].songs.push(s);
             });
@@ -1292,21 +1313,58 @@
             } catch (e) { alert('Voice service failed to respond.'); }
         }
 
-        let masterActive = false;
-        async function toggleMasterControl() {
-            masterActive = !masterActive;
-            const statusText = document.getElementById('masterControlStatus');
-            const card = document.getElementById('masterControlBtn');
+        // EQ Logic
+        let eqDebounceTimer = null;
+        
+        function showEqModal() { document.getElementById('eqModal').style.display = 'flex'; }
+        function closeEqModal() { document.getElementById('eqModal').style.display = 'none'; }
+        
+        function handleEqInput() {
+            document.getElementById('eq-bass-val').innerText = document.getElementById('eq-bass').value;
+            document.getElementById('eq-mid-val').innerText = document.getElementById('eq-mid').value;
+            document.getElementById('eq-treble-val').innerText = document.getElementById('eq-treble').value;
+            
+            // Debounce for smooth drag updates
+            clearTimeout(eqDebounceTimer);
+            eqDebounceTimer = setTimeout(() => {
+                sendEqUpdate();
+            }, 150);
+        }
+        
+        async function sendEqUpdate() {
+            const bass = parseFloat(document.getElementById('eq-bass').value);
+            const mid = parseFloat(document.getElementById('eq-mid').value);
+            const treble = parseFloat(document.getElementById('eq-treble').value);
+            
+            const isFlat = (bass === 0 && mid === 0 && treble === 0);
+            const statusText = document.getElementById('eqControlStatus');
+            const card = document.getElementById('eqControlBtn');
+            
             try {
-                await fetch('/api/system/mode', { 
-                    method: 'POST', 
+                await fetch('/api/system/eq', {
+                    method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ mode: masterActive ? 'PC_MASTER' : 'AUTO' }) 
+                    body: JSON.stringify({ bass, mid, treble })
                 });
-                if (statusText) statusText.innerText = `Currently: ${masterActive ? 'ON' : 'OFF'}`;
-                card.style.background = masterActive ? 'rgba(255,150,50,0.1)' : '';
-                card.style.borderColor = masterActive ? 'rgba(255,150,50,0.3)' : '';
-            } catch (e) { alert('Failed to set control mode.'); }
+                
+                if (statusText) {
+                    statusText.innerText = isFlat ? 'Currently: Flat' : 'Currently: Active';
+                }
+                if (card) {
+                    card.style.background = isFlat ? '' : 'rgba(255,150,50,0.1)';
+                    card.style.borderColor = isFlat ? '' : 'rgba(255,150,50,0.3)';
+                }
+            } catch(e) {
+                console.error("Failed to update EQ", e);
+            }
+        }
+        
+        function resetEq() {
+            document.getElementById('eq-bass').value = 0;
+            document.getElementById('eq-mid').value = 0;
+            document.getElementById('eq-treble').value = 0;
+            handleEqInput();
+            // sendEqUpdate() is called by the debouncer in handleEqInput()
         }
 
         async function powerDownPi() {

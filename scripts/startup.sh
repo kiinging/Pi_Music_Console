@@ -60,6 +60,8 @@ if [ -d "$REPO_DIR/venv" ]; then
 fi
 
 cd "$REPO_DIR/app"
+python3 "$SCRIPT_DIR/sync_metadata.py" >> "$SCRIPT_DIR/api.log" 2>&1
+python3 "$SCRIPT_DIR/clean_git_log.py" >> "$SCRIPT_DIR/api.log" 2>&1
 python3 main.py > "$SCRIPT_DIR/api.log" 2>&1 &
 
 # Wait for API to be ready

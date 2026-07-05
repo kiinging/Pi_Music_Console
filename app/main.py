@@ -34,6 +34,7 @@ PERMANENT_CACHE = {} # Loaded from disk
 # app/main.py is inside 'app/' folder, so project root is parent
 BASE_DIR = Path(__file__).parent.parent
 METADATA_FILE = BASE_DIR / "music_metadata.json"
+ALBUM_METADATA_FILE = BASE_DIR / "album_metadata.json"
 STATE_FILE = BASE_DIR / "system_state.json"
 # Media Sources (Organized Structure)
 MEDIA_SOURCES = [
@@ -200,10 +201,23 @@ class MpvPlayer:
 player = MpvPlayer(IPC_SOCKET)
 
 def load_metadata():
+    """Load video/audio track metadata (title based)."""
     if METADATA_FILE.exists():
         try:
-            with open(METADATA_FILE, 'r', encoding='utf-8') as f: return json.load(f)
-        except Exception: return {}
+            with open(METADATA_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+def load_album_metadata():
+    """Load album metadata (album based) from album_metadata.json."""
+    if ALBUM_METADATA_FILE.exists():
+        try:
+            with open(ALBUM_METADATA_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            return {}
     return {}
 
 def detect_mixer():
@@ -286,79 +300,95 @@ def csi_console(): return render_template("touch.html")
 
 @app.route("/api/songs")
 def list_songs():
-    """List all songs across all media sources with high-performance caching."""
+    """List all songs across media sources with appropriate metadata handling."""
     requested_type = request.args.get('type')
     songs = []
     exts = ('.mp3', '.flac', '.wav', '.m4a', '.ogg', '.mp4', '.mkv', '.avi', '.mov', '.webm')
-    p_meta = load_metadata()
     
     state = load_system_state()
     cache = state.get("cache", {})
-
-    for source in MEDIA_SOURCES:
+    
+    # Choose metadata source based on tab
+    if requested_type == 'music':
+        # Music tab: use album metadata, only music source
+        p_meta = load_album_metadata()
+        sources = [s for s in MEDIA_SOURCES if s["type"] == "music"]
+    else:
+        # Video (or others): use existing music_metadata.json
+        p_meta = load_metadata()
+        sources = MEDIA_SOURCES
+    
+    for source in sources:
         b_dir = source["path"]
-        if os.path.exists(b_dir):
-            for root, _, files in os.walk(b_dir):
-                for f in files:
-                    if f.lower().endswith(exts):
-                        f_path = os.path.join(root, f)
-                        rel = os.path.relpath(f_path, b_dir)
-                        
-                        # Determine type based on extension rather than strict folder segregation
-                        is_video_ext = f.lower().endswith(('.mkv', '.mp4', '.webm', '.avi', '.mov'))
-                        typ = 'video' if is_video_ext else 'music'
-                        
-                        # Filter by requested type
-                        if requested_type and requested_type != typ:
-                            continue
-
-                        # High-performance metadata resolution
-                        meta = {"title": f, "artist": "Unknown Artist", "album": "Unknown Album", "track_number": 0}
-                        tech = {"format": os.path.splitext(f)[1][1:].upper()}
-                        
-                        # 1. Try persistent cache from disk
-                        if f_path in cache:
-                            meta_cached = cache[f_path].get("meta", {})
-                            meta.update(meta_cached)
-                            tech = cache[f_path].get("tech", tech)
-                        # 2. Try in-memory memory cache (recently scanned)
-                        elif f_path in META_CACHE:
-                            m = META_CACHE[f_path]
-                            meta = {
-                                "title": m.get("title", f), 
-                                "artist": m.get("artist", "Unknown Artist"),
-                                "album": m.get("album", "Unknown Album"),
-                                "track_number": m.get("track_number", 0)
-                            }
-                            tech = TECH_CACHE.get(f_path, tech)
-                        # 3. Fast scan if absolutely missing
-                        else:
-                            m = get_track_metadata(f_path)
-                            meta = {
-                                "title": m["title"], 
-                                "artist": m["artist"],
-                                "album": m.get("album", "Unknown Album"),
-                                "track_number": m.get("track_number", 0)
-                            }
-                                
-                        if rel in p_meta:
-                            for field in ["title", "category", "artist", "year", "rating", "album"]:
-                                if field in p_meta[rel]: meta[field] = p_meta[rel][field]
-                                
-                        songs.append({
-                            "path": rel, 
-                            "type": typ, 
-                            "filename": f, 
-                            "title": meta.get("title", f), 
-                            "artist": meta.get("artist", "Unknown Artist"),
-                            "album": meta.get("album", "Unknown Album"),
-                            "track_number": meta.get("track_number", 0),
-                            "category": meta.get("category", "All"), 
-                            "year": meta.get("year", ""), 
-                            "rating": meta.get("rating", 0), 
-                            "tech": tech,
-                            "base_dir": b_dir
-                        })
+        if not os.path.exists(b_dir):
+            continue
+        for root, _, files in os.walk(b_dir):
+            for f in files:
+                if not f.lower().endswith(exts):
+                    continue
+                f_path = os.path.join(root, f)
+                rel = os.path.relpath(f_path, b_dir)
+                
+                # Determine type based on extension
+                is_video_ext = f.lower().endswith(('.mkv', '.mp4', '.webm', '.avi', '.mov'))
+                typ = 'video' if is_video_ext else 'music'
+                
+                if requested_type and requested_type != typ:
+                    continue
+                
+                # Base metadata
+                meta = {"title": f, "artist": "Unknown Artist", "album": "Unknown Album", "track_number": 0}
+                tech = {"format": os.path.splitext(f)[1][1:].upper()}
+                
+                # Cache lookup
+                if f_path in cache:
+                    meta_cached = cache[f_path].get("meta", {})
+                    meta.update(meta_cached)
+                    tech = cache[f_path].get("tech", tech)
+                elif f_path in META_CACHE:
+                    m = META_CACHE[f_path]
+                    meta = {
+                        "title": m.get("title", f),
+                        "artist": m.get("artist", "Unknown Artist"),
+                        "album": m.get("album", "Unknown Album"),
+                        "track_number": m.get("track_number", 0)
+                    }
+                    tech = TECH_CACHE.get(f_path, tech)
+                else:
+                    m = get_track_metadata(f_path)
+                    meta = {
+                        "title": m["title"],
+                        "artist": m["artist"],
+                        "album": m.get("album", "Unknown Album"),
+                        "track_number": m.get("track_number", 0)
+                    }
+                
+                # Apply persistent metadata overrides
+                if rel in p_meta:
+                    # For music use album metadata (fields: album, category, artist, rating)
+                    if requested_type == 'music':
+                        for field in ["album", "category", "artist", "rating"]:
+                            if field in p_meta[rel]:
+                                meta[field] = p_meta[rel][field]
+                    else:
+                        # Video/tab uses title‑based metadata, omit year field
+                        for field in ["title", "category", "artist", "rating", "album"]:
+                            if field in p_meta[rel]:
+                                meta[field] = p_meta[rel][field]
+                
+                songs.append({
+                    "path": rel,
+                    "type": typ,
+                    "filename": f,
+                    "title": meta.get("title", f),
+                    "artist": meta.get("artist", "Unknown Artist"),
+                    "album": meta.get("album", "Unknown Album"),
+                    "track_number": meta.get("track_number", 0),
+                    "category": meta.get("category", "All"),
+                    "rating": meta.get("rating", 0),
+                    "tech": tech,
+                    "base_dir": b_dir
+                })
     
     songs.sort(key=lambda x: x['title'].lower())
     return jsonify(songs)
@@ -633,14 +663,30 @@ def voice_message():
 
 # ── System Control ──────────────────────────────────────────────────────────
 
-CONTROL_MODE = "AUTO" # "AUTO" or "PC_MASTER"
+EQ_STATE = {"bass": 0, "mid": 0, "treble": 0}
 
-@app.route("/api/system/mode", methods=["GET", "POST"])
-def system_mode():
-    global CONTROL_MODE
-    if request.method == "POST":
-        CONTROL_MODE = request.json.get("mode", "AUTO")
-    return jsonify({"mode": CONTROL_MODE})
+def build_eq(eq):
+    return (
+        f"equalizer=f=80:width_type=o:width=2:g={eq['bass']},"
+        f"equalizer=f=1000:width_type=o:width=2:g={eq['mid']},"
+        f"equalizer=f=9000:width_type=o:width=2:g={eq['treble']}"
+    )
+
+@app.route("/api/system/eq", methods=["POST"])
+def system_eq():
+    global EQ_STATE
+    data = request.json
+    if data:
+        if "bass" in data: EQ_STATE["bass"] = float(data["bass"])
+        if "mid" in data: EQ_STATE["mid"] = float(data["mid"])
+        if "treble" in data: EQ_STATE["treble"] = float(data["treble"])
+        
+    if EQ_STATE["bass"] == 0 and EQ_STATE["mid"] == 0 and EQ_STATE["treble"] == 0:
+        player._send_command(["af", "clr"])
+    else:
+        player._send_command(["af", "set", build_eq(EQ_STATE)])
+        
+    return jsonify({"status": "success", "eq": EQ_STATE})
 
 @app.route("/api/system/screen_toggle", methods=["POST"])
 def screen_toggle():

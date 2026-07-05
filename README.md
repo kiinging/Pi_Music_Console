@@ -83,3 +83,4 @@ The system uses `agetty` for auto-login on `tty1`, which then triggers `scripts/
 
 ---
 *Built for Curtin Electronic Fundamentals 2026.*
+Music can be download from: *https://monochrome.tf/*
