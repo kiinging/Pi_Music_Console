@@ -751,7 +751,6 @@
                 <option>Spanish</option>
                 <option>Chinese</option>
             </select>
-            <input id="edit-year" placeholder="Year" class="form-input">
             <div class="star-rating" id="edit-stars">
                 <span class="star" data-value="1" onclick="setEditRating(1)">★</span>
                 <span class="star" data-value="2" onclick="setEditRating(2)">★</span>
@@ -930,7 +929,7 @@
         function renderAlbumGrid(songs, container) {
             const albums = {};
             songs.forEach(s => {
-                const key = (() => { const parts = s.path.split('/'); return parts.length >= 2 ? parts[parts.length - 2] : 'Unknown Album'; })();
+                const key = s.path.split('/')[0];
                 if (!albums[key]) albums[key] = { name: key, artist: getArtistName(s), songs: [], coverPath: s.path };
                 albums[key].songs.push(s);
             });
@@ -960,10 +959,11 @@
 
         function renderAlbumTracks(songs, container) {
             const tracks = songs
-                .filter(s => {
-                    const key = (s.album && s.album !== 'Unknown Album') ? s.album : (getArtistName(s) !== 'Others' ? getArtistName(s) + ' – Singles' : 'Unknown Album');
-                    return key === currentAlbum;
-                })
+            .filter(s => {
+                const key = s.path.split('/')[0];
+                return key === currentAlbum;
+            })
+
                 .sort((a,b) => ((a.track_number||0) - (b.track_number||0)) || (a.title||'').localeCompare(b.title||''));
             const first = tracks[0];
             const coverUrl = first ? '/api/cover?path=' + encodeURIComponent(first.path) : '';
@@ -990,7 +990,7 @@
                     const b24 = s.tech && s.tech.bit_depth >= 24 ? '<span class="tech-badge">24BIT</span> ' : '';
                     
                     const isPlaying = s.path === currentPath;
-                    const editBtn = isEditMode ? `<div class="hamburger-btn" onclick="prepareEdit(event,this,'${title.replace(/'/g,"\\'")}','${getArtistName(s).replace(/'/g,"\\'")}','${s.category}','${s.year||''}','${s.filename.replace(/'/g,"\\'")}',${s.rating||0})">☰</div>` : '';
+                    const editBtn = isEditMode ? `<div class="hamburger-btn" onclick="prepareEdit(event,this,'${title.replace(/'/g,"\\'")}','${getArtistName(s).replace(/'/g,"\\'")}','${s.category}','${s.filename.replace(/'/g,"\\'")}',${s.rating||0})">☰</div>` : '';
                     return `<div class="track-item${isPlaying?' playing':''}" onclick="onTrackClick(event,this)" data-path="${s.path.replace(/"/g,'&quot;')}" data-type="${s.type}">
                         <div class="track-number">${isPlaying ? '<i class="fas fa-volume-up" style="font-size:.7rem"></i>' : String(num).padStart(2,'0')}</div>
                         <div class="track-info" style="flex:1">
@@ -1022,7 +1022,7 @@
                         <div class="track-item-title"><span>${title}</span>${catBadge}${artBadge}${starsHtml}</div>
                         <div class="track-item-sub"><span>${artist}</span><span>|</span>${techInfo}</div>
                     </div>
-                    <div class="hamburger-btn" onclick="prepareEdit(event,this,'${title.replace(/'/g,"\\'")}','${artist.replace(/'/g,"\\'")}','${song.category}','${song.year||''}','${song.filename.replace(/'/g,"\\'")}',${song.rating||0})">☰</div>
+                    <div class="hamburger-btn" onclick="prepareEdit(event,this,'${title.replace(/'/g,"\\'")}','${artist.replace(/'/g,"\\'")}','${song.category}','${song.filename.replace(/'/g,"\\'")}',${song.rating||0})">☰</div>
                 </div>`;
             }).join('');
         }
@@ -1042,13 +1042,13 @@
             document.querySelector('#edit-modal h3').innerText = 'Edit Album Category';
             document.getElementById('edit-title').style.display = 'none';
             document.getElementById('edit-artist').style.display = 'none';
-            document.getElementById('edit-year').style.display = 'none';
+
             document.getElementById('edit-stars').style.display = 'none';
             document.getElementById('edit-category').value = category || 'All';
             document.getElementById('edit-modal').style.display = 'flex';
         }
 
-        function prepareEdit(e, el, title, artist, cat, year, filename, rating) {
+        function prepareEdit(e, el, title, artist, cat, filename, rating) {
             e.stopPropagation();
             editingAlbum = null;
             editingPath = el.closest('.track-item').getAttribute('data-path');
@@ -1058,45 +1058,44 @@
             document.querySelector('#edit-modal h3').innerText = 'Edit Song Details';
             document.getElementById('edit-title').style.display = 'block';
             document.getElementById('edit-artist').style.display = 'block';
-            document.getElementById('edit-year').style.display = 'block';
+
             document.getElementById('edit-stars').style.display = 'block';
             document.getElementById('edit-filename').value = filename;
             document.getElementById('edit-title').value = title;
             document.getElementById('edit-artist').value = (artist === 'Others') ? '' : artist;
             document.getElementById('edit-category').value = cat || 'All';
-            document.getElementById('edit-year').value = year;
+
             document.getElementById('edit-modal').style.display = 'flex';
         }
 
         function closeModal() { document.getElementById('edit-modal').style.display = 'none'; }
         async function saveSongDetails() {
-            const cat = document.getElementById('edit-category').value;
-            
+            const cat = document.getElementById('edit-category').value || 'All';
+
             if (editingAlbum) {
                 const tracks = allSongs.filter(s => {
                     const key = (s.album && s.album !== 'Unknown Album') ? s.album : (getArtistName(s) !== 'Others' ? getArtistName(s) + ' – Singles' : 'Unknown Album');
                     return key === editingAlbum;
                 });
+                const payload = {
+                    album: editingAlbum,
+                    category: cat,
+                    artist: tracks && tracks.length ? tracks[0].artist : undefined,
+                    rating: currentEditRating || 0
+                };
                 try {
-                    for (let t of tracks) {
-                        await fetch('/api/songs/update', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({
-                                path: t.path,
-                                title: t.title || t.filename, 
-                                artist: t.artist || 'Unknown Artist', 
-                                category: cat, 
-                                year: t.year || '', 
-                                rating: t.rating || 0
-                            })
-                        });
-                    }
-                } catch (e) { alert('Save failed'); }
+                    await fetch('/api/albums/update', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(payload)
+                    });
+                    refreshList();
+                    closeModal();
+                    return;
+                } catch (e) { alert('Album save failed'); }
             } else {
                 const title = document.getElementById('edit-title').value || originalFilename;
                 const artist = document.getElementById('edit-artist').value || 'Others';
-                const year = document.getElementById('edit-year').value;
                 const rating = currentEditRating;
 
                 try {
@@ -1105,7 +1104,7 @@
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({
                             path: editingPath,
-                            title, artist, category: cat, year, rating
+                            title, artist, category: cat, rating
                         })
                     });
                 } catch (e) { alert('Save failed'); }
@@ -1341,10 +1340,10 @@
             const card = document.getElementById('eqControlBtn');
             
             try {
-                await fetch('/api/system/eq', {
+                await fetch('/api/albums/update', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ bass, mid, treble })
+                    body: JSON.stringify({ album: editingAlbum, bass, mid, treble })
                 });
                 
                 if (statusText) {

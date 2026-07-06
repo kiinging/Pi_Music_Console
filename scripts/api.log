@@ -7,6 +7,9 @@
  * Running on http://127.0.0.1:5000
  * Running on http://192.168.8.192:5000
 [33mPress CTRL+C to quit[0m
-127.0.0.1 - - [05/Jul/2026 23:25:32] "GET /api/ping HTTP/1.1" 200 -
-127.0.0.1 - - [05/Jul/2026 23:25:34] "GET /csi?cachebust=1783265132 HTTP/1.1" 200 -
-127.0.0.1 - - [05/Jul/2026 23:25:34] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+127.0.0.1 - - [06/Jul/2026 14:41:33] "GET /api/ping HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jul/2026 14:41:35] "GET /csi?cachebust=1783320093 HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jul/2026 14:41:35] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+192.168.8.222 - - [06/Jul/2026 14:41:45] "GET /api/songs?type=music HTTP/1.1" 200 -
+192.168.8.222 - - [06/Jul/2026 14:41:46] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+192.168.8.222 - - [06/Jul/2026 14:42:34] "GET /api/songs?type=music HTTP/1.1" 200 -

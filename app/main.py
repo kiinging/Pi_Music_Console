@@ -52,7 +52,7 @@ IPC_SOCKET = "/tmp/mpvsocket"
 
 def get_track_metadata(file_path):
     if file_path in META_CACHE: return META_CACHE[file_path]
-    metadata = {"title": os.path.basename(file_path), "artist": "Unknown Artist", "album": "Unknown Album", "track_number": 0}
+    metadata = {"title": os.path.basename(file_path), "artist": "Unknown Artist", "album": "Unknown Album", "track_number": 0,  "disc_number": 1}
     if File:
         try:
             audio = File(file_path)
@@ -66,6 +66,18 @@ def get_track_metadata(file_path):
                     tn_raw = tags.get('tracknumber', tags.get('track', ["0"]))
                     tn_str = str(tn_raw[0]) if tn_raw else "0"
                     metadata["track_number"] = int(tn_str.split('/')[0]) if tn_str.split('/')[0].isdigit() else 0
+                    
+                    # Detect disc number from folder names such as "Disc 1", "Disc 2", ...
+                    parts = os.path.normpath(file_path).split(os.sep)
+
+                    for part in parts:
+                        if part.lower().startswith("disc "):
+                            num = part[5:].strip()
+                            if num.isdigit():
+                                metadata["disc_number"] = int(num)
+                            break
+
+
         except Exception: pass
     META_CACHE[file_path] = metadata
     return metadata
@@ -505,7 +517,35 @@ def save_metadata(metadata):
         with open(METADATA_FILE, 'w', encoding='utf-8') as f: json.dump(metadata, f, indent=4)
         return True
     except: return False
+def save_album_metadata(album_metadata):
+    try:
+        with open(ALBUM_METADATA_FILE, 'w', encoding='utf-8') as f:
+            json.dump(album_metadata, f, indent=4)
+        return True
+    except:
+        return False
 
+# New endpoint to update album‑level metadata
+@app.route("/api/albums/update", methods=["POST"])
+def update_album_metadata():
+    data = request.json
+    if not data:
+        return jsonify({"error": "No data"}), 400
+    album_name = data.get("album")
+    if not album_name:
+        return jsonify({"error": "Album name required"}), 400
+    # Load existing album metadata
+    album_meta = load_album_metadata()
+    # Ensure entry exists
+    if album_name not in album_meta:
+        album_meta[album_name] = {}
+    # Update allowed fields
+    for field in ["artist", "category", "rating"]:
+        if field in data:
+            album_meta[album_name][field] = data[field]
+    # Save back to file
+    save_album_metadata(album_meta)
+    return jsonify({"status": "success"})
 @app.route("/api/status")
 def status():
     if not player.is_alive(): return jsonify({"status": "error", "manual_stop": MANUAL_STOP}), 200
