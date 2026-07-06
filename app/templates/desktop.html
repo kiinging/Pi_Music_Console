@@ -938,7 +938,7 @@
                 const coverUrl = '/api/cover?path=' + encodeURIComponent(al.coverPath);
                 const category = al.songs[0].category || 'All';
                 const catBadge = (category && category !== 'All') ? `<span style="background:var(--accent);color:white;padding:2px 6px;border-radius:10px;font-size:.6rem;margin-left:5px;">${category}</span>` : '';
-                const editBtn = isEditMode ? `<div class="album-edit-btn" onclick="prepareAlbumEdit(event, '${al.name.replace(/'/g,"\\'").replace(/\\/g,'\\\\')}', '${category}')"><i class="fas fa-edit"></i> Edit Category</div>` : '';
+                const editBtn = isEditMode ? `<div class="album-edit-btn" onclick="prepareAlbumEdit(event, '${al.name.replace(/'/g,"\\'").replace(/\\/g,'\\\\')}', '${category}')"><i class="fas fa-edit"></i> Edit Album</div>` : '';
                 return `<div class="album-card" onclick="openAlbum('${al.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">
                     <img class="album-cover-img" src="${coverUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" style="display:block">
                     <div class="album-cover-placeholder" style="display:none">💿</div>
@@ -964,7 +964,12 @@
                 return key === currentAlbum;
             })
 
-                .sort((a,b) => ((a.track_number||0) - (b.track_number||0)) || (a.title||'').localeCompare(b.title||''));
+            .sort((a,b) =>   
+                ((a.disc_number || 1) - (b.disc_number || 1))
+                || ((a.track_number || 0) - (b.track_number || 0))
+                || (a.title || '').localeCompare(b.title || '')
+            );
+
             const first = tracks[0];
             const coverUrl = first ? '/api/cover?path=' + encodeURIComponent(first.path) : '';
             const totalDur = tracks.reduce((t,s) => t + (s.tech && s.tech.duration ? parseFloat(s.tech.duration) : 0), 0);
@@ -1039,11 +1044,20 @@
             e.stopPropagation();
             editingAlbum = albumName;
             editingPath = null;
-            document.querySelector('#edit-modal h3').innerText = 'Edit Album Category';
+            document.querySelector('#edit-modal h3').innerText = 'Edit Album Details';
             document.getElementById('edit-title').style.display = 'none';
-            document.getElementById('edit-artist').style.display = 'none';
+            document.getElementById('edit-artist').style.display = 'block';
+            document.getElementById('edit-stars').style.display = 'block';
 
-            document.getElementById('edit-stars').style.display = 'none';
+            const tracks = allSongs.filter(s => {
+                const key = (s.album && s.album !== 'Unknown Album') ? s.album : (getArtistName(s) !== 'Others' ? getArtistName(s) + ' – Singles' : 'Unknown Album');
+                return key === albumName;
+            });
+            const currentArtist = tracks.length ? tracks[0].artist : 'Others';
+            const currentRating = tracks.length ? (tracks[0].rating || 0) : 0;
+            currentEditRating = currentRating;
+            updateModalStars(currentRating);
+            document.getElementById('edit-artist').value = (currentArtist === 'Others') ? '' : currentArtist;
             document.getElementById('edit-category').value = category || 'All';
             document.getElementById('edit-modal').style.display = 'flex';
         }
@@ -1073,15 +1087,14 @@
             const cat = document.getElementById('edit-category').value || 'All';
 
             if (editingAlbum) {
-                const tracks = allSongs.filter(s => {
-                    const key = (s.album && s.album !== 'Unknown Album') ? s.album : (getArtistName(s) !== 'Others' ? getArtistName(s) + ' – Singles' : 'Unknown Album');
-                    return key === editingAlbum;
-                });
+                const title = document.getElementById('edit-title').value || '';
+                const artist = document.getElementById('edit-artist').value || 'Others';
+                const rating = currentEditRating || 0;
                 const payload = {
                     album: editingAlbum,
                     category: cat,
-                    artist: tracks && tracks.length ? tracks[0].artist : undefined,
-                    rating: currentEditRating || 0
+                    artist,
+                    rating
                 };
                 try {
                     await fetch('/api/albums/update', {

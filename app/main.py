@@ -33,7 +33,7 @@ PERMANENT_CACHE = {} # Loaded from disk
 # Paths (Professional Structure)
 # app/main.py is inside 'app/' folder, so project root is parent
 BASE_DIR = Path(__file__).parent.parent
-METADATA_FILE = BASE_DIR / "music_metadata.json"
+VIDEO_METADATA_FILE = BASE_DIR / "video_metadata.json"
 ALBUM_METADATA_FILE = BASE_DIR / "album_metadata.json"
 STATE_FILE = BASE_DIR / "system_state.json"
 # Media Sources (Organized Structure)
@@ -214,9 +214,9 @@ player = MpvPlayer(IPC_SOCKET)
 
 def load_metadata():
     """Load video/audio track metadata (title based)."""
-    if METADATA_FILE.exists():
+    if VIDEO_METADATA_FILE.exists():
         try:
-            with open(METADATA_FILE, 'r', encoding='utf-8') as f:
+            with open(VIDEO_METADATA_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception:
             return {}
@@ -349,7 +349,7 @@ def list_songs():
                     continue
                 
                 # Base metadata
-                meta = {"title": f, "artist": "Unknown Artist", "album": "Unknown Album", "track_number": 0}
+                meta = {"title": f, "artist": "Unknown Artist", "album": "Unknown Album", "track_number": 0, "disc_number": 1}
                 tech = {"format": os.path.splitext(f)[1][1:].upper()}
                 
                 # Cache lookup
@@ -363,7 +363,8 @@ def list_songs():
                         "title": m.get("title", f),
                         "artist": m.get("artist", "Unknown Artist"),
                         "album": m.get("album", "Unknown Album"),
-                        "track_number": m.get("track_number", 0)
+                        "track_number": m.get("track_number", 0),
+                        "disc_number": m.get("disc_number", 1)
                     }
                     tech = TECH_CACHE.get(f_path, tech)
                 else:
@@ -372,7 +373,8 @@ def list_songs():
                         "title": m["title"],
                         "artist": m["artist"],
                         "album": m.get("album", "Unknown Album"),
-                        "track_number": m.get("track_number", 0)
+                        "track_number": m.get("track_number", 0),
+                        "disc_number": m.get("disc_number", 1)
                     }
                 
                 # Apply persistent metadata overrides
@@ -396,6 +398,7 @@ def list_songs():
                     "artist": meta.get("artist", "Unknown Artist"),
                     "album": meta.get("album", "Unknown Album"),
                     "track_number": meta.get("track_number", 0),
+                    "disc_number": meta.get("disc_number", 1),
                     "category": meta.get("category", "All"),
                     "rating": meta.get("rating", 0),
                     "tech": tech,
@@ -514,7 +517,7 @@ def delete_song():
 
 def save_metadata(metadata):
     try:
-        with open(METADATA_FILE, 'w', encoding='utf-8') as f: json.dump(metadata, f, indent=4)
+        with open(VIDEO_METADATA_FILE, 'w', encoding='utf-8') as f: json.dump(metadata, f, indent=4)
         return True
     except: return False
 def save_album_metadata(album_metadata):
@@ -786,7 +789,8 @@ def background_scanner():
                                 "title":        m["title"],
                                 "artist":       m["artist"],
                                 "album":        m.get("album", "Unknown Album"),
-                                "track_number": m.get("track_number", 0)
+                                "track_number": m.get("track_number", 0),
+                                "disc_number": m.get("disc_number", 1)
                             },
                             "tech": t
                         }
