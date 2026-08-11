@@ -11,6 +11,11 @@ import glob
 from pathlib import Path
 from flask import Flask, render_template, jsonify, request, send_file
 
+# ── Audio Output Selection ────────────────────────────────────────────────────
+# Supported values: 'pcm5122' (internal DAC) | 'usb' (external USB DAC)
+# Loaded from system_state.json at startup; changed via /api/system/set_audio
+AUDIO_OUTPUT = 'pcm5122'  # safe default – overwritten after state loads
+
 try:
     from mutagen import File
 except ImportError:
@@ -115,6 +120,7 @@ class MpvPlayer:
             env = os.environ.copy()
             if env_vars: env.update(env_vars)
             # Use flags for better performance on Pi 5
+            # get_audio_device() reads the global AUDIO_OUTPUT – no subprocess call
             cmd = [
                 "mpv", 
                 "--fullscreen", 
@@ -131,7 +137,7 @@ class MpvPlayer:
                 "--audio-display=no", 
                 "--stop-screensaver=yes", 
                 "--input-ipc-server=" + self.socket_path,
-                "--ao=alsa", 
+                "--audio-device=" + get_audio_device(),
                 file_path
             ]
             self.proc = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -232,28 +238,53 @@ def load_album_metadata():
             return {}
     return {}
 
+def get_audio_device():
+    """Return the mpv --audio-device string based on the user-selected AUDIO_OUTPUT.
+    No subprocess calls – fast, reliable, and hot-plug-independent."""
+    if AUDIO_OUTPUT == 'usb':
+        print("[*] Audio Device: USB DAC (alsa/plughw:CARD=Audio,DEV=0)")
+        return "alsa/plughw:CARD=Audio,DEV=0"
+    else:
+        # Use a more explicit target for the PCM5122 instead of "auto" which might route to HDMI
+        print("[*] Audio Device: PCM5122 internal DAC")
+        return "alsa/sysdefault:CARD=IQaudIODAC"
+
 def detect_mixer():
-    # Priority 1: Look for PCM5122 / HiFi DAC specific mixers first ("Digital" or "Analogue")
-    for card in range(3):
-        for name in ["Digital", "Analogue"]:
-            try:
-                subprocess.check_output(["amixer", "-c", str(card), "get", name], stderr=subprocess.DEVNULL)
-                print(f"[*] Audio: Found DAC mixer '{name}' on card {card}")
-                return f"-c {card} sset {name}"
-            except: continue
-            
-    # Priority 2: General mixers (HDMI, Master, etc.)
-    for card in range(3):
-        for name in ["Master", "Playback", "HDMI", "Speaker"]:
-            try:
-                subprocess.check_output(["amixer", "-c", str(card), "get", name], stderr=subprocess.DEVNULL)
-                print(f"[*] Audio: Found general mixer '{name}' on card {card}")
-                return f"-c {card} sset {name}"
-            except: continue
-            
+    """Detect the correct amixer control for the currently selected audio output.
+    When AUDIO_OUTPUT=='usb' we skip PCM5122-specific mixers and prefer Master/Playback
+    on the USB card so that volume control targets the right hardware."""
+    if AUDIO_OUTPUT == 'usb':
+        # For USB DAC: look for a Master or PCM control on card 1 or 2
+        for card in range(3):
+            for name in ["Master", "PCM", "Playback", "Speaker"]:
+                try:
+                    subprocess.check_output(["amixer", "-c", str(card), "get", name], stderr=subprocess.DEVNULL)
+                    print(f"[*] Mixer (USB mode): Found '{name}' on card {card}")
+                    return f"-c {card} sset {name}"
+                except: continue
+    else:
+        # For PCM5122 internal DAC: prefer 'Digital' or 'Analogue' mixer
+        for card in range(3):
+            for name in ["Digital", "Analogue"]:
+                try:
+                    subprocess.check_output(["amixer", "-c", str(card), "get", name], stderr=subprocess.DEVNULL)
+                    print(f"[*] Mixer (PCM5122 mode): Found '{name}' on card {card}")
+                    return f"-c {card} sset {name}"
+                except: continue
+        # Fallback: general mixers
+        for card in range(3):
+            for name in ["Master", "Playback", "HDMI", "Speaker"]:
+                try:
+                    subprocess.check_output(["amixer", "-c", str(card), "get", name], stderr=subprocess.DEVNULL)
+                    print(f"[*] Mixer (PCM5122 fallback): Found '{name}' on card {card}")
+                    return f"-c {card} sset {name}"
+                except: continue
+
     return "sset Master"
 
-MIXER_CMD = detect_mixer()
+# NOTE: MIXER_CMD is initialised at the bottom of __main__ after system state
+# (and therefore AUDIO_OUTPUT) has been loaded, so it always targets the correct card.
+MIXER_CMD = "sset Master"  # temporary placeholder – replaced on startup
 
 def load_system_state():
     if STATE_FILE.exists():
@@ -348,7 +379,9 @@ def list_songs():
                 if requested_type and requested_type != typ:
                     continue
                 
-                # Base metadata
+                # Base metadata. Use filename as default display title so
+                # the web UI reflects the filesystem name (avoids tag-based
+                # replacements for formats like FLAC that have embedded English titles).
                 meta = {"title": f, "artist": "Unknown Artist", "album": "Unknown Album", "track_number": 0, "disc_number": 1}
                 tech = {"format": os.path.splitext(f)[1][1:].upper()}
                 
@@ -360,7 +393,11 @@ def list_songs():
                 elif f_path in META_CACHE:
                     m = META_CACHE[f_path]
                     meta = {
-                        "title": m.get("title", f),
+                        # Prefer filename for display unless tag explicitly
+                        # provides a non-empty title. This keeps Chinese
+                        # filenames visible in the UI even when tags contain
+                        # English titles.
+                        "title": m.get("title", f) if m.get("title") else f,
                         "artist": m.get("artist", "Unknown Artist"),
                         "album": m.get("album", "Unknown Album"),
                         "track_number": m.get("track_number", 0),
@@ -369,26 +406,61 @@ def list_songs():
                     tech = TECH_CACHE.get(f_path, tech)
                 else:
                     m = get_track_metadata(f_path)
+                    # If tags exist but title is empty, fall back to filename.
+                    title_from_tag = m.get("title") if isinstance(m.get("title"), str) and m.get("title").strip() else None
                     meta = {
-                        "title": m["title"],
-                        "artist": m["artist"],
+                        "title": title_from_tag or f,
+                        "artist": m.get("artist", "Unknown Artist"),
                         "album": m.get("album", "Unknown Album"),
                         "track_number": m.get("track_number", 0),
                         "disc_number": m.get("disc_number", 1)
                     }
+
+                # If metadata didn't provide a track number, try to parse it
+                # from the filename (common pattern: '01 - Artist - Title.ext').
+                if not meta.get("track_number"):
+                    try:
+                        name_no_ext = os.path.splitext(f)[0]
+                        # Look for leading track like '01', '1.', '01 -', etc.
+                        import re
+                        m_t = re.match(r"^\s*(\d{1,2})\b", name_no_ext)
+                        if m_t:
+                            meta["track_number"] = int(m_t.group(1))
+                    except Exception:
+                        pass
                 
                 # Apply persistent metadata overrides
-                if rel in p_meta:
-                    # For music use album metadata (fields: album, category, artist, rating)
-                    if requested_type == 'music':
-                        for field in ["album", "category", "artist", "rating"]:
-                            if field in p_meta[rel]:
-                                meta[field] = p_meta[rel][field]
-                    else:
-                        # Video/tab uses title‑based metadata, omit year field
-                        for field in ["title", "category", "artist", "rating", "album"]:
-                            if field in p_meta[rel]:
-                                meta[field] = p_meta[rel][field]
+                if requested_type == 'music':
+                    album_key = None
+                    candidates = []
+                    if rel in p_meta:
+                        candidates.append(rel)
+                    rel_dir = os.path.dirname(rel)
+                    if rel_dir:
+                        candidates.append(rel_dir)
+                        candidates.append(rel_dir.split('/')[0])
+                    album_name = meta.get("album")
+                    if album_name and album_name != "Unknown Album":
+                        candidates.append(album_name)
+
+                    for candidate in candidates:
+                        if candidate in p_meta:
+                            album_key = candidate
+                            break
+
+                    if album_key:
+                        for field in ["category", "artist", "rating"]:
+                            if field in p_meta[album_key]:
+                                meta[field] = p_meta[album_key][field]
+                        if "album" in p_meta[album_key]:
+                            meta["album"] = p_meta[album_key]["album"]
+                        else:
+                            meta["album"] = album_key
+                elif rel in p_meta:
+                    # Video/tab uses title‑based metadata, omit year field
+                    for field in ["title", "category", "artist", "rating", "album"]:
+                        if field in p_meta[rel]:
+                            meta[field] = p_meta[rel][field]
                 
                 songs.append({
                     "path": rel,
@@ -405,7 +477,9 @@ def list_songs():
                     "base_dir": b_dir
                 })
     
-    songs.sort(key=lambda x: x['title'].lower())
+    # Sort by disc_number, then track_number, then filename to keep
+    # album ordering stable and avoid interleaving formats (mp3 vs flac).
+    songs.sort(key=lambda x: (int(x.get('disc_number', 1) or 1), int(x.get('track_number', 0) or 0), x['filename'].lower()))
     return jsonify(songs)
 
 MANUAL_STOP = False
@@ -660,6 +734,7 @@ def volume_api():
 # ── System Control ──────────────────────────────────────────────────────────
 
 EQ_STATE = {"bass": 0, "mid": 0, "treble": 0}
+FAN_STATE = False
 
 def build_eq(eq):
     return (
@@ -683,6 +758,26 @@ def system_eq():
         player._send_command(["af", "set", build_eq(EQ_STATE)])
         
     return jsonify({"status": "success", "eq": EQ_STATE})
+
+@app.route("/api/system/fan", methods=["POST"])
+def system_fan():
+    global FAN_STATE
+    data = request.json
+    if data and "enabled" in data:
+        FAN_STATE = data["enabled"]
+    else:
+        FAN_STATE = not FAN_STATE
+        
+    try:
+        if FAN_STATE:
+            # Set GPIO 8 (CE0) HIGH (ON)
+            subprocess.run(["pinctrl", "set", "8", "op", "dh"], check=True)
+        else:
+            # Set GPIO 8 (CE0) LOW (OFF)
+            subprocess.run(["pinctrl", "set", "8", "op", "dl"], check=True)
+        return jsonify({"status": "success", "fan_enabled": FAN_STATE})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route("/api/system/screen_toggle", methods=["POST"])
 def screen_toggle():
@@ -817,12 +912,69 @@ def quit_browser():
         return jsonify({"status": "Browser closed"})
     except: return jsonify({"status": "error"}), 500
 
-if __name__ == "__main__":
-    # Restore volume on startup
+# ── Audio Output Selection ────────────────────────────────────────────────────
+
+@app.route("/api/system/audio_output", methods=["GET"])
+def get_audio_output():
+    """Return the currently selected audio output."""
+    return jsonify({"audio_output": AUDIO_OUTPUT})
+
+@app.route("/api/system/set_audio", methods=["POST"])
+def set_audio_output():
+    """Switch the audio output between 'pcm5122' and 'usb'.
+    Persists the choice to system_state.json so it survives reboots.
+    Restarts mpv (if playing) so the new device takes effect immediately."""
+    global AUDIO_OUTPUT, MIXER_CMD
+    data = request.json
+    new_output = data.get("audio_output", "").strip().lower()
+    if new_output not in ("pcm5122", "usb"):
+        return jsonify({"error": "Invalid audio_output. Use 'pcm5122' or 'usb'"}), 400
+
+    AUDIO_OUTPUT = new_output
+
+    # Persist to state file
     state = load_system_state()
+    state["audio_output"] = AUDIO_OUTPUT
+    save_system_state(state)
+
+    # Re-detect mixer so volume control follows the new device
+    MIXER_CMD = detect_mixer()
+    print(f"[*] Audio output switched to: {AUDIO_OUTPUT} | MIXER_CMD: {MIXER_CMD}")
+
+    # If mpv is playing, stop it so the next playTrack uses the new device
+    was_alive = player.is_alive()
+    if was_alive:
+        player.stop()
+
+    return jsonify({
+        "status": "success",
+        "audio_output": AUDIO_OUTPUT,
+        "mixer": MIXER_CMD,
+        "player_restarted": was_alive
+    })
+
+if __name__ == "__main__":
+    # ── Load system state first (needed for AUDIO_OUTPUT + MIXER_CMD) ──────────
+    state = load_system_state()
+
+    # Restore audio output preference (default: 'pcm5122')
+    AUDIO_OUTPUT = state.get("audio_output", "pcm5122")
+    print(f"[*] Startup: Audio output = {AUDIO_OUTPUT}")
+
+    # Now initialise MIXER_CMD with the correct device knowledge
+    MIXER_CMD = detect_mixer()
+    print(f"[*] Startup: MIXER_CMD = {MIXER_CMD}")
+
+    # Restore volume
     set_system_volume(state.get("volume", 85))
-    
+
+    # Ensure Fan is OFF on startup (GPIO 8 LOW)
+    try:
+        subprocess.run(["pinctrl", "set", "8", "op", "dl"], check=True)
+    except Exception:
+        pass
+
     # Start background metadata scanner
     threading.Thread(target=background_scanner, daemon=True).start()
-    
+
     app.run(host="0.0.0.0", port=5000, debug=False, threaded=True)

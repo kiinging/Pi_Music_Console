@@ -33,7 +33,10 @@
             margin: 0;
             display: flex;
             flex-direction: column;
-            height: 100vh;
+            width: 149.253vw;
+            height: 149.253vh;
+            transform: scale(0.67);
+            transform-origin: top left;
             overflow: hidden;
             background-image: radial-gradient(circle at 0% 0%, rgba(157, 78, 221, 0.05) 0%, transparent 50%),
                 radial-gradient(circle at 100% 100%, rgba(61, 44, 141, 0.05) 0%, transparent 50%);
@@ -235,7 +238,11 @@
             display: flex;
             justify-content: center;
             gap: 10px;
-            padding: 1rem 0;
+            padding: 0.35rem 0.55rem;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 999px;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
         }
 
         .tab-btn {
@@ -309,6 +316,15 @@
             border-radius: 15px;
             cursor: pointer;
             font-size: 0.85rem;
+        }
+
+        #inline-category-filter,
+        #star-filter-group {
+            padding: 0.35rem 0.55rem;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 999px;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
         }
 
         .filter-btn.active {
@@ -528,11 +544,41 @@
             from { transform: rotate(0deg) scale(1.1); }
             to { transform: rotate(360deg) scale(1.1); }
         }
-        .card-network i { color: #00f5d4; }
         .card-youtube i { color: #ff0000; }
         .card-master i { color: #ff9f1c; }
-        .card-screen i { color: #38b000; }
         .card-exit i { color: #ef233c; }
+        .card-dac i { color: #f77f00; }
+
+        /* DAC Selector Modal buttons */
+        .dac-option-btn {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+            padding: 14px 18px;
+            border-radius: 12px;
+            border: 2px solid var(--glass-border);
+            background: var(--glass);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+            text-align: left;
+        }
+        .dac-option-btn:hover {
+            border-color: #f77f00;
+            background: rgba(247, 127, 0, 0.08);
+        }
+        .dac-option-btn.active {
+            border-color: #f77f00;
+            background: rgba(247, 127, 0, 0.15);
+            box-shadow: 0 0 18px rgba(247, 127, 0, 0.25);
+        }
+        .dac-option-btn .dac-icon { font-size: 1.6rem; width: 36px; text-align: center; flex-shrink: 0; }
+        .dac-option-btn .dac-label small { display: block; font-size: 0.72rem; color: var(--text-dim); font-weight: 400; margin-top: 2px; }
 
         /* Home icon inside app view */
         .home-icon {
@@ -550,7 +596,8 @@
         .app-view {
             display: none;
             flex-direction: column;
-            height: 100vh;
+            flex: 1;
+            min-height: 0;
             position: relative;
         }
 
@@ -606,7 +653,7 @@
     <!-- PREMIUM HOME MENU -->
     <div id="homeMenu" class="home-menu">
         <div class="home-header">
-            <h1>Pi Music Console</h1>
+            <h1>Pi Console</h1>
             <p>High-Fidelity Audio Experience</p>
         </div>
         <div id="voice-prompt-box" style="display: none; background: rgba(100,255,100,0.1); border: 1px solid rgba(100,255,100,0.3); padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center;">
@@ -625,20 +672,15 @@
                 <h3>YouTube</h3>
                 <p>Stream Video Online</p>
             </div>
-            <div class="home-card card-network" onclick="showNetworkModal()">
-                <i class="fas fa-network-wired"></i>
-                <h3>Network</h3>
-                <p>Wi-Fi & Ethernet Settings</p>
-            </div>
             <div class="home-card card-eq" id="eqControlBtn" onclick="showEqModal()">
                 <i class="fas fa-sliders-h"></i>
                 <h3>EQ Settings</h3>
                 <p id="eqControlStatus">Currently: Flat</p>
             </div>
-            <div class="home-card card-screen" onclick="toggleHardwareScreen()">
-                <i class="fas fa-power-off"></i>
-                <h3>Screen Backlight</h3>
-                <p>Toggle Display Hardware</p>
+            <div class="home-card card-dac" id="dacCard" onclick="showDacModal()">
+                <i class="fas fa-plug"></i>
+                <h3>Audio Output</h3>
+                <p id="dacCardStatus">Loading...</p>
             </div>
             <div class="home-card card-exit" onclick="powerDownPi()">
                 <i class="fas fa-power-off"></i>
@@ -687,8 +729,10 @@
 
                 <button id="btn-video" class="btn-circle" style="background: var(--accent)"
                     onclick="toggleVideo()" title="Toggle Video Stream">📺</button>
-                <button id="voiceToggleBtn" class="btn-circle" style="background: rgba(100,255,100,0.15); color: #64ff64;"
-                    onclick="toggleVoiceControl()" title="Toggle Voice Commands">🎤</button>
+                <button id="fanToggleBtn" class="btn-circle" style="background: rgba(100,150,255,0.15); color: #6496ff;"
+                    onclick="toggleFan()" title="Toggle Cooling Fan">🌀</button>
+                <button id="dacQuickBtn" class="btn-circle" style="background: rgba(247,127,0,0.15); color: #f77f00;"
+                    onclick="showDacModal()" title="Switch Audio Output">🔌</button>
             </div>
             <div class="seek-container">
                 <span id="seek-current">0:00</span>
@@ -764,20 +808,6 @@
         </div>
     </div>
 
-    <!-- Network Modal -->
-    <div id="networkModal" class="modal-overlay">
-        <div class="modal-content">
-            <h3>Network Settings</h3>
-            <button class="btn-secondary" onclick="scanWifi()">Scan Wi-Fi</button>
-            <div id="wifi-list" style="margin:10px 0;"></div>
-            <input type="password" id="wifi-password" placeholder="Password" class="form-input">
-            <button class="btn-primary" onclick="connectToSelectedWifi()">Connect</button>
-            <hr>
-            <button class="btn-secondary" onclick="enableEthernet()">Use Ethernet</button>
-            <div id="network-status" style="margin-top:10px;"></div>
-            <button class="btn-secondary" onclick="closeNetworkModal()" style="margin-top:15px;">Close</button>
-        </div>
-    </div>
 
     <!-- EQ Modal -->
     <div id="eqModal" class="modal-overlay">
@@ -810,6 +840,27 @@
         </div>
     </div>
 
+    <!-- DAC Selector Modal -->
+    <div id="dacModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 360px;">
+            <h3 style="margin-bottom: 6px;">🔌 Audio Output</h3>
+            <p style="color: var(--text-dim); font-size: 0.82rem; margin: 0 0 20px;">Select where audio is sent. Takes effect on next track play. If currently playing, playback will stop briefly.</p>
+
+            <button class="dac-option-btn" id="dac-btn-pcm5122" onclick="setAudioOutput('pcm5122')">
+                <span class="dac-icon">🎛️</span>
+                <span class="dac-label">PCM5122 Internal DAC<small>Pi HAT — 3.5mm / RCA output</small></span>
+            </button>
+
+            <button class="dac-option-btn" id="dac-btn-usb" onclick="setAudioOutput('usb')">
+                <span class="dac-icon">🔌</span>
+                <span class="dac-label">USB External DAC<small>plughw:CARD=Audio,DEV=0</small></span>
+            </button>
+
+            <div id="dac-status-msg" style="margin: 12px 0 0; font-size: 0.8rem; color: var(--text-dim); min-height: 1.2em; text-align: center;"></div>
+            <button class="btn-secondary" onclick="closeDacModal()" style="width:100%; margin-top:14px;">Close</button>
+        </div>
+    </div>
+
     <script>
         // ---------- YOUR ORIGINAL JAVASCRIPT (with apostrophe fix) ----------
         let isEditMode = false;
@@ -829,20 +880,7 @@
         let currentPath = null;
         let isPaused = true;
 
-        async function toggleHardwareScreen() {
-            try {
-                const res = await fetch('/api/system/screen_toggle', { method: 'POST' });
-                const data = await res.json();
-                if (data.status === "not_supported") {
-                    alert('Hardware backlight control not available.');
-                } else if (data.status === "success") {
-                    console.log('Screen toggled. Is On:', data.power);
-                }
-            } catch (e) {
-                console.error(e);
-                alert('Failed to toggle screen');
-            }
-        }
+
 
         // Helper to normalize artist names
         function getArtistName(song) {
@@ -1045,7 +1083,11 @@
             editingAlbum = albumName;
             editingPath = null;
             document.querySelector('#edit-modal h3').innerText = 'Edit Album Details';
-            document.getElementById('edit-title').style.display = 'none';
+            const editTitle = document.getElementById('edit-title');
+            editTitle.style.display = 'block';
+            editTitle.readOnly = true;
+            editTitle.placeholder = 'Album Folder Name';
+            editTitle.value = albumName;
             document.getElementById('edit-artist').style.display = 'block';
             document.getElementById('edit-stars').style.display = 'block';
 
@@ -1295,14 +1337,7 @@
         function goHome() { document.getElementById('homeMenu').style.display = 'flex'; document.getElementById('appView').style.display = 'none'; }
         function showMusicLibrary() { document.getElementById('homeMenu').style.display = 'none'; document.getElementById('appView').style.display = 'flex'; refreshList(); }
 
-        let selectedWifiSSID = null;
-        async function scanWifi() { const res = await fetch('/api/network/wifi/scan'); const data = await res.json(); if (data.error) { document.getElementById('wifi-list').innerHTML = `<div>${data.error}</div>`; return; } document.getElementById('wifi-list').innerHTML = data.map(net => `<div class="filter-btn" style="display:block;margin:5px 0;" onclick="selectWifi('${net.ssid.replace(/'/g, "\\'")}')">📶 ${net.ssid} (${net.signal}%) ${net.secure ? '🔒' : ''}</div>`).join(''); }
-        function selectWifi(ssid) { selectedWifiSSID = ssid; alert(`Selected ${ssid}. Enter password and click Connect.`); }
-        async function connectToSelectedWifi() { const pwd = document.getElementById('wifi-password').value; const res = await fetch('/api/network/wifi/connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ssid: selectedWifiSSID, password: pwd }) }); const data = await res.json(); alert(data.status === 'connected' ? 'Connected!' : 'Failed: ' + data.error); if (data.status === 'connected') closeNetworkModal(); }
-        async function updateNetworkStatus() { const res = await fetch('/api/network/status'); const data = await res.json(); document.getElementById('network-status').innerHTML = `<div>Wi‑Fi: ${data.wifi ? data.wifi.name : 'None'}</div><div>Ethernet: ${data.ethernet ? data.ethernet.name : 'Inactive'}</div>`; }
-        async function enableEthernet() { await fetch('/api/network/ethernet/connect', { method: 'POST' }); updateNetworkStatus(); }
-        function showNetworkModal() { document.getElementById('networkModal').style.display = 'flex'; scanWifi(); updateNetworkStatus(); }
-        function closeNetworkModal() { document.getElementById('networkModal').style.display = 'none'; }
+
 
         function showYoutubeModal() { document.getElementById('youtubeModal').style.display = 'flex'; }
         function closeYoutubeModal() { document.getElementById('youtubeModal').style.display = 'none'; }
@@ -1310,19 +1345,89 @@
 
         // Removing duplicate toggleHardwareScreen function
 
-        let voiceActive = false;
-        async function toggleVoiceControl() {
-            voiceActive = !voiceActive;
-            const btn = document.getElementById('voiceToggleBtn');
+        // ── DAC Selector ──────────────────────────────────────────────────────
+        let currentAudioOutput = 'pcm5122';
+
+        async function loadAudioOutput() {
             try {
-                await fetch('/api/voice/toggle', { 
+                const res = await fetch('/api/system/audio_output');
+                const data = await res.json();
+                currentAudioOutput = data.audio_output || 'pcm5122';
+                updateDacUI();
+            } catch (e) { console.warn('Could not fetch audio output state'); }
+        }
+
+        function updateDacUI() {
+            const labels = { pcm5122: '🎛️ PCM5122 Internal', usb: '🔌 USB External DAC' };
+            const shortLabel = labels[currentAudioOutput] || currentAudioOutput;
+            const statusEl = document.getElementById('dacCardStatus');
+            if (statusEl) statusEl.innerText = shortLabel;
+            const qBtn = document.getElementById('dacQuickBtn');
+            if (qBtn) {
+                qBtn.title = 'Audio: ' + shortLabel + ' — click to switch';
+                qBtn.style.background = currentAudioOutput === 'usb' ? 'rgba(247,127,0,0.4)' : 'rgba(247,127,0,0.15)';
+                qBtn.style.boxShadow = currentAudioOutput === 'usb' ? '0 0 12px rgba(247,127,0,0.5)' : 'none';
+            }
+            document.getElementById('dac-btn-pcm5122')?.classList.toggle('active', currentAudioOutput === 'pcm5122');
+            document.getElementById('dac-btn-usb')?.classList.toggle('active', currentAudioOutput === 'usb');
+        }
+
+        function showDacModal() {
+            updateDacUI();
+            document.getElementById('dac-status-msg').innerText = '';
+            document.getElementById('dacModal').style.display = 'flex';
+        }
+        function closeDacModal() { document.getElementById('dacModal').style.display = 'none'; }
+
+        async function setAudioOutput(output) {
+            const msgEl = document.getElementById('dac-status-msg');
+            msgEl.innerText = '⏳ Switching...';
+            msgEl.style.color = 'var(--text-dim)';
+            ['dac-btn-pcm5122', 'dac-btn-usb'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.disabled = true;
+            });
+            try {
+                const res = await fetch('/api/system/set_audio', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ audio_output: output })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    currentAudioOutput = data.audio_output;
+                    updateDacUI();
+                    msgEl.style.color = '#00f5d4';
+                    msgEl.innerText = '✅ Switched to ' + (output === 'usb' ? 'USB DAC' : 'PCM5122')
+                        + (data.player_restarted ? ' — playback stopped, re-select a track.' : '.');
+                } else {
+                    msgEl.style.color = '#ff453a';
+                    msgEl.innerText = '❌ Error: ' + (data.error || 'Unknown error');
+                }
+            } catch (e) {
+                msgEl.style.color = '#ff453a';
+                msgEl.innerText = '❌ Network error. Is the server running?';
+            }
+            ['dac-btn-pcm5122', 'dac-btn-usb'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.disabled = false;
+            });
+        }
+        // ── End DAC Selector ──────────────────────────────────────────────────
+
+        let fanActive = false;
+        async function toggleFan() {
+            fanActive = !fanActive;
+            const btn = document.getElementById('fanToggleBtn');
+            try {
+                await fetch('/api/system/fan', { 
                     method: 'POST', 
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ enabled: voiceActive }) 
+                    body: JSON.stringify({ enabled: fanActive }) 
                 });
-                btn.style.background = voiceActive ? 'rgba(100,255,100,0.4)' : 'rgba(100,255,100,0.15)';
-                btn.style.boxShadow = voiceActive ? '0 0 15px rgba(100,255,100,0.5)' : 'none';
-            } catch (e) { alert('Voice service failed to respond.'); }
+                btn.style.background = fanActive ? 'rgba(100,150,255,0.4)' : 'rgba(100,150,255,0.15)';
+                btn.style.boxShadow = fanActive ? '0 0 15px rgba(100,150,255,0.5)' : 'none';
+            } catch (e) { alert('Fan control failed.'); }
         }
 
         // EQ Logic
@@ -1401,7 +1506,8 @@
             syncUI(); 
             fetchSongs(); 
             pollStatus(); 
-            fetchVolume(); 
+            fetchVolume();
+            loadAudioOutput(); // Restore DAC selection from server state
         };
     </script>
 </body>

@@ -1,37 +1,37 @@
 {
     "1432 - Katy Perry": {
-        "artist": "Various",
+        "artist": "Katy Perry",
         "category": "Pop",
         "rating": 0
     },
     "3.0 - Marc Anthony": {
-        "artist": "Various",
-        "category": "Classical",
+        "artist": "Nil",
+        "category": "Spanish",
         "rating": 0
     },
     "Beethoven - 9 Symphonies - Berliner Philharmoniker": {
-        "artist": "Berliner Philharmoniker",
+        "artist": "Karajan",
         "category": "Classical",
         "rating": 0
     },
     "Beethoven_ Violin Concerto; Romances - Anne-Sophie Mutter": {
-        "artist": "Anne-Sophie Mutter",
+        "artist": "Anne",
         "category": "Classical",
         "rating": 0
     },
     "Bizet_ Carmen - Roberto Alagna": {
-        "artist": "Roberto Alagna",
-        "category": "Opera",
+        "artist": "Others",
+        "category": "Classical",
         "rating": 0
     },
     "Bizet_ Carmen, WD 31 - Adriana Maliponte": {
-        "artist": "Adriana Maliponte",
+        "artist": "Others",
         "category": "Classical",
         "rating": 0
     },
     "Cantonese 101 - Various Artists": {
-        "artist": "Various",
-        "category": "Cantonese",
+        "artist": "Others",
+        "category": "Chinese",
         "rating": 0
     },
     "Dangerous - Michael Jackson": {
@@ -55,8 +55,8 @@
         "rating": 0
     },
     "La traviata - Riccardo Muti, Renata Scotto, Alfredo Kraus & Philharmonia Orchestra": {
-        "artist": "Riccardo Muti",
-        "category": "Opera",
+        "artist": "Nil",
+        "category": "Classical",
         "rating": 0
     },
     "Man\u2019s Best Friend (Bonus Track Version) - Sabrina Carpenter": {
@@ -66,27 +66,27 @@
     },
     "Metallica - Metallica": {
         "artist": "Metallica",
-        "category": "Metal",
+        "category": "Rock",
         "rating": 0
     },
     "Mozart_ Violin Concerto No. 3 in G Major, K. 216; Violin Concerto No. 5 in A Major, K. 219 - Anne-Sophie Mutter": {
-        "artist": "Anne-Sophie Mutter",
+        "artist": "Nil",
         "category": "Classical",
         "rating": 0
     },
     "Puccini_ La boh\u00e8me (2024 Remaster) - Luciano Pavarotti": {
-        "artist": "Luciano Pavarotti",
-        "category": "Opera",
+        "artist": "Puccine",
+        "category": "Classical",
         "rating": 0
     },
     "Puccini_ Madama Butterfly - Herbert von Karajan": {
-        "artist": "Herbert von Karajan",
-        "category": "Opera",
+        "artist": "Puccini",
+        "category": "Classical",
         "rating": 0
     },
     "Soy el Mismo - Prince Royce": {
         "artist": "Prince Royce",
-        "category": "Latin",
+        "category": "Spanish",
         "rating": 0
     },
     "Teenage Dream - Katy Perry": {
@@ -95,7 +95,7 @@
         "rating": 0
     },
     "The Fame - Lady GaGa": {
-        "artist": "Lady GaGa",
+        "artist": "Lady Gaga",
         "category": "Pop",
         "rating": 0
     },
@@ -105,38 +105,178 @@
         "rating": 0
     },
     "VIDA - Luis Fonsi": {
-        "artist": "Luis Fonsi",
-        "category": "Latin",
+        "artist": "Others",
+        "category": "Spanish",
         "rating": 0
     },
     "Vivaldi_ The Four Seasons (Live) - Anne-Sophie Mutter": {
-        "artist": "Anne-Sophie Mutter",
+        "artist": "Others",
         "category": "Classical",
         "rating": 0
     },
     "\u5929\u7a7a - \u738b\u83f2": {
         "artist": "\u738b\u83f2",
-        "category": "Mandarin",
+        "category": "Chinese",
         "rating": 0
     },
     "\u6211\u53ea\u5728\u4e4e\u4f60 - \u9127\u9e97\u541b": {
         "artist": "\u9127\u9e97\u541b",
-        "category": "Mandarin",
+        "category": "Chinese",
         "rating": 0
     },
     "\u6975\u54c1\u5929\u789f \u9127\u9e97\u541b - \u9127\u9e97\u541b": {
-        "artist": "\u9127\u9e97\u541b",
-        "category": "Mandarin",
+        "artist": "Others",
+        "category": "Chinese",
         "rating": 0
     },
     "\u7cbe\u9078\uff08Remastered\uff09 - \u8521\u7434": {
         "artist": "\u8521\u7434",
-        "category": "Mandarin",
+        "category": "Chinese",
         "rating": 0
     },
     "\u9127\u9e97\u541b15\u9031\u5e74 - \u9127\u9e97\u541b": {
         "artist": "\u9127\u9e97\u541b",
-        "category": "Mandarin",
+        "category": "Chinese",
+        "rating": 0
+    },
+    "Come Away With Me - Norah Jones": {
+        "artist": "Norah Jones",
+        "category": "Pop",
+        "rating": 0
+    },
+    "\u8521\u7434\u4e0d\u4e86\u60c5\u6f14\u5531\u6703 - \u8521\u7434": {
+        "artist": "\u8521\u7434",
+        "category": "Chinese",
+        "rating": 0
+    },
+    "\u611b\u50cf\u4e00\u9996\u6b4c - \u8521\u7434": {
+        "artist": "\u8521\u7434",
+        "category": "Chinese",
+        "rating": 0
+    },
+    "The Look Of Love - Diana Krall": {
+        "artist": "Diana Krall",
+        "category": "Pop",
+        "rating": 0
+    },
+    "Dvor\u00e1k_ Rusalka - Ren\u00e9e Fleming": {
+        "artist": "Renee",
+        "category": "Classical",
+        "rating": 0
+    },
+    "Ren\u00e9e Fleming - The Beautiful Voice - Ren\u00e9e Fleming": {
+        "artist": "Rennee",
+        "category": "Classical",
+        "rating": 0
+    },
+    "Souvenirs - Anna Netrebko": {
+        "artist": "Anna",
+        "category": "Classical",
+        "rating": 0
+    },
+    "The Art of Ren\u00e9e Fleming - Ren\u00e9e Fleming": {
+        "artist": "Renee",
+        "category": "Classical",
+        "rating": 0
+    },
+    "The Mozart Album - Anna Netrebko": {
+        "artist": "Anna",
+        "category": "Classical",
+        "rating": 0
+    },
+    "Tracy Chapman - Tracy Chapman": {
+        "artist": "Others",
+        "category": "Pop",
+        "rating": 0
+    },
+    "\u74b0\u7403\u8403\u53d6\u5347\u7d1a\u7cbe\u9078 - \u5289\u5fb7\u83ef": {
+        "artist": "\u5289\u5fb7\u83ef",
+        "category": "Chinese",
+        "rating": 0
+    },
+    "\u52c1\u6b4c\u7cbe\u9078 - \u5289\u5fb7\u83ef": {
+        "artist": "\u5289\u5fb7\u83ef",
+        "category": "Chinese",
+        "rating": 0
+    },
+    "\u5bec\u5bb9 - \u5f35\u4fe1\u54f2": {
+        "artist": "\u5f35\u4fe1\u54f2",
+        "category": "Chinese",
+        "rating": 0
+    },
+    "\u6c5f\u8559 - \u6c5f\u8559": {
+        "artist": "Others",
+        "category": "Chinese",
+        "rating": 0
+    },
+    "\u4e0a\u6d77\u7058 - \u8449\u9e97\u5100": {
+        "artist": "Others",
+        "category": "Chinese",
+        "rating": 0
+    },
+    "Opera Arias - Anna Netrebko": {
+        "artist": "Others",
+        "category": "Classical",
+        "rating": 0
+    },
+    "21 - Adele": {
+        "artist": "Adele",
+        "category": "Pop",
+        "rating": 0
+    },
+    "25 - Adele": {
+        "artist": "Adele",
+        "category": "Pop",
+        "rating": 0
+    },
+    "Songbird - Eva Cassidy": {
+        "artist": "Others",
+        "category": "Pop",
+        "rating": 0
+    },
+    "\u6975\u54c1\u5929\u789f BEYOND - Beyond": {
+        "artist": "BEYOND",
+        "category": "Chinese",
+        "rating": 0
+    },
+    "Para M\u00ed - Yuridia": {
+        "artist": "Others",
+        "category": "Spanish",
+        "rating": 0
+    },
+    "La Voz de un \u00c1ngel - Yuridia": {
+        "artist": "Others",
+        "category": "Spanish",
+        "rating": 0
+    },
+    "Amada Mas Que Nunca - Daniela Romo": {
+        "artist": "Others",
+        "category": "Spanish",
+        "rating": 0
+    },
+    "Six Evolutions - Bach_ Cello Suites - Yo-Yo Ma": {
+        "artist": "Others",
+        "category": "Classical",
+        "rating": 0
+    },
+    "Patient Number 9 - Ozzy Osbourne": {
+        "artist": "Others",
+        "category": "Rock",
+        "rating": 0
+    },
+    "Canta En Espa\u00f1ol Con Los Panchos - Eydie Gorme": {
+        "artist": "Others",
+        "category": "Spanish",
+        "rating": 0
+    },
+    "Use Your Illusion I - Guns N Roses": {
+        "artist": "Others",
+        "category": "Rock",
+        "rating": 0
+    },
+    "Use Your Illusion II - Guns N Roses": {
+        "artist": "Others",
+        "category": "Rock",
         "rating": 0
     }
 }
