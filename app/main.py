@@ -1,6 +1,7 @@
 import os
 import socket
 import json
+import sqlite3
 import subprocess
 import time
 import logging
@@ -31,32 +32,143 @@ class _SuppressStatusFilter(logging.Filter):
 logging.getLogger('werkzeug').addFilter(_SuppressStatusFilter())
 
 # --- Metadata Caching ---
-TECH_CACHE = {}
-META_CACHE = {}
-PERMANENT_CACHE = {} # Loaded from disk
-
-# Paths (Professional Structure)
-# app/main.py is inside 'app/' folder, so project root is parent
+# Caches replaced by SQLite database
 BASE_DIR = Path(__file__).parent.parent
-VIDEO_METADATA_FILE = BASE_DIR / "video_metadata.json"
-ALBUM_METADATA_FILE = BASE_DIR / "album_metadata.json"
-STATE_FILE = BASE_DIR / "system_state.json"
+DB_PATH = BASE_DIR / "media.db"
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def ensure_db_schema():
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            cols = [row[1] for row in c.execute("PRAGMA table_info(media_items)").fetchall()]
+            if 'bit_rate' not in cols:
+                c.execute("ALTER TABLE media_items ADD COLUMN bit_rate TEXT")
+            conn.commit()
+    except Exception as e:
+        print(f"[!] DB schema repair failed: {e}")
+
+
+def prune_missing_media_items():
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            rows = c.execute("SELECT path FROM media_items WHERE path IS NOT NULL").fetchall()
+            missing = []
+            for row in rows:
+                rel_path = row['path']
+                if not resolve_media_path(rel_path):
+                    missing.append((rel_path,))
+            if missing:
+                c.executemany("DELETE FROM media_items WHERE path = ?", missing)
+                conn.commit()
+    except Exception as e:
+        print(f"[!] Prune missing media failed: {e}")
+
+
+def resolve_media_path(rel_path):
+    if not rel_path:
+        return None
+    if os.path.isabs(rel_path) and os.path.exists(rel_path):
+        return rel_path
+    for source in MEDIA_SOURCES:
+        candidate = os.path.abspath(os.path.join(source["path"], rel_path))
+        if os.path.exists(candidate):
+            return candidate
+    return None
+
+
+def expected_media_type_for_path(file_path):
+    if not file_path:
+        return None
+    ext = os.path.splitext(file_path)[1].lower()
+    if ext in ('.mp4', '.mkv', '.avi', '.mov', '.webm'):
+        return 'video'
+    if ext in ('.mp3', '.flac', '.wav', '.m4a', '.ogg'):
+        return 'music'
+    return None
+
+
+def repair_media_db_types():
+    ensure_db_schema()
+    prune_missing_media_items()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            rows = c.execute("SELECT path, type FROM media_items WHERE path IS NOT NULL").fetchall()
+            for row in rows:
+                rel_path = row[0]
+                current_type = row[1]
+                real_path = resolve_media_path(rel_path)
+                real_type = expected_media_type_for_path(real_path) if real_path else None
+                if real_type and current_type != real_type:
+                    c.execute("UPDATE media_items SET type=? WHERE path=?", (real_type, rel_path))
+            conn.commit()
+    except Exception as e:
+        print(f"[!] DB repair failed: {e}")
+
+
+def normalize_category(value):
+    if value is None:
+        return None
+    s = str(value).strip()
+    if not s:
+        return None
+    if s.lower() == 'all':
+        return 'All'
+    aliases = {
+        'pop': 'Pop',
+        'rock': 'Rock',
+        'classical': 'Classical',
+        'spanish': 'Spanish',
+        'chinese': 'Chinese'
+    }
+    return aliases.get(s.lower(), s)
+
+
+def apply_music_album_overrides(song, album_override):
+    if not album_override:
+        return song
+
+    if album_override.get('artist'):
+        song['artist'] = album_override['artist']
+
+    category_val = normalize_category(album_override.get('category'))
+    if category_val:
+        song['category'] = category_val
+
+    album_rating = album_override.get('rating')
+    if album_rating not in (None, ''):
+        try:
+            album_rating = int(album_rating)
+        except (TypeError, ValueError):
+            album_rating = None
+
+        current_rating = song.get('rating')
+        if album_rating is not None and (current_rating in (None, '', 0)):
+            song['rating'] = album_rating
+
+    return song
+
 # Media Sources (Organized Structure)
+# Music: ~/Music (albums only)
+# Video: ~/Video (videos only)
 MEDIA_SOURCES = [
-    {"path": os.path.expanduser("~/Music"), "type": "music"},  # Primary Music (FLAC/MP3)
-    {"path": os.path.expanduser("~/Video"), "type": "video"},  # Primary Video
-    {"path": os.path.expanduser("~/video"), "type": "video"},  # Fallback
-    {"path": os.path.expanduser("~/Videos"), "type": "video"}, # Fallback
+    {"path": os.path.expanduser("~/Music"), "type": "music"},
+    {"path": os.path.expanduser("~/Video"), "type": "video"},
 ]
 
-# Legacy constants for compatibility where needed (using first valid path)
-MUSIC_DIR = next((s["path"] for s in MEDIA_SOURCES if s["type"] == "music" and os.path.exists(s["path"])), os.path.expanduser("~/Music"))
-VIDEO_DIR = next((s["path"] for s in MEDIA_SOURCES if s["type"] == "video" and os.path.exists(s["path"])), os.path.expanduser("~/Videos"))
+MUSIC_DIR = os.path.expanduser("~/Music")
+VIDEO_DIR = os.path.expanduser("~/Video")
 
 IPC_SOCKET = "/tmp/mpvsocket"
 
 def get_track_metadata(file_path):
-    if file_path in META_CACHE: return META_CACHE[file_path]
     metadata = {"title": os.path.basename(file_path), "artist": "Unknown Artist", "album": "Unknown Album", "track_number": 0,  "disc_number": 1}
     if File:
         try:
@@ -67,24 +179,30 @@ def get_track_metadata(file_path):
                     metadata["title"] = str(tags.get('title', [metadata["title"]])[0])
                     metadata["artist"] = str(tags.get('artist', ["Unknown Artist"])[0])
                     metadata["album"] = str(tags.get('album', ["Unknown Album"])[0])
-                    # Track number for ordering within album
                     tn_raw = tags.get('tracknumber', tags.get('track', ["0"]))
                     tn_str = str(tn_raw[0]) if tn_raw else "0"
                     metadata["track_number"] = int(tn_str.split('/')[0]) if tn_str.split('/')[0].isdigit() else 0
                     
-                    # Detect disc number from folder names such as "Disc 1", "Disc 2", ...
                     parts = os.path.normpath(file_path).split(os.sep)
-
                     for part in parts:
                         if part.lower().startswith("disc "):
                             num = part[5:].strip()
                             if num.isdigit():
                                 metadata["disc_number"] = int(num)
                             break
-
-
         except Exception: pass
-    META_CACHE[file_path] = metadata
+    
+    # Fallback: Extract track number from filename if tags had none (e.g., "05 - Title.flac" -> 5)
+    if metadata["track_number"] == 0:
+        basename = os.path.basename(file_path)
+        # Match pattern: "01 " or "01-" at start of filename
+        import re
+        match = re.match(r'^(\d+)\s*[-\s]', basename)
+        if match:
+            try:
+                metadata["track_number"] = int(match.group(1))
+            except: pass
+    
     return metadata
 
 class MpvPlayer:
@@ -218,26 +336,6 @@ class MpvPlayer:
 
 player = MpvPlayer(IPC_SOCKET)
 
-def load_metadata():
-    """Load video/audio track metadata (title based)."""
-    if VIDEO_METADATA_FILE.exists():
-        try:
-            with open(VIDEO_METADATA_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception:
-            return {}
-    return {}
-
-def load_album_metadata():
-    """Load album metadata (album based) from album_metadata.json."""
-    if ALBUM_METADATA_FILE.exists():
-        try:
-            with open(ALBUM_METADATA_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception:
-            return {}
-    return {}
-
 def get_audio_device():
     """Return the mpv --audio-device string based on the user-selected AUDIO_OUTPUT.
     No subprocess calls – fast, reliable, and hot-plug-independent."""
@@ -287,18 +385,24 @@ def detect_mixer():
 MIXER_CMD = "sset Master"  # temporary placeholder – replaced on startup
 
 def load_system_state():
-    if STATE_FILE.exists():
-        try:
-            with open(STATE_FILE, 'r') as f:
-                data = json.load(f)
-                if "cache" not in data: data["cache"] = {}
-                return data
-        except: pass
-    return {"volume": 85, "cache": {}}
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            c.execute("SELECT key, value FROM settings")
+            rows = c.fetchall()
+            if rows:
+                state = {row['key']: json.loads(row['value']) for row in rows}
+                return state
+    except: pass
+    return {"volume": 85, "audio_output": "pcm5122"}
 
 def save_system_state(state):
     try:
-        with open(STATE_FILE, 'w') as f: json.dump(state, f)
+        with get_db() as conn:
+            c = conn.cursor()
+            for k, v in state.items():
+                c.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (k, json.dumps(v)))
+            conn.commit()
     except: pass
 
 def get_current_volume():
@@ -343,142 +447,60 @@ def csi_console(): return render_template("touch.html")
 
 @app.route("/api/songs")
 def list_songs():
-    """List all songs across media sources with appropriate metadata handling."""
     requested_type = request.args.get('type')
     songs = []
-    exts = ('.mp3', '.flac', '.wav', '.m4a', '.ogg', '.mp4', '.mkv', '.avi', '.mov', '.webm')
-    
-    state = load_system_state()
-    cache = state.get("cache", {})
-    
-    # Choose metadata source based on tab
-    if requested_type == 'music':
-        # Music tab: use album metadata, only music source
-        p_meta = load_album_metadata()
-        sources = [s for s in MEDIA_SOURCES if s["type"] == "music"]
-    else:
-        # Video (or others): use existing music_metadata.json
-        p_meta = load_metadata()
-        sources = MEDIA_SOURCES
-    
-    for source in sources:
-        b_dir = source["path"]
-        if not os.path.exists(b_dir):
-            continue
-        for root, _, files in os.walk(b_dir):
-            for f in files:
-                if not f.lower().endswith(exts):
-                    continue
-                f_path = os.path.join(root, f)
-                rel = os.path.relpath(f_path, b_dir)
-                
-                # Determine type based on extension
-                is_video_ext = f.lower().endswith(('.mkv', '.mp4', '.webm', '.avi', '.mov'))
-                typ = 'video' if is_video_ext else 'music'
-                
-                if requested_type and requested_type != typ:
-                    continue
-                
-                # Base metadata. Use filename as default display title so
-                # the web UI reflects the filesystem name (avoids tag-based
-                # replacements for formats like FLAC that have embedded English titles).
-                meta = {"title": f, "artist": "Unknown Artist", "album": "Unknown Album", "track_number": 0, "disc_number": 1}
-                tech = {"format": os.path.splitext(f)[1][1:].upper()}
-                
-                # Cache lookup
-                if f_path in cache:
-                    meta_cached = cache[f_path].get("meta", {})
-                    meta.update(meta_cached)
-                    tech = cache[f_path].get("tech", tech)
-                elif f_path in META_CACHE:
-                    m = META_CACHE[f_path]
-                    meta = {
-                        # Prefer filename for display unless tag explicitly
-                        # provides a non-empty title. This keeps Chinese
-                        # filenames visible in the UI even when tags contain
-                        # English titles.
-                        "title": m.get("title", f) if m.get("title") else f,
-                        "artist": m.get("artist", "Unknown Artist"),
-                        "album": m.get("album", "Unknown Album"),
-                        "track_number": m.get("track_number", 0),
-                        "disc_number": m.get("disc_number", 1)
-                    }
-                    tech = TECH_CACHE.get(f_path, tech)
-                else:
-                    m = get_track_metadata(f_path)
-                    # If tags exist but title is empty, fall back to filename.
-                    title_from_tag = m.get("title") if isinstance(m.get("title"), str) and m.get("title").strip() else None
-                    meta = {
-                        "title": title_from_tag or f,
-                        "artist": m.get("artist", "Unknown Artist"),
-                        "album": m.get("album", "Unknown Album"),
-                        "track_number": m.get("track_number", 0),
-                        "disc_number": m.get("disc_number", 1)
-                    }
+    try:
+        repair_media_db_types()
+        prune_missing_media_items()
+        with get_db() as conn:
+            c = conn.cursor()
+            c.execute("SELECT * FROM albums")
+            albums_map = {row['name']: dict(row) for row in c.fetchall()}
 
-                # If metadata didn't provide a track number, try to parse it
-                # from the filename (common pattern: '01 - Artist - Title.ext').
-                if not meta.get("track_number"):
-                    try:
-                        name_no_ext = os.path.splitext(f)[0]
-                        # Look for leading track like '01', '1.', '01 -', etc.
-                        import re
-                        m_t = re.match(r"^\s*(\d{1,2})\b", name_no_ext)
-                        if m_t:
-                            meta["track_number"] = int(m_t.group(1))
-                    except Exception:
-                        pass
-                
-                # Apply persistent metadata overrides
-                if requested_type == 'music':
-                    album_key = None
-                    candidates = []
-                    if rel in p_meta:
-                        candidates.append(rel)
-                    rel_dir = os.path.dirname(rel)
-                    if rel_dir:
-                        candidates.append(rel_dir)
-                        candidates.append(rel_dir.split('/')[0])
-                    album_name = meta.get("album")
-                    if album_name and album_name != "Unknown Album":
-                        candidates.append(album_name)
+            if requested_type == 'music':
+                c.execute("SELECT * FROM media_items WHERE type='music'")
+            elif requested_type == 'video':
+                c.execute("SELECT * FROM media_items WHERE type='video'")
+            else:
+                c.execute("SELECT * FROM media_items")
 
-                    for candidate in candidates:
-                        if candidate in p_meta:
-                            album_key = candidate
+            for row in c.fetchall():
+                resolved_path = resolve_media_path(row['path'])
+                real_type = expected_media_type_for_path(resolved_path) if resolved_path else row['type']
+                if real_type is not None and row['type'] != real_type:
+                    row = dict(row)
+                    row['type'] = real_type
+                song = dict(row)
+                if song.get('type') == 'music':
+                    override_keys = []
+                    album_name = song.get('album')
+                    if album_name:
+                        override_keys.append(album_name)
+                    rel_path = song.get('path') or ''
+                    if rel_path:
+                        top_folder = rel_path.split('/')[0].split('\\')[0].strip()
+                        if top_folder and top_folder not in override_keys:
+                            override_keys.append(top_folder)
+                    for key in override_keys:
+                        if key in albums_map:
+                            a_override = albums_map[key]
+                            song = apply_music_album_overrides(song, a_override)
                             break
 
-                    if album_key:
-                        for field in ["category", "artist", "rating"]:
-                            if field in p_meta[album_key]:
-                                meta[field] = p_meta[album_key][field]
-                        if "album" in p_meta[album_key]:
-                            meta["album"] = p_meta[album_key]["album"]
-                        else:
-                            meta["album"] = album_key
-                elif rel in p_meta:
-                    # Video/tab uses title‑based metadata, omit year field
-                    for field in ["title", "category", "artist", "rating", "album"]:
-                        if field in p_meta[rel]:
-                            meta[field] = p_meta[rel][field]
-                
-                songs.append({
-                    "path": rel,
-                    "type": typ,
-                    "filename": f,
-                    "title": meta.get("title", f),
-                    "artist": meta.get("artist", "Unknown Artist"),
-                    "album": meta.get("album", "Unknown Album"),
-                    "track_number": meta.get("track_number", 0),
-                    "disc_number": meta.get("disc_number", 1),
-                    "category": meta.get("category", "All"),
-                    "rating": meta.get("rating", 0),
-                    "tech": tech,
-                    "base_dir": b_dir
-                })
-    
-    # Sort by disc_number, then track_number, then filename to keep
-    # album ordering stable and avoid interleaving formats (mp3 vs flac).
+                if resolved_path and real_type is not None:
+                    song['type'] = real_type
+                song['tech'] = {
+                    'duration': song.get('duration'),
+                    'sample_rate': song.get('sample_rate'),
+                    'bit_depth': song.get('bit_depth'),
+                    'format': song.get('format'),
+                    'bit_rate': song.get('bit_rate')
+                }
+                song['base_dir'] = VIDEO_DIR if song['type'] == 'video' else MUSIC_DIR
+                songs.append(song)
+    except Exception as e:
+        print("Error fetching songs:", e)
+
     songs.sort(key=lambda x: (int(x.get('disc_number', 1) or 1), int(x.get('track_number', 0) or 0), x['filename'].lower()))
     return jsonify(songs)
 
@@ -542,12 +564,24 @@ def update_song_metadata():
     data = request.json
     song_path = data.get("path")
     if not song_path: return jsonify({"error": "No path"}), 400
-    metadata = load_metadata()
-    if song_path not in metadata: metadata[song_path] = {}
-    for field in ["title", "artist", "category", "year", "rating"]:
-        if field in data: metadata[song_path][field] = data[field]
-    save_metadata(metadata)
-    return jsonify({"status": "success"})
+    
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            fields = []
+            values = []
+            for field in ["title", "artist", "category", "rating"]:
+                if field in data:
+                    fields.append(f"{field}=?")
+                    values.append(data[field])
+            if fields:
+                values.append(song_path)
+                query = f"UPDATE media_items SET {', '.join(fields)} WHERE path=?"
+                c.execute(query, tuple(values))
+            conn.commit()
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/songs/rename", methods=["POST"])
 def rename_song_file():
@@ -555,7 +589,6 @@ def rename_song_file():
     old_rel = data.get("path")
     new_name = data.get("new_filename")
     
-    # Search for the file in all media sources
     old_full = None
     for source in MEDIA_SOURCES:
         trial_path = os.path.join(source["path"], old_rel)
@@ -566,8 +599,13 @@ def rename_song_file():
     if not old_full: return jsonify({"error": "Not found"}), 404
     
     new_full = os.path.join(os.path.dirname(old_full), os.path.basename(new_name))
+    new_rel = os.path.join(os.path.dirname(old_rel), os.path.basename(new_name))
     try:
         os.rename(old_full, new_full)
+        with get_db() as conn:
+            c = conn.cursor()
+            c.execute("UPDATE media_items SET path=?, filename=? WHERE path=?", (new_rel, os.path.basename(new_name), old_rel))
+            conn.commit()
         return jsonify({"status": "success"})
     except Exception as e: return jsonify({"error": str(e)}), 500
 
@@ -576,7 +614,6 @@ def delete_song():
     data = request.json
     song_path = data.get("path")
     
-    # Search for the file in all media sources
     full_path = None
     for source in MEDIA_SOURCES:
         trial_path = os.path.join(source["path"], song_path)
@@ -586,43 +623,44 @@ def delete_song():
             
     if full_path and os.path.exists(full_path):
         os.remove(full_path)
+        try:
+            with get_db() as conn:
+                c = conn.cursor()
+                c.execute("DELETE FROM media_items WHERE path=?", (song_path,))
+                conn.commit()
+        except: pass
         return jsonify({"status": "success"})
     return jsonify({"error": "Not found"}), 404
 
-def save_metadata(metadata):
-    try:
-        with open(VIDEO_METADATA_FILE, 'w', encoding='utf-8') as f: json.dump(metadata, f, indent=4)
-        return True
-    except: return False
-def save_album_metadata(album_metadata):
-    try:
-        with open(ALBUM_METADATA_FILE, 'w', encoding='utf-8') as f:
-            json.dump(album_metadata, f, indent=4)
-        return True
-    except:
-        return False
 
 # New endpoint to update album‑level metadata
 @app.route("/api/albums/update", methods=["POST"])
 def update_album_metadata():
     data = request.json
-    if not data:
-        return jsonify({"error": "No data"}), 400
+    if not data: return jsonify({"error": "No data"}), 400
     album_name = data.get("album")
-    if not album_name:
-        return jsonify({"error": "Album name required"}), 400
-    # Load existing album metadata
-    album_meta = load_album_metadata()
-    # Ensure entry exists
-    if album_name not in album_meta:
-        album_meta[album_name] = {}
-    # Update allowed fields
-    for field in ["artist", "category", "rating"]:
-        if field in data:
-            album_meta[album_name][field] = data[field]
-    # Save back to file
-    save_album_metadata(album_meta)
-    return jsonify({"status": "success"})
+    if not album_name: return jsonify({"error": "Album name required"}), 400
+    
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            c.execute("SELECT * FROM albums WHERE name=?", (album_name,))
+            row = c.fetchone()
+            album = dict(row) if row else {"name": album_name, "artist": "", "category": "", "rating": 0}
+            
+            for field in ["artist", "category", "rating"]:
+                if field in data:
+                    if field == "category":
+                        album[field] = normalize_category(data[field])
+                    else:
+                        album[field] = data[field]
+                
+            c.execute("INSERT OR REPLACE INTO albums (name, artist, category, rating) VALUES (?, ?, ?, ?)", 
+                      (album["name"], album["artist"], album["category"], album["rating"]))
+            conn.commit()
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 @app.route("/api/status")
 def status():
     if not player.is_alive(): return jsonify({"status": "error", "manual_stop": MANUAL_STOP}), 200
@@ -645,19 +683,23 @@ def status():
     tech = {}
     if full_path:
         meta = get_track_metadata(full_path)
-        state = load_system_state()
-        cache = state.get("cache", {})
-        p_meta = load_metadata()
-        
-        if full_path in cache:
-            meta.update(cache[full_path].get("meta", {}))
-            tech = cache[full_path].get("tech", {})
-        else:
-            tech = TECH_CACHE.get(full_path, {})
-            
-        if path in p_meta:
-            for field in ["title", "category", "artist", "year", "rating", "album"]:
-                if field in p_meta[path]: meta[field] = p_meta[path][field]
+        tech = {}
+        try:
+            with get_db() as conn:
+                c = conn.cursor()
+                c.execute("SELECT * FROM media_items WHERE path=?", (path,))
+                row = c.fetchone()
+                if row:
+                    r = dict(row)
+                    for field in ["title", "category", "artist", "rating", "album"]:
+                        if r.get(field): meta[field] = r[field]
+                    tech = {
+                        'duration': r.get('duration'),
+                        'sample_rate': r.get('sample_rate'),
+                        'bit_depth': r.get('bit_depth'),
+                        'format': r.get('format')
+                    }
+        except: pass
     else:
         meta = {}
     
@@ -806,7 +848,6 @@ def system_shutdown():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 def get_audio_details(f_path):
-    if f_path in TECH_CACHE: return TECH_CACHE[f_path]
     try:
         # Run ffprobe without nice to ensure it doesn't fail on Windows or timeout unexpectedly
         res = subprocess.check_output(
@@ -818,33 +859,40 @@ def get_audio_details(f_path):
         d = json.loads(res)
         s = next((x for x in d.get("streams", []) if x.get("codec_type") == "audio"), {})
         f = d.get("format", {})
-        TECH_CACHE[f_path] = {
+        bit_rate = f.get("bit_rate")
+        try:
+            if bit_rate is not None and str(bit_rate).strip() != '':
+                bit_rate = int(float(bit_rate))
+        except Exception:
+            pass
+        
+        # ── NEW: estimate bitrate for FLAC when ffprobe gives 0/None ──
+        if (not bit_rate or bit_rate == 0) and f.get("duration"):
+            try:
+                file_size = os.path.getsize(f_path)
+                duration = float(f.get("duration"))
+                if duration > 0:
+                    bit_rate = int((file_size * 8) / duration)
+            except:
+                pass
+        # ───────────────────────────────────────────────────────────────
+        return {
             "sample_rate": s.get("sample_rate"),
             "bit_depth":   s.get("bits_per_sample"),
             "format":      f.get("format_name"),
-            "bit_rate":    f.get("bit_rate"),
+            "bit_rate":    bit_rate,
             "duration":    float(f.get("duration", 0) or 0)
         }
-        return TECH_CACHE[f_path]
     except: return {}
 
 # Video extensions that are too slow/large for deep ffprobe scanning at startup
 _VIDEO_EXTS = ('.mp4', '.mkv', '.avi', '.mov', '.webm')
 
 def background_scanner():
-    """
-    Crawls all media sources in the background to build a rich technical
-    metadata cache. Runs at low CPU priority with throttling between files
-    so the Pi stays responsive during normal use.
-    """
-    # Wait for boot to settle before hammering the disk/CPU
     print("[*] Metadata Scanner: Waiting 30 seconds for system to settle...")
     time.sleep(30)
     print("[*] Metadata Scanner: Starting background scan (throttled)...")
     
-    state = load_system_state()
-    cache = state.get("cache", {})
-    # Audio-only extensions for deep scanning (videos are too slow and not needed)
     audio_exts = ('.mp3', '.flac', '.wav', '.m4a', '.ogg')
     all_exts   = audio_exts + _VIDEO_EXTS
     
@@ -859,48 +907,48 @@ def background_scanner():
                     continue
                     
                 f_path = os.path.join(root, f)
+                rel_path = os.path.relpath(f_path, b_dir)
                 is_video = f.lower().endswith(_VIDEO_EXTS)
+                typ = 'video' if is_video else 'music'
                 
-                # Deep-scan all files to get tech info (including video)
-                existing_tech = cache.get(f_path, {}).get("tech", {})
-                needs_scan = (f_path not in cache or not existing_tech.get("sample_rate"))
-                
+                needs_scan = False
                 try:
-                    # 1. Fast tag scan (always)
-                    m = get_track_metadata(f_path)
-                    t = {}
-                    
-                    if needs_scan:
-                        # 2. Deep technical scan via ffprobe (audio files only)
+                    with get_db() as conn:
+                        c = conn.cursor()
+                        c.execute("SELECT sample_rate, bit_rate FROM media_items WHERE path=?", (rel_path,))
+                        row = c.fetchone()
+                        if not row or not row['sample_rate'] or not row['bit_rate']:
+                            needs_scan = True
+                except: needs_scan = True
+                
+                if needs_scan:
+                    try:
+                        m = get_track_metadata(f_path)
                         t = get_audio_details(f_path)
-                        count += 1
-                        # Throttle: pause between each file scan to keep CPU sane
-                        time.sleep(0.3)
-                        
-                    # Only update cache if we have new data
-                    if f_path not in cache or needs_scan:
-                        cache[f_path] = {
-                            "meta": {
-                                "title":        m["title"],
-                                "artist":       m["artist"],
-                                "album":        m.get("album", "Unknown Album"),
-                                "track_number": m.get("track_number", 0),
-                                "disc_number": m.get("disc_number", 1)
-                            },
-                            "tech": t
-                        }
 
-                    # Save every 20 deep-scanned files to persist progress
-                    if count > 0 and count % 20 == 0:
-                        state["cache"] = cache
-                        save_system_state(state)
-                        print(f"[*] Metadata Scanner: Progress saved ({count} audio files)...")
+                        with get_db() as conn:
+                            c = conn.cursor()
+                            c.execute('''
+                                INSERT INTO media_items 
+                                (path, type, filename, title, artist, album, track_number, disc_number, duration, sample_rate, bit_depth, format, bit_rate)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                ON CONFLICT(path) DO UPDATE SET
+                                duration=excluded.duration,
+                                sample_rate=excluded.sample_rate,
+                                bit_depth=excluded.bit_depth,
+                                format=excluded.format,
+                                bit_rate=excluded.bit_rate
+                            ''', (
+                                rel_path, typ, f, m["title"], m["artist"], m.get("album", "Unknown Album"),
+                                m.get("track_number", 0), m.get("disc_number", 1),
+                                t.get("duration", 0), t.get("sample_rate", ""), t.get("bit_depth", ""), t.get("format", ""), t.get("bit_rate", "")
+                            ))
+                            conn.commit()
+                        count += 1
+                        time.sleep(0.3)
+                    except Exception as e:
+                        print(f"[!] Metadata Scanner Error on {f}: {e}")
                         
-                except Exception as e:
-                    print(f"[!] Metadata Scanner Error on {f}: {e}")
-                            
-    state["cache"] = cache
-    save_system_state(state)
     print(f"[*] Metadata Scanner: Scan complete. Total {count} files updated.")
 
 @app.route("/api/quit_browser", methods=["POST"])
@@ -973,6 +1021,9 @@ if __name__ == "__main__":
         subprocess.run(["pinctrl", "set", "8", "op", "dl"], check=True)
     except Exception:
         pass
+
+    # Repair stale metadata that was created by older JSON-based imports or partial migrations.
+    repair_media_db_types()
 
     # Start background metadata scanner
     threading.Thread(target=background_scanner, daemon=True).start()
