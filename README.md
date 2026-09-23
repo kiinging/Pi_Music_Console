@@ -37,6 +37,12 @@ Copy your media files to `~/Music` or `~/Videos`.
 mkdir -p ~/Music ~/Videos
 # Transfer files...
 ```
+## 📽️ Demo Video
+
+<video width="640" height="360" controls autoplay muted loop>
+  <source src="assets/demo.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
 
 ### 3. Startup
 The system is designed to start automatically on boot. To start manually:
@@ -50,7 +56,10 @@ bash scripts/startup.sh
 - **Raspberry Pi 5**
 - **5-inch CSI/DSI/HDMI Touchscreen** (800x480)
 - **PCM5122 HiFi DAC** (e.g., HiFiBerry DAC+)
-- **Rotary Encoder** (GPIO 17, 18)
+- **ALPS RK27** rotary knob for volume control (GPIO as required)
+- **JlH1969 Class A Amplifier** (≈25 VDC bias, 1.4 A)
+- **INA219** sensor measuring bias voltage & current
+- **Two 12 V PC fans** for heatsink cooling
 
 ---
 
