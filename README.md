@@ -3,6 +3,12 @@
 A premium touchscreen music player for **Raspberry Pi 5** featuring a modern Web UI, PCM5122 DAC support, and auto-boot kiosk mode powered by Wayland/Weston.
 
 ---
+## 📽️ Demo Video
+![Demo animation](assets/demo.gif)
+
+*Click the link below to view the full‑resolution video:*
+
+[▶️ Full demo (MP4)](https://raw.githubusercontent.com/kiinging/Pi_Music_Console/main/assets/demo.mp4)
 
 ## 🏗️ System Architecture
 
