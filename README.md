@@ -41,12 +41,6 @@ mkdir -p ~/Music ~/Videos
 # Transfer files...
 ```
 ## 📽️ Demo Video
-
-<video width="640" height="360" controls autoplay muted loop>
-  <source src="assets/demo.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
-
 ![Demo animation](assets/demo.gif)
 
 *Click the link below to view the full‑resolution video:*
