@@ -6,19 +6,22 @@ A premium touchscreen music player for **Raspberry Pi 5** featuring a modern Web
 
 ## 🏗️ System Architecture
 
-This project has moved away from X11 and Kivy to a **Pure Web Path** for maximum reliability and performance on Raspberry Pi 5.
+The original design targets a **pure‑web UI** running on Wayland/Weston with Chromium in kiosk mode, removing X11/Kivy for greater stability on the Raspberry Pi 5. The boot flow is illustrated below:
 
 ```mermaid
 graph TD
-    A[Power ON] --> B[Debian 13 Trixie Boots]
-    B --> C[Auto Login tty1]
+    A[Power ON] --> B[Debian 13 (Trixie) boots]
+    B --> C[Auto‑login on tty1]
     C --> D[startup.sh via .bash_profile]
-    D --> E[Weston (Desktop Shell) Starts]
-    F[Flask API Backend Starts]
-    G[Chromium Kiosk Mode Launches]
-    G --> H[Web UI on 5-inch CSI Screen]
+    D --> E[Weston (Wayland) starts]
+    E --> F[Flask API backend starts]
+    F --> G[Chromium kiosk launches]
+    G --> H[Web UI on attached display]
 ```
 
+> **Note:** If your CSI screen isn’t optimal, you can use any HDMI/DSI monitor. The architecture is display‑agnostic; only the final node changes. Feel free to adjust the diagram or description to match your hardware.
+
+---
 ---
 
 ## ⚡ Quick Start
