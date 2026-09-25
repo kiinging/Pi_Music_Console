@@ -8,7 +8,7 @@
   - [Control Board](#control-board)
   - [Power Amplifier](#power-amplifier)
 - [Result](#result)
-- [Component](#component)
+- [Components](#components)
 
 
 ## Executive Summary
