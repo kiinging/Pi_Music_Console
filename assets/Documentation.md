@@ -665,21 +665,21 @@ The prototype therefore demonstrates the feasibility of combining **high-fidelit
 
 | no. | Part / Model | Category | Quantity | Price (total) | Notes |
 |----------|--------------|----------|-------|----|----------------------|
-| 1. | 2GB Raspberry Pi 5 |Computer| 1 | RM 300 | Implement the music streamer controls |
-| 2. | EI transformer 220 / 20 5A  | Transformer| 2 | RM 240 | Main power supply to the power amplifier | 
-| . | Netac 128GB NVME SSD | Memory| 1 | RM 178 | software and music files storage | 
-|  | JLH1969 Class A amp | Amplifier | 1 | RM 100 | Core audio amp |
-|  | MEAN WELL 85W  RD-85 | Power supply | 1 | RM 96 | Dual Output Switching to supply 5V and 12 Vdc |
-|  | 5 inch tft lcd 800x480 display | Screen | 1 | RM 89| Music streamer main display |
-|  | Raspberry Pi pico 2 | microcontroller| 1 | RM 50 | Implement fan control, display OLED | 
-|  | ALPS RK27 motorized volume potentiometer | potentiometer | 1 | RM 50 | Volume control |
-|  | 63V 15000 uF  105 degree Capacitor | Capacitor | 6 | RM 60 | Rectifier design |
-|  | 2.42-inch OLED SSD 1309 display | OLED display | 1 | RM 38 | displaying voltage, current and power of both channels |
-|  | 12V pc 9015 slim fan  | Fan | 2 | RM 32 | Cooling the heatsink temperature |
-|  | JQX-10F soft start | Electronic | 1 | RM 20 | Soft start and avoid inrush current |
-|  | INA219 current sensor IC | Sensor | 2 | RM 20 | Measuring voltage and current |
-|  | 0.5Ohm 10W RX21 wirewound resistor  | Electronic | 2 | RM 5 | Core audio amp |
-|  | NTC thermistor temperature sensor | Sensor | 2 | RM 2 | Meausring temperature of heatsink |
+| 1. | 2GB Raspberry Pi 5 |Computer| 1 | RM 300 | Main computing platform for music library management, network streaming, playback control, touchscreen interface and system-level hardware control. |
+| 2. | EI transformer 220 / 20 5A  | Transformer| 2 | RM 240 | Main power supply to the power amplifieDedicated power transformer for the left and right JLH1969 amplifier channels, providing independent AC power for the dual-mono amplifier supply. | 
+| . | Netac 128GB NVME SSD | Memory| 1 | RM 178 | Local storage for the operating software, music library, album artwork and system data. | 
+|  | JLH1969 Class A amp | Amplifier | 1 | RM 100 | Main analogue power-amplification stage providing the Class-A audio output for the integrated audio platform. |
+|  | MEAN WELL 85W  RD-85 | Power supply | 1 | RM 96 | Dual-output switching power supply providing regulated 5 V and 12 V DC supplies for the digital control, display and cooling subsystems. |
+|  | 5 inch tft lcd 800x480 display | Screen | 1 | RM 89| Main touchscreen interface for music browsing, playback control, volume adjustment, system settings and user interaction. |
+|  | Raspberry Pi pico 2 | microcontroller| 1 | RM 50 | Dedicated real-time controller for amplifier monitoring, OLED status display, heatsink temperature measurement and intelligent fan-speed control. | 
+|  | ALPS RK27 motorized volume potentiometer | potentiometer | 1 | RM 50 | Motorized analogue volume-control interface for adjusting the amplifier audio level. |
+|  | 63 V, 15,000 µF, 105 °C Capacitor | Capacitor | 6 | RM 60 | High-capacity reservoir and CRC filtering capacitors used to provide a low-ripple DC supply for the JLH1969 amplifier. |
+|  | 2.42-inch OLED SSD 1309 display | OLED display | 1 | RM 38 | Local engineering-status display for real-time amplifier voltage, current and power monitoring of both channels. |
+|  | 12V pc 9015 slim fan  | Fan | 2 | RM 32 | Forced-air cooling for the JLH1969 amplifier heatsink, with fan operation controlled according to the measured thermal condition. |
+|  | JQX-10F soft start | Electronic | 1 | RM 20 | Soft-start circuit for limiting transformer and capacitor inrush current during power-up and reducing electrical stress on the power-supply components.|
+|  | INA219 current sensor IC | Sensor | 2 | RM 20 | Dual-channel voltage and current monitoring for measuring amplifier operating conditions and calculating electrical power consumption.|
+|  | 0.5Ohm 10W RX21 wirewound resistor  | Electronic | 2 | RM 5 | Series resistor used in the CRC power-supply filter to reduce ripple transferred from the reservoir section to the JLH1969 amplifier. |
+|  | NTC thermistor temperature sensor | Sensor | 2 | RM 2 | Heatsink temperature sensors providing thermal feedback to the Raspberry Pi Pico 2 for closed-loop fan-speed control. |
 
 |  | JLH1969 Class A amp | Amplifier | 1 | RM 100 | Core audio amp |
 |  | JLH1969 Class A amp | Amplifier | 1 | RM 100 | Core audio amp |
