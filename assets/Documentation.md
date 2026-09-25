@@ -8,8 +8,8 @@
   - [Control Board](#control-board)
   - [Power Amplifier](#power-amplifier)
 - [Result](#result)
-- [Competition Overview](#competition-overview)
-- [Project Details](#project-details)
+- [Component](#component)
+
 
 ## Executive Summary
 The main difference from commercial music streamers is that we use a Raspberry Pi 5 as the core of our design. A large SSD can store hundreds of songs. Commercial streamers typically stream music online, whereas we support both online streaming and local playback. Many people still prefer to keep their favorite music on a physical medium like a CD; with our solution they can store the same collection on an SSD. 
@@ -524,9 +524,6 @@ The JLH1969 Class-A topology provides a simple, feedback-based analogue amplifie
 
 **Figure 2. JLH1969 Class-A amplifier circuit used as the analogue power-amplifier core.**
 
-![Component testing using TC1](images/multi-function%20tester%20tc1.jpg)
-
-**Figure 3. Pre-assembly verification of transistors and capacitors using a TC1 multi-function tester.**
 
 **2. Dedicated power delivery**
 Each stereo channel has its own 220 V / 20 V, 5 A EI transformer and independent rectification and filtering path.
@@ -540,6 +537,128 @@ Fusing, soft-start, speaker DC protection and closed-loop heatsink cooling are i
 The resulting amplifier is therefore not simply a reproduction of a historical JLH circuit. It combines the **minimalist Class-A analogue philosophy of the JLH1969 with modern power semiconductors, high-capacity dual-mono power supplies, active thermal management, instrumentation and protection electronics**.
 
 This integration is central to the SmartClass-A concept: the analogue amplifier provides the high-fidelity audio function, while the Raspberry Pi 5 and Raspberry Pi Pico 2 provide the digital intelligence, monitoring and automation required to operate the amplifier as part of a modern embedded audio platform.
+
+## Results
+
+The completed SmartClass-A prototype was subjected to electrical, audio-output and thermal-management testing to verify the operation of the integrated system. The testing focused on three main aspects: verification of the amplifier operating point, measurement of the maximum audio output before significant clipping, and validation of the monitoring and thermal-control functions.
+
+### 1. Amplifier Operating Point
+
+The JLH1969 Class-A amplifier was first tested under no-signal operating conditions. A supply voltage of approximately **24.5 V** was measured, while the amplifier bias current was adjusted to approximately **1.5 A**.
+
+The component selection and pre-assembly verification were also performed using a TC1 multifunction component tester. The tester was used to verify selected semiconductor and passive components before they were incorporated into the amplifier and power-supply circuits.
+
+![Component testing using TC1 multifunction tester](images/multi-functionTester.jpg)
+
+**Figure (a). Component verification using a TC1 multifunction tester.**
+
+At the measured operating point, the approximate electrical power associated with the amplifier bias condition is:
+
+**P ≈ V × I**
+
+**P ≈ 24.5 V × 1.5 A ≈ 36.8 W**
+
+This demonstrates the significant continuous power dissipation associated with Class-A operation, even when the amplifier is producing little or no audio output. The measured operating condition therefore provides a practical basis for the project's active thermal-management system.
+
+The amplifier voltage, current and calculated power were monitored using the integrated INA219 measurement system.
+
+### 2. 1 kHz Audio Output Test
+
+A controlled audio-output test was subsequently performed to determine the maximum output level of the amplifier before significant waveform clipping.
+
+A signal generator was used to generate a **1 kHz sinusoidal waveform**. The input signal level was progressively increased while the amplifier output waveform was monitored using an oscilloscope.
+
+![1 kHz function generator test](images/functionGenerator.jpg)
+
+**Figure (b). Function generator used to generate the 1 kHz sinusoidal test signal.**
+
+The use of a fixed 1 kHz sine wave provides a repeatable test condition for evaluating the amplifier's output capability. As the input signal was increased, the amplifier output initially remained approximately sinusoidal. Further increases in input amplitude eventually caused the peaks of the output waveform to flatten, indicating the onset of clipping.
+
+### 3. Amplifier Output Clipping Test
+
+The output waveform at the clipping condition was captured using an oscilloscope.
+
+![Oscilloscope measurement of amplifier output clipping](images/oscilloscopeResult.jpg)
+
+**Figure X(c). Oscilloscope measurement showing the amplifier output waveform at the clipping condition.**
+
+The measured output voltage at the clipping condition was approximately **23.5 V peak-to-peak**.
+
+For an 8 Ω loudspeaker load, the corresponding RMS voltage is:
+
+**V_RMS = V_PP / (2√2)**
+
+Therefore:
+
+**V_RMS ≈ 23.5 / 2.828 ≈ 8.31 V**
+
+The corresponding output power is:
+
+**P = V_RMS² / R**
+
+**P ≈ (8.31 V)² / 8 Ω**
+
+**P ≈ 8.6 W**
+
+The measurement therefore indicates an amplifier output capability of approximately **8 W into an 8 Ω load** at the observed clipping condition.
+
+The result provides an experimental measurement of the actual output capability of the completed amplifier rather than relying solely on the nominal characteristics of the JLH1969 circuit.
+
+### 4. Thermal-Management Requirement
+
+The measured amplifier operating point also demonstrates the importance of the integrated thermal-control system. With approximately **24.5 V supply voltage and 1.5 A quiescent current**, the amplifier dissipates approximately **36.8 W** under its biased operating condition.
+
+This continuous dissipation produces substantial heat even when the audio output power is low. The heat is transferred to the amplifier heatsink and monitored using the NTC thermistor connected to the Raspberry Pi Pico 2.
+
+The thermal-control sequence is:
+
+**Amplifier bias → heat generation → heatsink temperature → NTC measurement → Pico 2 processing → PWM fan control → forced-air cooling**
+
+The Pico 2 consequently allows the cooling fan to respond to the actual thermal condition of the amplifier rather than simply operating continuously at maximum speed. This provides a practical demonstration of automatic control applied to a high-fidelity analogue amplifier.
+
+### 5. Integrated System Results
+
+The completed prototype successfully combines the digital and analogue sections into a single embedded audio platform.
+
+The **Raspberry Pi 5** provides:
+
+* local music-library storage and management;
+* network-enabled music playback;
+* touchscreen user interface;
+* MPV audio playback;
+* PCM5122 digital-to-analogue conversion; and
+* system-level hardware control.
+
+The **Raspberry Pi Pico 2** provides:
+
+* dual-channel voltage and current monitoring;
+* heatsink temperature measurement;
+* OLED operating-status display;
+* manual fan control;
+* PWM fan-speed control; and
+* real-time thermal-management functions.
+
+The **JLH1969 amplifier** provides the analogue power-amplification stage, supported by dedicated dual-mono transformer supplies, discrete rectification, high-capacity reservoir capacitors, CRC filtering, soft-start and speaker protection.
+
+### 6. Summary of Experimental Results
+
+| Parameter                              |          Result |
+| -------------------------------------- | --------------: |
+| Amplifier supply voltage               |        ≈ 24.5 V |
+| JLH1969 bias current                   |         ≈ 1.5 A |
+| Approximate quiescent electrical power |        ≈ 36.8 W |
+| Test signal                            | 1 kHz sine wave |
+| Output load                            |             8 Ω |
+| Output voltage at clipping             |      ≈ 23.5 Vpp |
+| Calculated RMS output voltage          |     ≈ 8.31 Vrms |
+| Estimated output power                 |         ≈ 8.6 W |
+
+The experimental results demonstrate that the prototype achieves approximately **8.6 W of measured sinusoidal output power into an 8 Ω load at the observed clipping condition**, while maintaining a substantial Class-A quiescent operating current.
+
+More importantly, the testing demonstrates the integration of **analogue audio amplification, digital music playback, electrical instrumentation and automatic thermal control** within a single embedded platform. The high quiescent dissipation of the JLH1969 amplifier provides a practical engineering challenge that is directly addressed by the Raspberry Pi Pico 2-based closed-loop cooling system.
+
+The prototype therefore demonstrates the feasibility of combining **high-fidelity audio technology with embedded computing, IoT-oriented monitoring and intelligent automation**, forming the basis for further optimisation and future product development.
+
 
 
 ## Components
