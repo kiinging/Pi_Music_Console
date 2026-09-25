@@ -6,3 +6,5 @@ smart_voice_unit/models/
 # Temporary files
 .lgd-*
 system_state.json
+
+# /assets/Documentation.md
