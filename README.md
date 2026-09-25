@@ -46,12 +46,6 @@ Copy your media files to `~/Music` or `~/Videos`.
 mkdir -p ~/Music ~/Videos
 # Transfer files...
 ```
-## 📽️ Demo Video
-![Demo animation](assets/demo.gif)
-
-*Click the link below to view the full‑resolution video:*
-
-[▶️ Full demo (MP4)](https://raw.githubusercontent.com/kiinging/Pi_Music_Console/main/assets/demo.mp4)
 
 ### 3. Startup
 The system is designed to start automatically on boot. To start manually:
