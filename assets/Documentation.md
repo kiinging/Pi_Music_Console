@@ -481,15 +481,27 @@ The principal engineering challenge of the JLH amplifier is its continuous quies
 
 Unlike a conventional amplifier that reduces its output-stage current substantially when no signal is present, the JLH Class-A stage maintains a substantial standing current. This produces heat continuously, including during periods in which the amplifier is producing little or no acoustic output.
 
-The heatsink therefore forms an important part of the amplifier design rather than being a secondary accessory.
+The heatsink therefore forms an important part of the amplifier design rather than being a secondary accessory. Under the measured operating condition of approximately 24.5 V supply voltage and 1.5 A quiescent current, the amplifier has an electrical power consumption of approximately 36.8 W. For the thermal design, approximately **35 W of continuous heat dissipation per amplifier channel** is therefore considered.
 
-This is where the SmartClass-A architecture extends the conventional JLH implementation. The heatsink temperature is measured using an NTC thermistor and processed by the Raspberry Pi Pico 2. The Pico 2 subsequently regulates the cooling fan according to the measured thermal condition.
+The prototype currently uses an aluminium heatsink with a mass of approximately **650 g per channel**.
 
-The amplifier and cooling system therefore form a closed-loop electro-thermal system:
+![Heatsink weight](images/heatsinkWeight.jpg)
+**Figure X. 650 g aluminium heatsink used for the JLH1969 amplifier channel.**
 
-**Electrical bias → semiconductor dissipation → heatsink temperature → temperature sensor → digital controller → fan airflow → heatsink temperature**
+For comparison, a substantially larger passive heatsink in the approximate **2–3 kg per channel** range would provide greater thermal mass and surface area for passive heat dissipation at this continuous power level. However, increasing heatsink mass alone does not fully determine the thermal performance; heatsink geometry, fin surface area, thermal resistance, mounting quality and ambient airflow also influence the final heatsink temperature.
 
-This integration transforms a traditional analogue Class-A amplifier into an experimentally measurable and automatically controlled cyber-physical system.
+Because the prototype uses a relatively compact 650 g heatsink while the JLH1969 continuously dissipates approximately 35 W per channel, passive cooling alone provides less thermal margin than a substantially larger heatsink. The project therefore adopts **active forced-air cooling** as part of the thermal-management design.
+
+A **12 V PC cooling fan** is mounted to provide forced airflow across the heatsink. Rather than operating the fan continuously at maximum speed, the Raspberry Pi Pico 2 uses an NTC thermistor to measure the heatsink temperature and regulates the fan speed through PWM. The proposed control objective is to maintain the heatsink at approximately **50 °C during normal operation**, subject to the actual thermal behaviour measured during testing.
+
+The thermal-control system therefore compensates for the relatively small heatsink used in the prototype while allowing the amplifier to operate at its required Class-A bias condition without requiring a very large passive heatsink.
+
+The complete thermal-management chain is:
+
+**JLH1969 bias → approximately 35 W heat dissipation/channel → 650 g heatsink → NTC temperature measurement → Pico 2 controller → PWM-controlled 12 V fan → forced-air cooling → approximately 50 °C heatsink operating target**
+
+This arrangement demonstrates the application of closed-loop automatic control to the thermal management of a high-fidelity Class-A amplifier.
+
 
 ### 9. Speaker Protection
 
@@ -523,6 +535,8 @@ The JLH1969 Class-A topology provides a simple, feedback-based analogue amplifie
 ![JLH1969 Class-A amplifier schematic](images/jlh1969%20schematic.png)
 
 **Figure 2. JLH1969 Class-A amplifier circuit used as the analogue power-amplifier core.**
+
+The JLH1969 amplifier retains the original Class-A circuit topology while using modern, currently manufactured components selected for electrical performance, thermal suitability, reliability, availability, and long-term serviceability. Wherever practical, readily available components from established manufacturers are preferred over obsolete, expensive, or difficult-to-authenticate parts. The design incorporates modern devices such as NJW0302G output transistors, Vishay-Dale resistors in appropriate bias, feedback, and other circuit positions, WIMA MKP10 film capacitors, and high-thermal-conductivity aluminium nitride insulation pads. Additional components, including the Zobel network and bleeder resistor, are used to support output stability and practical operation. The objective is not to reproduce the amplifier using historically exact components, but to implement the JLH1969 topology using reliable, traceable, and readily serviceable modern components.
 
 
 **2. Dedicated power delivery**
@@ -661,7 +675,7 @@ The prototype therefore demonstrates the feasibility of combining **high-fidelit
 
 
 
-## Components
+## Music Streamer Components
 
 | no. | Part / Model | Category | Quantity | Price (total) | Notes |
 |----------|--------------|----------|-------|----|----------------------|
@@ -682,7 +696,47 @@ The prototype therefore demonstrates the feasibility of combining **high-fidelit
 |  | NTC thermistor temperature sensor | Sensor | 2 | RM 2 | Heatsink temperature sensors providing thermal feedback to the Raspberry Pi Pico 2 for closed-loop fan-speed control. |
 
 |  | JLH1969 Class A amp | Amplifier | 1 | RM 100 | Core audio amp |
-|  | JLH1969 Class A amp | Amplifier | 1 | RM 100 | Core audio amp |
+
+
+## JLH1969 Components
+| no. | Part / Model | Category | Quantity | Price (total) | Notes |
+|  | Vishay-Dale 1W 2.67K Ohm | resistor | 2 | RM 1 | feedback |
+|  | Vishay-Dale 1W 330 Ohm | resistor | 2 | RM 100 | feedback |
+|  | KSA992FTA TO-92 pnp transistor | transistor | 2 | RM 1 | Input transistor |
+|  | NJW0302G npn transistor | transistor | 4 | RM 4 | power transistor |
+|  | 2SD669 npn transistor | transistor | 2 | RM 3 | driver |
+|  | TO-126 11x5x17mm  | Heatsink | 2 | RM 1 |  |
+|  | WIMA MKP10 3.3uF 160V | Capacitor | 2 | RM 4 | Input coupling |
+|  | EPCOS B41690 35V 2200uF | Capacitor | 2 | RM 5 | Output coupling |
+|  | 100k 67WR Precision trimming BOURNS 3296 | potentiometer | 2 | RM 3 | Core audio amp |
+|  | 1K 67WR Precision trimming BOURNS 3296 | potentiometer | 2 | RM 3 | Core audio amp |
+|  | KF762 7.62mm terminal block | terminal block | 6 | RM 1 | connect to power, signal input and output |
+|  | 200W Aluminum Nitride Ceramic Sheet (TO-220) High-Temperature Resistant, High Thermal Conductivity Hing Insulation Thermal Pad | Amplifier | 6 | RM 6 |  |
+
+
+
+### JLH1969 Components
+
+| No. | Part / Model                                                    | Category                       | Qty. | Price (Total) | Circuit / Function / Notes                                                                                  |
+| --: | --------------------------------------------------------------- | ------------------------------ | ---: | ------------: | ----------------------------------------------------------------------------------------------------------- |
+|   1 | **KSA992FTA TO-92 PNP transistor**                              | Small-signal transistor        |    2 |          RM 1 | Input / voltage-amplifying stage; modern, readily available alternative                                     |
+|   2 | **2SD669 NPN transistor**                                       | Driver transistor              |    2 |          RM 3 | Driver stage for the power output devices                                                                   |
+|   3 | **NJW0302G NPN transistor**                                     | Power transistor               |    4 |          RM 4 | Class-A output stage; selected for modern availability, current capability and thermal performance          |
+|   4 | **Vishay-Dale 1 W 2.67 kΩ**                                     | Resistor                       |    2 |          RM 1 | Bias / feedback network; high-quality, readily available resistor                                           |
+|   5 | **Vishay-Dale 1 W 330 Ω**                                       | Resistor                       |    2 |        RM 1 | Bias / feedback / emitter network, depending on exact circuit position                                      |
+|   6 | **WIMA MKP10 3.3 µF 160 V**                                     | Film capacitor                 |    2 |          RM 4 | Input coupling capacitor                                                                                    |
+|   7 | **EPCOS B41690 35 V 2200 µF**                                   | Electrolytic capacitor         |    2 |          RM 5 | Output coupling capacitor                                                                                   |
+|   8 | **BOURNS 3296 100 kΩ precision trimmer**                        | Trimmer potentiometer          |    2 |          RM 3 | Amplifier bias / operating-point adjustment                                                                 |
+|   9 | **BOURNS 3296 1 kΩ precision trimmer**                          | Trimmer potentiometer          |    2 |          RM 3 | Amplifier adjustment / bias setting                                                                         |
+|  10 | **200 W Aluminium Nitride (AlN) TO-220 ceramic insulation pad** | Thermal interface / insulation |    6 |          RM 6 | Electrically insulating interface between transistor and heatsink while providing high thermal conductivity |
+|  11 | **TO-126 11 × 5 × 17 mm heatsink**                              | Heatsink                       |    2 |          RM 1 | Local heatsinking for TO-126 driver devices                                                                 |
+|  12 | **KF762 7.62 mm terminal block**                                | Connection hardware            |    6 |          RM 1 | Power, signal-input, speaker/output and other external connections                                          |
+
+### Component-selection philosophy
+> **Component Selection Philosophy**
+
+> The amplifier retains the fundamental JLH1969 Class-A topology while using modern, currently manufactured components wherever practical. Component selection prioritises electrical suitability, thermal performance, reliability, manufacturer traceability, availability and long-term serviceability rather than historical component authenticity. Modern semiconductor devices such as the KSA992FTA, 2SD669 and NJW0302G are therefore used in place of difficult-to-source or obsolete devices where their characteristics are suitable for the circuit. Vishay-Dale resistors, WIMA film capacitors and other reputable components are selected where their specifications and construction are appropriate for their respective circuit functions. The design also incorporates practical modern improvements such as appropriate thermal insulation, heatsinking, output stability components and adjustment provisions. The objective is to preserve the operating principles and character of the JLH1969 topology while creating an amplifier that can be built, tested, maintained and reproduced using genuine, readily available components.
+
 
 
 # Technology and Digital Innovation
