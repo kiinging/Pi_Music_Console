@@ -389,7 +389,16 @@ The use of separate transformers for the two channels creates a dual-mono power 
 
 This architecture avoids sharing a single high-current transformer between both amplifier channels and provides independent reservoir capacity for each channel. It also makes the power-amplifier subsystem physically and electrically modular.
 
-The use of a conventional EI transformer is deliberate. The transformer provides a robust linear-frequency power source with no high-frequency switching stage in the main amplifier supply. This is appropriate for a high-fidelity analogue amplifier where the power supply is treated as an important part of the overall analogue signal chain.
+The use of conventional EI transformers is deliberate. They provide a robust linear-frequency power source without a high-frequency switching stage in the main amplifier power supply. This approach is well suited to the high-current requirements of a Class-A analogue amplifier, where the power supply is designed as an integral part of the overall amplifier system.
+
+![Schematic diagram of dual mono power supply](images/powerSupplyDesign_a.png)
+![Top view of the dual mono power supply](images/powerSupplyDesign_b.png)
+![Bottom view of the dual mono power supply](images/powerSupplyDesign_c.png)
+Figure X shows the dual-mono power-supply implementation, including the electrical schematic and the physical prototype:
+
+Figure X(a): Schematic diagram of the dual-mono JLH1969 power supply.
+Figure X(b): Top view of the dual-mono power-supply prototype board.
+Figure X(c): Bottom view of the dual-mono power-supply prototype board.
 
 ### 2. Discrete Ultrafast Bridge Rectifier
 
