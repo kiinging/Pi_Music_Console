@@ -375,6 +375,13 @@ The power amplifier stage is based on the **John Linsley Hood (JLH) 1969 Class-A
 
 For this project, the JLH 1969 circuit has been implemented as a **dual-mono stereo power amplifier**, with a dedicated 220 V / 20 V, 5 A EI transformer allocated to each amplifier channel. This arrangement provides an independent power source for the left and right channels and reduces the degree to which the instantaneous current demand of one channel is coupled into the supply of the other channel. The dual-transformer architecture is therefore consistent with the project's high-fidelity design objective and provides a clear separation between the two amplifier channels.
 
+![Physical arrangement of the main components](images/Layout.jpg)
+
+**Figure X. Physical arrangement of the main components on the 430 mm × 380 mm wooden mounting board.** The figure shows the initial positioning of the essential components, including the IEC mains socket, soft-start circuit, MEAN WELL RD-85 power supply, EI transformers, JLH1969 amplifier boards, heatsinks, Raspberry Pi 5, rectifier boards, thermal-control board, volume control and push-button switch.
+
+![Main Power and dual mono amplifier wiring diagram](images/mainPowerWiringDiagram.png)
+
+Figure X shows the main power and dual-mono amplifier wiring arrangement.
 ### 1. Dedicated Dual-Mono Power Supply
 
 Each JLH1969 channel is supplied by its own **220 V / 20 V, 5 A EI transformer**. The transformers provide galvanic isolation from the mains and deliver a substantial low-voltage AC source suitable for the high continuous current requirement of the Class-A output stage.
@@ -699,6 +706,7 @@ The prototype therefore demonstrates the feasibility of combining **high-fidelit
 |  | 63 V, 15,000 µF, 105 °C Capacitor | Capacitor | 6 | RM 60 | High-capacity reservoir and CRC filtering capacitors used to provide a low-ripple DC supply for the JLH1969 amplifier. |
 |  | 2.42-inch OLED SSD 1309 display | OLED display | 1 | RM 38 | Local engineering-status display for real-time amplifier voltage, current and power monitoring of both channels. |
 |  | 12V pc 9015 slim fan  | Fan | 2 | RM 32 | Forced-air cooling for the JLH1969 amplifier heatsink, with fan operation controlled according to the measured thermal condition. |
+|  | EI transformer 220/13.5 Vac 1300mA | Transformer | 1 | RM 30 | A dedicated EI transformer is used to power the speaker protection circuit. |
 |  | JQX-10F soft start | Electronic | 1 | RM 20 | Soft-start circuit for limiting transformer and capacitor inrush current during power-up and reducing electrical stress on the power-supply components.|
 |  | INA219 current sensor IC | Sensor | 2 | RM 20 | Dual-channel voltage and current monitoring for measuring amplifier operating conditions and calculating electrical power consumption.|
 |  | 0.5Ohm 10W RX21 wirewound resistor  | Electronic | 2 | RM 5 | Series resistor used in the CRC power-supply filter to reduce ripple transferred from the reservoir section to the JLH1969 amplifier. |
