@@ -377,7 +377,20 @@ For this project, the JLH 1969 circuit has been implemented as a **dual-mono ste
 
 ![Physical arrangement of the main components](images/Layout.jpg)
 
-**Figure X. Physical arrangement of the main components on the 430 mm × 380 mm wooden mounting board.** The figure shows the initial positioning of the essential components, including the IEC mains socket, soft-start circuit, MEAN WELL RD-85 power supply, EI transformers, JLH1969 amplifier boards, heatsinks, Raspberry Pi 5, rectifier boards, thermal-control board, volume control and push-button switch.
+**Figure X.** The figure shows the initial arrangement of all the essential components on the **430 mm × 380 mm wooden mounting board**. The components are:
+
+1. IEC mains socket
+2. Soft starter
+3. MEAN WELL RD-85 85 W power supply
+4. 220 V / 13.5 V AC, 1.3 A EI transformer for the speaker protection circuit
+5. 220 V / 20 V AC, 5 A EI transformer for the JLH1969 amplifier
+6. JLH1969 power amplifier boards
+7. Heatsinks
+8. Raspberry Pi 5
+9. Rectifier boards
+10. Thermal control board
+11. Volume control
+12. Push-button power switch
 
 ![Main Power and dual mono amplifier wiring diagram](images/mainPowerWiringDiagram.png)
 
