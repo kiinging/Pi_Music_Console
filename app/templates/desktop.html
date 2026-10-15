@@ -1473,19 +1473,35 @@
         // ── End DAC Selector ──────────────────────────────────────────────────
 
         let fanActive = false;
+        // Update fan button UI based on current state
+        function updateFanButtonUI() {
+            const btn = document.getElementById('fanToggleBtn');
+            if (!btn) return;
+            btn.style.background = fanActive ? 'rgba(100,150,255,0.4)' : 'rgba(100,150,255,0.15)';
+            btn.style.boxShadow = fanActive ? '0 0 15px rgba(100,150,255,0.5)' : 'none';
+            // Tooltip reflects the action that will be performed on click
+            btn.title = fanActive ? 'Toggle Cooling Fan OFF' : 'Toggle Cooling Fan ON';
+        }
         async function toggleFan() {
             fanActive = !fanActive;
-            const btn = document.getElementById('fanToggleBtn');
             try {
-                await fetch('/api/system/fan', { 
-                    method: 'POST', 
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ enabled: fanActive }) 
+                // Send UART command via backend endpoint
+                await fetch('/api/system/fan_uart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: fanActive })
                 });
-                btn.style.background = fanActive ? 'rgba(100,150,255,0.4)' : 'rgba(100,150,255,0.15)';
-                btn.style.boxShadow = fanActive ? '0 0 15px rgba(100,150,255,0.5)' : 'none';
-            } catch (e) { alert('Fan control failed.'); }
+            } catch (e) {
+                alert('Fan control failed.');
+            }
+            updateFanButtonUI();
         }
+        // Ensure fan starts OFF on page load and UI reflects state
+        window.addEventListener('load', () => {
+            // Assume OFF state initially as required
+            fanActive = false;
+            updateFanButtonUI();
+        });
 
         // EQ Logic
         let eqDebounceTimer = null;
