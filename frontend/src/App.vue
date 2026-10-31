@@ -5,7 +5,7 @@ import { api } from './services/api'
 import NowPlaying from './components/player/NowPlaying.vue'
 import PlayerControls from './components/player/PlayerControls.vue'
 import VolumeControl from './components/player/VolumeControl.vue'
-import SongItem from './components/library/SongItem.vue'
+import MusicLibrary from './components/library/MusicLibrary.vue'
 
 const songs = ref([])
 const player = ref({
@@ -161,19 +161,12 @@ onUnmounted(() => {
         {{ error }}
       </p>
 
-      <p v-else-if="songs.length === 0">
-        No music found.
-      </p>
-
-      <div v-else class="song-list">
-        <SongItem
-          v-for="song in songs"
-          :key="song.path"
-          :song="song"
-          :selected="selectedPath === song.path"
-          @play="playSong"
-        />
-      </div>
+      <MusicLibrary
+        v-else
+        :songs="songs"
+        :selected-path="selectedPath"
+        @play="playSong"
+      />
     </section>
   </main>
 </template>
