@@ -11,6 +11,7 @@ import threading
 import glob
 from pathlib import Path
 from flask import Flask, render_template, jsonify, request, send_file
+import serial
 
 # ── Audio Output Selection ────────────────────────────────────────────────────
 # Supported values: 'pcm5122' (internal DAC) | 'usb' (external USB DAC)
@@ -23,6 +24,65 @@ except ImportError:
     File = None
 
 app = Flask(__name__)
+# ── Pico 2 UART Fan Control ──────────────────────────────────────
+PICO_UART_PORT = "/dev/serial0"
+PICO_UART_BAUD = 115200
+
+pico_uart = None
+pico_uart_lock = threading.Lock()
+
+FAN_STATE = False
+
+
+def get_pico_uart():
+    """Open the Pi 5 UART connection to Pico 2 when needed."""
+    global pico_uart
+
+    if pico_uart is None or not pico_uart.is_open:
+        pico_uart = serial.Serial(
+            port=PICO_UART_PORT,
+            baudrate=PICO_UART_BAUD,
+            timeout=1,
+            write_timeout=1
+        )
+
+    return pico_uart
+
+
+def send_pico_command(command):
+    """Send a command and wait for Pico 2 to acknowledge it.
+
+    Accepts OK, FAN, TEMP, and PONG reply prefixes so telemetry queries work
+    (FAN? returns 'FAN ...' and TEMP? returns 'TEMP ...' rather than 'OK ...').
+    """
+    with pico_uart_lock:
+        uart = get_pico_uart()
+
+        # Discard old startup messages or previous replies.
+        uart.reset_input_buffer()
+
+        uart.write((command + "\n").encode("ascii"))
+        uart.flush()
+
+        deadline = time.monotonic() + 2.0
+
+        while time.monotonic() < deadline:
+            reply = uart.readline().decode("ascii", errors="replace").strip()
+            if not reply:
+                continue
+
+            print(f"[Pico UART] {reply}")
+
+            if (reply.startswith("OK ")
+                    or reply.startswith("FAN ")
+                    or reply.startswith("TEMP ")
+                    or reply == "PONG"):
+                return reply
+
+            if reply.startswith("ERROR"):
+                raise RuntimeError(reply)
+
+        raise TimeoutError(f"No acknowledgement from Pico 2 for: {command}")
 
 # ── Suppress noisy /api/status poll from logs ─────────────────────────────
 class _SuppressStatusFilter(logging.Filter):
@@ -245,7 +305,10 @@ class MpvPlayer:
                 "--force-window=yes", 
                 "--keep-open=no", 
                 "--idle=yes", # Keep alive even when nothing playing
-                "--osc=no", 
+                "--osc=yes",
+                "--input-cursor=yes",
+                "--input-touch-emulate-mouse=yes",
+                "--script-opts=osc-layout=bottombar,osc-hidetimeout=4000,osc-scalefullscreen=2.0,osc-windowcontrols=no",
                 "--no-border", 
                 "--no-terminal", 
                 "--really-quiet", 
@@ -801,26 +864,198 @@ def system_eq():
         
     return jsonify({"status": "success", "eq": EQ_STATE})
 
-@app.route("/api/system/fan", methods=["POST"])
-def system_fan():
+@app.route("/api/system/fan_uart", methods=["POST"])
+def system_fan_uart():
     global FAN_STATE
-    data = request.json
-    if data and "enabled" in data:
-        FAN_STATE = data["enabled"]
-    else:
-        FAN_STATE = not FAN_STATE
-        
-    try:
-        if FAN_STATE:
-            # Set GPIO 8 (CE0) HIGH (ON)
-            subprocess.run(["pinctrl", "set", "8", "op", "dh"], check=True)
-        else:
-            # Set GPIO 8 (CE0) LOW (OFF)
-            subprocess.run(["pinctrl", "set", "8", "op", "dl"], check=True)
-        return jsonify({"status": "success", "fan_enabled": FAN_STATE})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
 
+    data = request.get_json(silent=True) or {}
+
+    if "enabled" not in data:
+        return jsonify({
+            "status": "error",
+            "error": "Missing enabled value"
+        }), 400
+
+    requested_state = data["enabled"]
+
+    if not isinstance(requested_state, bool):
+        return jsonify({
+            "status": "error",
+            "error": "enabled must be true or false"
+        }), 400
+
+    command = (
+        "FAN_POWER ON" if requested_state
+        else "FAN_POWER OFF"
+    )
+
+    try:
+        reply = send_pico_command(command)
+
+        # Update the state only after Pico acknowledges the command.
+        FAN_STATE = requested_state
+
+        return jsonify({
+            "status": "success",
+            "enabled": FAN_STATE,
+            "pico_reply": reply
+        })
+
+    except Exception as e:
+        app.logger.exception("Pico 2 fan control failed")
+
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "enabled": FAN_STATE
+        }), 500
+
+
+# ── Fan telemetry parser ──────────────────────────────────────────────────
+
+def _parse_fan_reply(reply):
+    """Parse the extended FAN? reply from the Pico 2.
+
+    Format:
+      FAN mode=AUTO manual_on=0 manual=50 \
+          L_state=OFF L_duty=0 L_temp=30.2 L_ok=1 \
+          R_state=OFF R_duty=0 R_temp=29.8 R_ok=1
+
+    Returns a dict of typed fields, or raises ValueError on a malformed reply.
+    """
+    parts = reply.split()
+    if not parts or parts[0] != "FAN":
+        raise ValueError(f"Unexpected FAN? reply: {reply}")
+
+    raw = {}
+    for p in parts[1:]:
+        if "=" in p:
+            k, v = p.split("=", 1)
+            raw[k] = v
+
+    def _int(k, default=0):
+        try:
+            return int(raw.get(k, default))
+        except (TypeError, ValueError):
+            return default
+
+    def _float(k, default=0.0):
+        try:
+            return float(raw.get(k, default))
+        except (TypeError, ValueError):
+            return default
+
+    return {
+        "mode":      raw.get("mode", "AUTO"),
+        "manual_on": _int("manual_on") == 1,
+        "manual":    _int("manual"),
+        "left": {
+            "state": raw.get("L_state", "OFF"),
+            "duty":  _int("L_duty"),
+            "temp":  _float("L_temp"),
+            "ok":    _int("L_ok") == 1,
+        },
+        "right": {
+            "state": raw.get("R_state", "OFF"),
+            "duty":  _int("R_duty"),
+            "temp":  _float("R_temp"),
+            "ok":    _int("R_ok") == 1,
+        },
+    }
+
+
+# ── New fan endpoints ────────────────────────────────────────────────────
+
+# Whitelist: only these commands are allowed through the generic
+# dispatcher. Keeps a malicious web client from sending arbitrary UART.
+_FAN_CMD_ALLOWLIST = (
+    "FAN_MODE AUTO",
+    "FAN_MODE MANUAL",
+    "FAN_POWER ON",
+    "FAN_POWER OFF",
+)
+
+def _is_allowed_fan_command(cmd):
+    if cmd in _FAN_CMD_ALLOWLIST:
+        return True
+    if cmd.startswith("FAN_SPEED "):
+        tail = cmd[10:].strip()
+        return tail.lstrip("-").isdigit()
+    return False
+
+
+@app.route("/api/system/fan_uart_command", methods=["POST"])
+def system_fan_uart_command():
+    """Send a whitelisted fan command to the Pico 2."""
+    data = request.get_json(silent=True) or {}
+    cmd = (data.get("command") or "").strip()
+
+    if not _is_allowed_fan_command(cmd):
+        return jsonify({
+            "status": "error",
+            "error": f"Command not allowed: {cmd!r}"
+        }), 400
+
+    try:
+        reply = send_pico_command(cmd)
+        return jsonify({"status": "success", "pico_reply": reply})
+    except Exception as e:
+        app.logger.exception("Fan UART command failed")
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@app.route("/api/system/fan_status", methods=["GET"])
+def system_fan_status():
+    """Query the Pico 2 with FAN? and return the parsed state."""
+    try:
+        reply = send_pico_command("FAN?")
+        parsed = _parse_fan_reply(reply)
+        return jsonify({"status": "success", **parsed, "raw": reply})
+    except Exception as e:
+        app.logger.exception("FAN? query failed")
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "mode": "UNKNOWN",
+            "manual_on": False,
+            "manual": 0,
+            "left":  {"state": "UNKNOWN", "duty": 0, "temp": 0.0, "ok": False},
+            "right": {"state": "UNKNOWN", "duty": 0, "temp": 0.0, "ok": False},
+        }), 500
+
+
+@app.route("/api/system/temp", methods=["GET"])
+def system_temp():
+    """Query the Pico 2 with TEMP? and return both NTC readings."""
+    try:
+        reply = send_pico_command("TEMP?")
+        parts = reply.split()
+        # Expect: ["TEMP", "<left>", "<right>", "<l_ok>", "<r_ok>"]
+        if len(parts) != 5 or parts[0] != "TEMP":
+            raise ValueError(f"Unexpected TEMP? reply: {reply}")
+
+        left_c   = float(parts[1])
+        right_c  = float(parts[2])
+        left_ok  = int(parts[3]) == 1
+        right_ok = int(parts[4]) == 1
+
+        return jsonify({
+            "status":   "success",
+            "left_c":   left_c,
+            "right_c":  right_c,
+            "left_ok":  left_ok,
+            "right_ok": right_ok,
+            "raw":      reply,
+        })
+    except Exception as e:
+        app.logger.exception("TEMP? query failed")
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "left_c": None, "right_c": None,
+            "left_ok": False, "right_ok": False,
+        }), 500
+        
 @app.route("/api/system/screen_toggle", methods=["POST"])
 def screen_toggle():
     # Dynamically discover backlight control paths
@@ -1000,6 +1235,249 @@ def set_audio_output():
         "mixer": MIXER_CMD,
         "player_restarted": was_alive
     })
+# ── Settings: Display Brightness ─────────────────────────────────────────────
+
+@app.route("/api/system/brightness", methods=["GET", "POST"])
+def system_brightness():
+    """Get/set DSI backlight brightness (0-100).
+
+    Uses direct file writes — no sudo needed.
+    The service user is in the 'video' group, which has write access to
+    /sys/class/backlight/*/brightness on Pi OS.
+    """
+    paths = glob.glob("/sys/class/backlight/*/brightness")
+    max_paths = glob.glob("/sys/class/backlight/*/max_brightness")
+    if not paths:
+        return jsonify({"status": "not_supported"}), 200
+
+    bl = paths[0]
+    max_bl = max_paths[0] if max_paths else None
+
+    def _read_max():
+        val = 255
+        if max_bl and os.path.exists(max_bl):
+            try:
+                with open(max_bl) as f:
+                    val = int(f.read().strip())
+            except Exception:
+                pass
+        return val or 255
+
+    if request.method == "POST":
+        data = request.get_json(silent=True) or {}
+        pct = data.get("brightness")
+        try:
+            pct = max(0, min(100, int(pct)))
+        except (TypeError, ValueError):
+            return jsonify({"status": "error", "error": "Invalid brightness"}), 400
+
+        try:
+            max_val = _read_max()
+            raw = round((pct / 100.0) * max_val)
+            with open(bl, "w") as f:
+                f.write(str(raw))
+            save_system_state({"brightness": pct})
+            return jsonify({"status": "success", "brightness": pct})
+        except PermissionError:
+            return jsonify({
+                "status": "error",
+                "error": "Permission denied writing to the backlight device."
+            }), 500
+        except Exception as e:
+            return jsonify({"status": "error", "error": str(e)}), 500
+
+    # GET
+    try:
+        with open(bl) as f:
+            cur = int(f.read().strip())
+        max_val = _read_max()
+        pct = round((cur / max_val) * 100) if max_val else 0
+        return jsonify({"status": "success", "brightness": pct})
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
+# ── Settings: Wi-Fi Info ─────────────────────────────────────────────────────
+
+@app.route("/api/system/wifi", methods=["GET"])
+def system_wifi_info():
+    """Return current Wi-Fi SSID, IP, and signal strength."""
+    info = {"connected": False, "ssid": None, "ip": None, "signal": None}
+    try:
+        # Active SSID
+        try:
+            ssid = subprocess.check_output(
+                ["iwgetid", "-r"], stderr=subprocess.DEVNULL
+            ).decode().strip()
+            if ssid:
+                info["ssid"] = ssid
+                info["connected"] = True
+        except Exception:
+            pass
+
+        # IP address on wlan0
+        try:
+            ip = subprocess.check_output(
+                ["hostname", "-I"], stderr=subprocess.DEVNULL
+            ).decode().strip().split()
+            wlan_ips = [x for x in ip if not x.startswith("127.")]
+            if wlan_ips:
+                info["ip"] = wlan_ips[0]
+        except Exception:
+            pass
+
+        # Signal strength via /proc/net/wireless
+        try:
+            with open("/proc/net/wireless") as f:
+                lines = f.readlines()[2:]
+                for line in lines:
+                    if "wlan0" in line:
+                        parts = line.split()
+                        quality = parts[2].rstrip(".")
+                        info["signal"] = int(float(quality))
+                        break
+        except Exception:
+            pass
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+    return jsonify({"status": "success", **info})
+
+
+# ── Settings: System Info ───────────────────────────────────────────────────
+
+@app.route("/api/system/info", methods=["GET"])
+def system_info():
+    """Return Pi model, CPU temp, uptime, disk, memory, version."""
+    info = {
+        "model": "Unknown",
+        "cpu_temp": None,
+        "uptime": None,
+        "disk_free_gb": None,
+        "disk_total_gb": None,
+        "mem_used_mb": None,
+        "mem_total_mb": None,
+        "version": "3.0",
+        "hostname": socket.gethostname(),
+    }
+    try:
+        # Model
+        try:
+            with open("/proc/device-tree/model") as f:
+                info["model"] = f.read().strip("\x00").strip()
+        except Exception:
+            pass
+
+        # CPU temp (millidegrees)
+        try:
+            with open("/sys/class/thermal/thermal_zone0/temp") as f:
+                info["cpu_temp"] = round(int(f.read().strip()) / 1000.0, 1)
+        except Exception:
+            pass
+
+        # Uptime
+        try:
+            with open("/proc/uptime") as f:
+                secs = int(float(f.read().split()[0]))
+                d, rem = divmod(secs, 86400)
+                h, rem = divmod(rem, 3600)
+                m, _ = divmod(rem, 60)
+                info["uptime"] = f"{d}d {h}h {m}m"
+        except Exception:
+            pass
+
+        # Disk
+        try:
+            st = os.statvfs("/")
+            total = st.f_blocks * st.f_frsize
+            free = st.f_bavail * st.f_frsize
+            info["disk_total_gb"] = round(total / (1024**3), 1)
+            info["disk_free_gb"] = round(free / (1024**3), 1)
+        except Exception:
+            pass
+
+        # Memory
+        try:
+            with open("/proc/meminfo") as f:
+                lines = f.readlines()
+                mem = {}
+                for line in lines:
+                    k, v = line.split(":", 1)
+                    mem[k.strip()] = int(v.strip().split()[0])
+                total = mem.get("MemTotal", 0)
+                avail = mem.get("MemAvailable", 0)
+                info["mem_total_mb"] = round(total / 1024)
+                info["mem_used_mb"] = round((total - avail) / 1024)
+        except Exception:
+            pass
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+    return jsonify({"status": "success", **info})
+
+
+# ── Settings: Update Check ──────────────────────────────────────────────────
+
+@app.route("/api/system/check_update", methods=["GET"])
+def system_check_update():
+    """Check if the app has updates via git. Non-destructive check only."""
+    try:
+        repo_dir = str(BASE_DIR)
+        # Check if git repo
+        if not os.path.exists(os.path.join(repo_dir, ".git")):
+            return jsonify({"status": "not_a_repo"}), 200
+
+        try:
+            subprocess.check_output(
+                ["git", "-C", repo_dir, "fetch", "--quiet"],
+                stderr=subprocess.DEVNULL, timeout=10
+            )
+        except Exception:
+            pass
+
+        try:
+            local = subprocess.check_output(
+                ["git", "-C", repo_dir, "rev-parse", "HEAD"],
+                stderr=subprocess.DEVNULL
+            ).decode().strip()
+            remote = subprocess.check_output(
+                ["git", "-C", repo_dir, "rev-parse", "@{u}"],
+                stderr=subprocess.DEVNULL
+            ).decode().strip()
+            behind = subprocess.check_output(
+                ["git", "-C", repo_dir, "rev-list", "--count", f"HEAD..{remote}"],
+                stderr=subprocess.DEVNULL
+            ).decode().strip()
+            return jsonify({
+                "status": "success",
+                "update_available": int(behind) > 0,
+                "commits_behind": int(behind),
+            })
+        except Exception:
+            return jsonify({"status": "success", "update_available": False, "commits_behind": 0})
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@app.route("/api/system/reboot", methods=["POST"])
+def system_reboot():
+    try:
+        subprocess.run(["sudo", "reboot"], stderr=subprocess.DEVNULL)
+        return jsonify({"status": "Rebooting"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/system/restart_service", methods=["POST"])
+def system_restart_service():
+    """Restart the music streamer service (assumes systemd unit name)."""
+    unit = request.json.get("unit", "miri.service") if request.json else "miri.service"
+    try:
+        subprocess.run(
+            ["sudo", "systemctl", "restart", unit],
+            stderr=subprocess.DEVNULL
+        )
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
 
 if __name__ == "__main__":
     # ── Load system state first (needed for AUDIO_OUTPUT + MIXER_CMD) ──────────
@@ -1016,11 +1494,6 @@ if __name__ == "__main__":
     # Restore volume
     set_system_volume(state.get("volume", 85))
 
-    # Ensure Fan is OFF on startup (GPIO 8 LOW)
-    try:
-        subprocess.run(["pinctrl", "set", "8", "op", "dl"], check=True)
-    except Exception:
-        pass
 
     # Repair stale metadata that was created by older JSON-based imports or partial migrations.
     repair_media_db_types()

@@ -1,3 +1,4 @@
+<!--   File: touch.html -->
 <!DOCTYPE html>
 <html lang="en">
 
@@ -155,12 +156,268 @@
       margin-bottom: 30px;
     }
 
-    .home-grid {
+        .home-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 12px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
       width: 100%;
-      max-width: 440px;
+      max-width: 720px;
+    }
+
+    /* ── SETTINGS SCREEN ── */
+    .settings-header {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(201,169,98,0.08), transparent);
+    }
+    .settings-back-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--line);
+      color: var(--gold);
+      padding: 6px 14px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .settings-back-btn:active { background: rgba(201,169,98,0.2); }
+    .settings-title {
+      font-size: 1rem;
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      color: var(--gold);
+      text-transform: uppercase;
+    }
+
+    /* 4-tile quick-nav row */
+    .settings-grid {
+      flex-shrink: 0;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,0.02);
+    }
+    .settings-tile {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .settings-tile:active {
+      background: rgba(201,169,98,0.18);
+      transform: scale(0.96);
+    }
+    .settings-tile-icon {
+      font-size: 1.4rem;
+      line-height: 1;
+      color: var(--gold);
+    }
+    .settings-tile-label {
+      font-size: 0.68rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      color: var(--text);
+      text-transform: uppercase;
+    }
+
+    .settings-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 12px 24px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+    }
+    .settings-list::-webkit-scrollbar { width: 8px; }
+    .settings-list::-webkit-scrollbar-thumb {
+      background: rgba(201,169,98,0.4);
+      border-radius: 20px;
+    }
+    .settings-section { margin-bottom: 18px; }
+    .settings-section-title {
+      font-size: 0.7rem;
+      font-weight: 900;
+      letter-spacing: 0.16em;
+      color: var(--muted);
+      text-transform: uppercase;
+      padding: 4px 6px 8px;
+    }
+    .settings-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .settings-row,
+    .settings-row-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      padding: 6px 0;
+      gap: 12px;
+    }
+    .settings-row span:first-child,
+    .settings-row-label span:first-child { color: var(--muted); }
+    .settings-row span:last-child,
+    .settings-row-label span:last-child {
+      color: var(--text);
+      font-weight: 700;
+      text-align: right;
+      word-break: break-all;
+    }
+    .settings-slider {
+      width: 100%;
+      -webkit-appearance: none;
+      height: 4px;
+      background: rgba(201,169,98,0.25);
+      border-radius: 2px;
+      margin: 12px 0;
+    }
+    .settings-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 0 8px var(--gold-dim);
+      cursor: pointer;
+    }
+    .settings-toggle-btn {
+      width: 100%;
+      margin-top: 8px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(201,169,98,0.12);
+      border: 1px solid rgba(201,169,98,0.4);
+      color: var(--gold);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .settings-toggle-btn:active { background: rgba(201,169,98,0.3); }
+    .settings-toggle-btn.danger {
+      background: rgba(255,96,96,0.1);
+      border-color: rgba(255,96,96,0.4);
+      color: #ff6060;
+    }
+    .settings-two-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .settings-hint {
+      font-size: 0.72rem;
+      color: var(--muted);
+      padding: 8px 0 4px;
+      line-height: 1.4;
+    }
+    .settings-hint code {
+      background: rgba(255,255,255,0.06);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+    }
+    .fan-status-inline {
+      font-size: 0.8rem;
+      color: var(--text);
+      font-weight: 700;
+      padding: 4px 0 10px;
+    }
+    .fan-temp-row { display: flex; gap: 10px; margin-bottom: 12px; }
+    .fan-temp-box {
+      flex: 1;
+      background: rgba(100,150,255,0.08);
+      border: 1px solid rgba(100,150,255,0.25);
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+    }
+    .fan-temp-label {
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 0.14em;
+      font-weight: 900;
+    }
+    .fan-temp-val {
+      font-size: 1.1rem;
+      font-weight: 900;
+      color: #fff;
+      margin-top: 4px;
+    }
+    .fan-temp-sub {
+      font-size: 0.68rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .fan-segmented {
+      display: flex;
+      gap: 6px;
+      background: var(--tile);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 4px;
+    }
+    .fan-seg-btn {
+      flex: 1;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.82rem;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .fan-seg-btn.active {
+      background: rgba(100,150,255,0.25);
+      color: #fff;
+      border-color: rgba(100,150,255,0.5);
+      box-shadow: 0 0 12px rgba(100,150,255,0.3);
+    }
+    .fan-seg-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    #fanPowerGroup .fan-seg-btn[data-power="on"].active {
+      background: rgba(0,245,212,0.20);
+      border-color: rgba(0,245,212,0.5);
+      box-shadow: 0 0 12px rgba(0,245,212,0.35);
+      color: #fff;
+    }
+    #fanPowerGroup .fan-seg-btn[data-power="off"].active {
+      background: rgba(255,69,58,0.20);
+      border-color: rgba(255,69,58,0.5);
+      box-shadow: 0 0 12px rgba(255,69,58,0.35);
+      color: #fff;
+    }
+    .about-title {
+      font-size: 1.3rem;
+      font-weight: 900;
+      color: var(--gold);
+      letter-spacing: 0.1em;
+    }
+    .about-sub { font-size: 0.8rem; color: var(--muted); margin-bottom: 12px; }
+    .about-footer {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-align: center;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+      margin-top: 12px;
     }
 
     .home-tile {
@@ -569,6 +826,7 @@
       color: var(--gold);
       margin-left: 6px;
     }
+    
 
     /* ── FLOATING CONTROL BAR (Rose RS520 style) ── */
     .cbar {
@@ -716,7 +974,15 @@
         </div>
         <div class="home-tile-label">FAVORITES</div>
       </div>
+      <!-- ⬇⬇⬇ NEW SETTINGS TILE — right next to FAVORITES ⬇⬇⬇ -->
+      <div class="home-tile" id="tileSettings">
+        <div class="home-tile-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        </div>
+        <div class="home-tile-label">SETTINGS</div>
+      </div>
     </div>
+
     <div class="now-playing-mini" id="miniNowPlaying">
       <div class="mini-dot"></div>
       <div class="mini-text">
@@ -743,11 +1009,131 @@
       </div>
       <div>
         <div class="fav-header-text">Favorites</div>
-        <div class="fav-header-sub">Songs you rated 3 stars or above · Tap to play</div>
+        <div class="fav-header-sub">Videos you rated 3 stars or above · Tap to play</div>
       </div>
     </div>
     <div class="list-wrap" id="favListWrap">
       <div class="empty" id="favMsg">Loading favorites...</div>
+    </div>
+  </div>
+  
+  <!-- SCREEN 4: SETTINGS -->
+  <div id="settingsScreen" class="screen">
+    <div class="settings-header">
+      <button class="settings-back-btn" onclick="closeSettings()">←</button>
+      <div class="settings-title">Settings</div>
+    </div>
+
+    <div class="settings-grid">
+      <div class="settings-tile" onclick="scrollToSection('displaySection')">
+        <div class="settings-tile-icon">☀</div>
+        <div class="settings-tile-label">DISPLAY</div>
+      </div>
+      <div class="settings-tile" onclick="scrollToSection('wifiSection')">
+        <div class="settings-tile-icon">📶</div>
+        <div class="settings-tile-label">WI-FI</div>
+      </div>
+      <div class="settings-tile" onclick="scrollToSection('systemSection')">
+        <div class="settings-tile-icon">🛠</div>
+        <div class="settings-tile-label">SYSTEM</div>
+      </div>
+      <div class="settings-tile" onclick="scrollToSection('aboutSection')">
+        <div class="settings-tile-icon">ℹ</div>
+        <div class="settings-tile-label">ABOUT</div>
+      </div>
+    </div>
+
+    <div class="settings-list" id="settingsList">
+
+      <div class="settings-section" id="displaySection">
+        <div class="settings-section-title">DISPLAY</div>
+        <div class="settings-card">
+          <div class="settings-row-label">
+            <span>☀ Brightness</span>
+            <span id="brightnessVal">—</span>
+          </div>
+          <input type="range" id="brightnessSlider" min="0" max="100" value="100"
+                 class="settings-slider"
+                 oninput="onBrightnessInput(this.value)"
+                 onchange="onBrightnessChange(this.value)">
+        </div>
+      </div>
+
+      <div class="settings-section" id="wifiSection">
+        <div class="settings-section-title">WI-FI</div>
+        <div class="settings-card">
+          <div class="settings-row"><span>SSID</span><span id="wifiSsid">—</span></div>
+          <div class="settings-row"><span>IP Address</span><span id="wifiIp">—</span></div>
+          <div class="settings-row"><span>Signal</span><span id="wifiSignal">—</span></div>
+          <div class="settings-hint">To change Wi-Fi, open the desktop editor at <code>http://&lt;pi-ip&gt;:5000</code></div>
+        </div>
+      </div>
+
+      <div class="settings-section" id="fanSection">
+        <div class="settings-section-title">FAN CONTROL</div>
+        <div class="settings-card">
+          <div id="fanLiveStatus" class="fan-status-inline">Status: —</div>
+          <div class="fan-temp-row">
+            <div class="fan-temp-box">
+              <div class="fan-temp-label">LEFT</div>
+              <div class="fan-temp-val" id="fanTempLeft">— °C</div>
+              <div class="fan-temp-sub" id="fanDutyLeft">duty 0%</div>
+            </div>
+            <div class="fan-temp-box">
+              <div class="fan-temp-label">RIGHT</div>
+              <div class="fan-temp-val" id="fanTempRight">— °C</div>
+              <div class="fan-temp-sub" id="fanDutyRight">duty 0%</div>
+            </div>
+          </div>
+          <div class="fan-segmented" id="fanModeGroup">
+            <button class="fan-seg-btn" data-mode="auto" onclick="setFanMode('auto')">AUTO</button>
+            <button class="fan-seg-btn" data-mode="manual" onclick="setFanMode('manual')">MANUAL</button>
+          </div>
+          <div class="fan-segmented" id="fanPowerGroup" style="margin-top:8px;">
+            <button class="fan-seg-btn" data-power="on" onclick="setFanPower(true)">ON</button>
+            <button class="fan-seg-btn" data-power="off" onclick="setFanPower(false)">OFF</button>
+          </div>
+          <div id="fanPwmSection" style="margin-top:12px;">
+            <div class="settings-row-label">
+              <span>Manual PWM</span>
+              <span id="fanPwmVal">50%</span>
+            </div>
+            <input type="range" id="fanPwmSlider" min="0" max="100" step="1" value="50"
+                   class="settings-slider"
+                   oninput="onFanPwmSlider(this.value)"
+                   onchange="onFanPwmChange(this.value)">
+          </div>
+          <div id="fanStatusMsg" class="settings-hint" style="min-height:1.1em;text-align:center;"></div>
+        </div>
+      </div>
+
+      <div class="settings-section" id="systemSection">
+        <div class="settings-section-title">SYSTEM &amp; UPDATES</div>
+        <div class="settings-card">
+          <div class="settings-row"><span>Model</span><span id="sysModel">—</span></div>
+          <div class="settings-row"><span>CPU Temp</span><span id="sysCpuTemp">—</span></div>
+          <div class="settings-row"><span>Uptime</span><span id="sysUptime">—</span></div>
+          <div class="settings-row"><span>Disk</span><span id="sysDisk">—</span></div>
+          <div class="settings-row"><span>Memory</span><span id="sysMem">—</span></div>
+          <button class="settings-toggle-btn" id="checkUpdateBtn" onclick="checkUpdate()">🔄 Check for Updates</button>
+          <div class="settings-two-btns">
+            <button class="settings-toggle-btn" onclick="restartService()">Restart Player</button>
+            <button class="settings-toggle-btn danger" onclick="rebootPi()">Reboot Pi</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section" id="aboutSection">
+        <div class="settings-section-title">ABOUT</div>
+        <div class="settings-card">
+          <div class="about-title">REJANG A1</div>
+          <div class="about-sub">Pi Music Streamer</div>
+          <div class="settings-row"><span>Version</span><span id="aboutVersion">3.0</span></div>
+          <div class="settings-row"><span>Hostname</span><span id="aboutHost">—</span></div>
+          <div class="about-footer">Powered by Raspberry Pi 5 · mpv · Flask</div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -795,7 +1181,7 @@
     // ── Screen Router ──
     function showScreen(name) {
       currentScreen = name;
-      ["homeScreen", "libraryScreen", "nowScreen"].forEach(function (id) {
+      ["homeScreen", "libraryScreen", "nowScreen",  "settingsScreen"].forEach(function (id) {
         var el = document.getElementById(id);
         if (el) el.classList.remove("active");
       });
@@ -866,6 +1252,25 @@
       }
       return parts.join(" • ");
     }
+    
+    // ── Album key helpers (mirror desktop.html exactly) ──
+    function getAlbumKey(s) {
+      var raw = String(s.path || '');
+      var cleaned = raw.replace(/\\/g, '/').replace(/^\//, '').replace(/^~\//, '');
+      var parts = cleaned.split('/').filter(Boolean);
+      return parts[0] || 'Unknown Album';
+    }
+
+    function getDiscNumber(s) {
+      if (s.disc_number && s.disc_number > 0) return s.disc_number;
+      var m = (s.path || '').match(/(?:disc|cd)\s*(\d+)/i);
+      return m ? parseInt(m[1]) : 1;
+    }
+
+    function getArtistName(song) {
+      if (!song.artist || song.artist === 'Unknown Artist' || song.artist.trim() === '' || song.artist === 'Others') return 'Unknown Artist';
+      return song.artist;
+    }
 
     function renderCategoryChips() {
       var bar = document.getElementById("catBar");
@@ -893,109 +1298,68 @@
         bar.appendChild(b);
       });
     }
-
+      
+    
     function renderList() {
       var wrap = document.getElementById("listWrap");
       if (!wrap) return;
 
       filteredSongs = allSongs.slice();
-      if (currentCategory !== "All") {
+      // Apply the category chip ONLY at the top level (album grid / video list).
+      // Inside an album, ignore the chip so all tracks of that folder show.
+      if (currentCategory !== "All" && currentAlbum === null) {
         filteredSongs = filteredSongs.filter(function (s) { return (s.category || "All") === currentCategory; });
       }
 
       if (currentLibraryType === "music") {
         if (currentAlbum === null) {
-          // Separate proper albums from orphan tracks (no album metadata)
+          // ── Use the SAME top-level-folder key as desktop.html ──
           var albums = {};
-          var singles = [];
-          filteredSongs.forEach(function(s) {
-            var hasAlbum = s.album && s.album !== "Unknown Album";
-            var hasArtist = s.artist && s.artist !== "Others" && s.artist !== "Unknown Artist";
-            if (hasAlbum) {
-              var key = s.album;
-              if (!albums[key]) albums[key] = { name: key, artist: s.artist || "Unknown Artist", songs: [] };
-              albums[key].songs.push(s);
-            } else if (hasArtist) {
-              // Group by artist name when album is missing
-              var key = s.artist;
-              if (!albums[key]) albums[key] = { name: key, artist: key, songs: [] };
-              albums[key].songs.push(s);
-            } else {
-              // Truly orphan — no album, no artist → flat singles list
-              singles.push(s);
-            }
+          filteredSongs.forEach(function (s) {
+            var key = getAlbumKey(s);
+            if (!albums[key]) albums[key] = { name: key, artist: getArtistName(s), songs: [], coverPath: s.path };
+            albums[key].songs.push(s);
           });
-          var list = Object.values(albums).sort(function(a,b) { return a.name.localeCompare(b.name); });
-          
-          if (!list.length && !singles.length) {
-            wrap.innerHTML = '<div class="empty">No media found.<br><button onclick="showScreen(\'home\')" style="margin-top:10px; padding:8px 16px; border-radius:10px; border:1px solid var(--gold); background:transparent; color:var(--gold);">Back Home</button></div>';
+
+          var list = Object.values(albums).sort(function (a, b) { return a.name.localeCompare(b.name); });
+
+          if (!list.length) {
+            wrap.innerHTML = '<div class="empty">No music found.<br><button onclick="showScreen(\'home\')" style="margin-top:10px; padding:8px 16px; border-radius:10px; border:1px solid var(--gold); background:transparent; color:var(--gold);">Back Home</button></div>';
             return;
           }
 
           wrap.innerHTML = "";
           var grid = document.createElement("div");
           grid.className = "album-grid";
-          
-          list.forEach(function(al) {
-            var firstSongPath = al.songs[0].path;
-            var coverUrl = "/api/cover?path=" + encodeURIComponent(firstSongPath);
-            
+
+          list.forEach(function (al) {
+            var coverUrl = "/api/cover?path=" + encodeURIComponent(al.coverPath);
             var card = document.createElement("div");
             card.className = "album-card";
-            card.innerHTML = 
-              '<img class="album-card-img" src="' + coverUrl + '" onerror="this.src=\'data:image/svg+xml;utf8,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\' width=\\\'100\\\' height=\\\'100\\\'><rect width=\\\'100\\\' height=\\\'100\\\' fill=\\\'#1a1520\\\'/><text x=\\\'50%\\\' y=\\\'50%\\\' fill=\\\'#c9a962\\\' font-size=\\\'35\\\' text-anchor=\\\'middle\\\' alignment-baseline=\\\'middle\\\'>🎵</text></svg>\'">' +
+            card.innerHTML =
+              '<img class="album-card-img" src="' + coverUrl + '" onerror="this.onerror=null;this.src=\'data:image/svg+xml;utf8,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\' viewBox=\\\'0 0 100 100\\\'><rect width=\\\'100\\\' height=\\\'100\\\' fill=\\\'#1a1520\\\'/><text x=\\\'50%\\\' y=\\\'55%\\\' fill=\\\'#c9a962\\\' font-size=\\\'38\\\' text-anchor=\\\'middle\\\'>💿</text></svg>\'">' +
               '<div class="album-card-info">' +
                 '<div class="album-card-title">' + escapeHtml(al.name) + '</div>' +
                 '<div class="album-card-artist">' + escapeHtml(al.artist) + '</div>' +
+                '<div class="album-card-count">' + al.songs.length + ' track' + (al.songs.length !== 1 ? 's' : '') + '</div>' +
               '</div>';
-            card.onclick = function() {
-              currentAlbum = al.name;
-              renderList();
-            };
+            card.onclick = (function (name) {
+              return function () { currentAlbum = name; renderList(); };
+            })(al.name);
             grid.appendChild(card);
           });
           wrap.appendChild(grid);
-
-          // Render singles as a flat list below album grid (no cover card)
-          if (singles.length > 0) {
-            var singlesHeader = document.createElement("div");
-            singlesHeader.style = "padding: 14px 4px 6px; font-size: 0.78rem; font-weight: 900; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase;";
-            singlesHeader.textContent = "Singles / Unknown Album (" + singles.length + ")";
-            wrap.appendChild(singlesHeader);
-
-            singles.sort(function(a,b) { return (a.title||a.filename).toLowerCase().localeCompare((b.title||b.filename).toLowerCase()); });
-            singles.forEach(function(song, index) {
-              var div = document.createElement("div");
-              div.className = "row";
-              div.innerHTML =
-                '<div class="play-icon">&#9654;</div>' +
-                '<div class="meta">' +
-                '<div class="t1">' + escapeHtml(song.title || song.filename) + '</div>' +
-                '<div class="t2">' + escapeHtml(song.artist || "Unknown") + '</div>' +
-                '</div>';
-              div.addEventListener("click", function() {
-                // When playing a single, build filteredSongs = singles so next/prev works
-                filteredSongs = singles;
-                currentIndex = index;
-                playTrack(song.path, song.type);
-              });
-              wrap.appendChild(div);
-            });
-          }
-          return; // Done rendering
+          return;
         } else {
-          // Filter by currentAlbum
-          filteredSongs = filteredSongs.filter(function(s) {
-            var key = (s.album && s.album !== "Unknown Album") ? s.album : (s.artist && s.artist !== "Others" && s.artist !== "Unknown Artist" ? s.artist : "Unknown Album");
-            return key === currentAlbum;
-          });
+          // Filter by selected album (folder key)
+          filteredSongs = filteredSongs.filter(function (s) { return getAlbumKey(s) === currentAlbum; });
         }
       }
 
       // Render Tracks (Videos or Album tracks)
       filteredSongs.sort(function (a, b) {
         if (currentAlbum !== null) {
-          return (a.track_number || 0) - (b.track_number || 0); // track order
+          return (getDiscNumber(a) - getDiscNumber(b)) || ((a.track_number || 0) - (b.track_number || 0));
         }
         return (a.title || a.filename).toLowerCase().localeCompare((b.title || b.filename).toLowerCase());
       });
@@ -1007,61 +1371,71 @@
 
       wrap.innerHTML = "";
 
+      // Album header (Hi-Fi Streamer Style)
       if (currentLibraryType === "music" && currentAlbum !== null && filteredSongs.length > 0) {
         var firstSong = filteredSongs[0];
         var coverUrl = "/api/cover?path=" + encodeURIComponent(firstSong.path);
-        var artistName = (firstSong.artist && firstSong.artist !== "Unknown Artist") ? firstSong.artist : "Unknown Artist";
-        
+        var artistName = getArtistName(firstSong);
+        var numDiscs = new Set(filteredSongs.map(getDiscNumber)).size;
+
         var header = document.createElement("div");
         header.className = "album-header-wrap";
-        header.innerHTML = 
-          '<img class="album-header-cover" src="' + coverUrl + '" onerror="this.src=\'data:image/svg+xml;utf8,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\' width=\\\'100\\\' height=\\\'100\\\'><rect width=\\\'100\\\' height=\\\'100\\\' fill=\\\'#1a1520\\\'/><text x=\\\'50%\\\' y=\\\'50%\\\' fill=\\\'#c9a962\\\' font-size=\\\'35\\\' text-anchor=\\\'middle\\\' alignment-baseline=\\\'middle\\\'>🎵</text></svg>\'">' +
+        header.innerHTML =
+          '<img class="album-header-cover" src="' + coverUrl + '" onerror="this.onerror=null;this.src=\'data:image/svg+xml;utf8,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\' viewBox=\\\'0 0 100 100\\\'><rect width=\\\'100\\\' height=\\\'100\\\' fill=\\\'#1a1520\\\'/><text x=\\\'50%\\\' y=\\\'55%\\\' fill=\\\'#c9a962\\\' font-size=\\\'38\\\' text-anchor=\\\'middle\\\'>💿</text></svg>\'">' +
           '<div class="album-header-info">' +
             '<div class="album-header-title">' + escapeHtml(currentAlbum) + '</div>' +
             '<div class="album-header-artist">' + escapeHtml(artistName) + '</div>' +
-            '<div class="album-header-meta">' + filteredSongs.length + ' tracks</div>' +
+            '<div class="album-header-meta">' + filteredSongs.length + ' tracks' + (numDiscs > 1 ? ' • ' + numDiscs + ' discs' : '') + '</div>' +
           '</div>' +
           '<div class="album-back-btn">← BACK</div>';
-          
-        header.querySelector('.album-back-btn').onclick = function() {
+
+        header.querySelector('.album-back-btn').onclick = function () {
           currentAlbum = null;
           renderList();
         };
         wrap.appendChild(header);
       }
 
+      var lastDisc = null;
       filteredSongs.forEach(function (song, index) {
-        var div = document.createElement("div");
-        div.className = "row";
-        
         var isAlbumView = (currentLibraryType === "music" && currentAlbum !== null);
-        var title = isAlbumView ? song.filename : (song.title || song.filename);
-        var artist = (song.artist && song.artist !== "Unknown Artist") ? song.artist : "Others";
-        var cat = (song.category && song.category !== "All") ? '<span class="badge">' + escapeHtml(song.category) + '</span>' : "";
-        
-        var subText = artist;
-        var subStyle = "";
-        if (isAlbumView) {
-          subStyle = 'color:#60d0ff;font-size:0.75rem;font-weight:700;letter-spacing:0.04em;';
+        var disc = getDiscNumber(song);
+
+        // Disc divider for multi-disc albums
+        if (isAlbumView && new Set(filteredSongs.map(getDiscNumber)).size > 1 && disc !== lastDisc) {
+          var divider = document.createElement("div");
+          divider.className = "disc-divider";
+          divider.textContent = "Disc " + disc;
+          wrap.appendChild(divider);
+          lastDisc = disc;
         }
 
+        var div = document.createElement("div");
+        div.className = "row";
+
+        var title = isAlbumView ? (song.title || song.filename) : (song.title || song.filename);
+        var artist = getArtistName(song);
+        var cat = (song.category && song.category !== "All") ? '<span class="badge">' + escapeHtml(song.category) + '</span>' : "";
+        var trackNum = isAlbumView ? '<div class="track-num">' + String(song.track_number || (index + 1)).padStart(2, '0') + '</div>' : '';
+
         div.innerHTML =
+          trackNum +
           '<div class="play-icon">&#9654;</div>' +
           '<div class="meta">' +
           '<div class="t1">' + escapeHtml(title) + cat + '</div>' +
-          '<div class="t2" style="' + subStyle + '">' + escapeHtml(subText) + '</div>' +
+          '<div class="t2">' + escapeHtml(artist) + '</div>' +
           '</div>';
 
-        var playHandler = function () {
-          currentIndex = index;
-          playTrack(song.path, song.type);
-        };
-
-        div.addEventListener("click", playHandler);
+        div.addEventListener("click", (function (s, i) {
+          return function () {
+            currentIndex = i;
+            playTrack(s.path, s.type);
+          };
+        })(song, index));
         wrap.appendChild(div);
       });
     }
-
+        
     async function loadLibrary(filterType) {
       var wrap = document.getElementById("listWrap");
       wrap.innerHTML = '<div class="empty">Scanning Library...</div>';
@@ -1118,6 +1492,7 @@
 
     // ── Control Bar ──
     function showCbar() {
+      if (currentScreen === "settings") return;
       // Show on any screen whenever media has been/is active
       cbarVisible = true;
       document.getElementById("cbar").classList.add("visible");
@@ -1274,41 +1649,6 @@
       document.getElementById("cbVolDisplay").textContent = currentVolume + "%";
     };
 
-    // ── Update renderList to track filteredSongs & index ──
-    var _origRenderList = renderList;
-    renderList = function () {
-      _origRenderList();
-      // Rebuild filteredSongs to match current category & album for prev/next
-      filteredSongs = allSongs.slice();
-      if (currentCategory !== "All") {
-        filteredSongs = filteredSongs.filter(function (s) { return (s.category || "All") === currentCategory; });
-      }
-      
-      if (currentLibraryType === "music" && currentAlbum !== null) {
-        filteredSongs = filteredSongs.filter(function(s) {
-          var key = (s.album && s.album !== "Unknown Album") ? s.album : (s.artist && s.artist !== "Others" && s.artist !== "Unknown Artist" ? s.artist : "Unknown Album");
-          return key === currentAlbum;
-        });
-        filteredSongs.sort(function (a, b) {
-          return (a.track_number || 0) - (b.track_number || 0);
-        });
-      } else {
-        filteredSongs.sort(function (a, b) {
-          return (a.title || a.filename).toLowerCase().localeCompare((b.title || b.filename).toLowerCase());
-        });
-      }
-    };
-
-    // ── Patch playTrack call in renderList rows to pass index ──
-    var _origLoadLibrary = loadLibrary;
-    loadLibrary = async function () {
-      await _origLoadLibrary();
-      // Re-attach click with index after load
-      var rows = document.querySelectorAll("#listWrap .row");
-      rows.forEach(function (row, i) {
-        row.addEventListener("click", function () { currentIndex = i; });
-      });
-    };
 
     // ── Clock Logic ──
     function updateClock() {
@@ -1350,7 +1690,7 @@
       if (!wrap) return;
       wrap.innerHTML = '<div class="empty">Loading favorites...</div>';
       try {
-        var res = await fetch("/api/songs");
+        var res = await fetch("/api/songs?type=video");
         var data = await res.json();
         var favSongs = Array.isArray(data) ? data.filter(function (s) {
           return (s.rating !== undefined && s.rating !== null && Number(s.rating) >= 3);
@@ -1399,11 +1739,291 @@
       }
     }
 
+
+        // ── Settings Screen ──
+    let settingsFanInterval = null;
+
+    document.getElementById("tileSettings").addEventListener("click", openSettings);
+
+    function openSettings() {
+      hideCbar();
+      showScreen("settings");
+      document.getElementById("cbar").classList.remove("visible");
+      loadBrightness();
+      loadWifi();
+      loadSystemInfo();
+      loadFanStatus();
+      startSettingsFanPolling();
+    }
+
+    function closeSettings() {
+      stopSettingsFanPolling();
+      showScreen("home");
+      checkNowPlaying();
+    }
+
+    function scrollToSection(id) {
+      const el = document.getElementById(id);
+      const list = document.getElementById("settingsList");
+      if (!el || !list) return;
+      list.scrollTo({ top: el.offsetTop - list.offsetTop - 4, behavior: "smooth" });
+    }
+
+    // Brightness
+    async function loadBrightness() {
+      try {
+        const res = await fetch("/api/system/brightness");
+        const d = await res.json();
+        if (d.status === "success") {
+          document.getElementById("brightnessSlider").value = d.brightness;
+          document.getElementById("brightnessVal").textContent = d.brightness + "%";
+        }
+      } catch (e) {}
+    }
+    let brightnessDebounce = null;
+    function onBrightnessInput(v) {
+      document.getElementById("brightnessVal").textContent = v + "%";
+      clearTimeout(brightnessDebounce);
+      brightnessDebounce = setTimeout(() => sendBrightness(v), 200);
+    }
+    function onBrightnessChange(v) { sendBrightness(v); }
+    async function sendBrightness(v) {
+      try {
+        await fetch("/api/system/brightness", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ brightness: Number(v) })
+        });
+      } catch (e) {}
+    }
+
+    // Wi-Fi
+    async function loadWifi() {
+      try {
+        const res = await fetch("/api/system/wifi");
+        const d = await res.json();
+        if (d.status === "success") {
+          document.getElementById("wifiSsid").textContent = d.ssid || "Not connected";
+          document.getElementById("wifiIp").textContent = d.ip || "—";
+          document.getElementById("wifiSignal").textContent =
+            d.signal !== null ? d.signal + " / 70" : "—";
+        }
+      } catch (e) {}
+    }
+
+    // System info
+    async function loadSystemInfo() {
+      try {
+        const res = await fetch("/api/system/info");
+        const d = await res.json();
+        if (d.status === "success") {
+          document.getElementById("sysModel").textContent = d.model || "—";
+          document.getElementById("sysCpuTemp").textContent =
+            d.cpu_temp !== null ? d.cpu_temp + " °C" : "—";
+          document.getElementById("sysUptime").textContent = d.uptime || "—";
+          document.getElementById("sysDisk").textContent =
+            d.disk_free_gb !== null ? d.disk_free_gb + " / " + d.disk_total_gb + " GB" : "—";
+          document.getElementById("sysMem").textContent =
+            d.mem_used_mb !== null ? d.mem_used_mb + " / " + d.mem_total_mb + " MB" : "—";
+          document.getElementById("aboutVersion").textContent = d.version || "3.0";
+          document.getElementById("aboutHost").textContent = d.hostname || "—";
+        }
+      } catch (e) {}
+    }
+
+    async function checkUpdate() {
+      const btn = document.getElementById("checkUpdateBtn");
+      btn.textContent = "Checking...";
+      btn.disabled = true;
+      try {
+        const res = await fetch("/api/system/check_update");
+        const d = await res.json();
+        btn.textContent = d.update_available
+          ? "✅ Update available (" + d.commits_behind + " commits)"
+          : "✅ Up to date";
+      } catch (e) { btn.textContent = "❌ Check failed"; }
+      setTimeout(() => {
+        btn.textContent = "🔄 Check for Updates";
+        btn.disabled = false;
+      }, 4000);
+    }
+
+    async function restartService() {
+      if (!confirm("Restart player service?")) return;
+      try {
+        await fetch("/api/system/restart_service", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ unit: "miri.service" })
+        });
+        alert("Restarting player...");
+      } catch (e) { alert("Failed"); }
+    }
+
+    async function rebootPi() {
+      if (!confirm("Reboot the Pi?")) return;
+      try {
+        await fetch("/api/system/reboot", { method: "POST" });
+        alert("Rebooting...");
+      } catch (e) { alert("Failed"); }
+    }
+
+    // Fan control
+    let fanLive = { ok: false, mode: "AUTO", manual_on: false, manual: 50,
+                    left: { state: "OFF", duty: 0, temp: null },
+                    right: { state: "OFF", duty: 0, temp: null } };
+    let fanMode = "auto";
+    let fanPower = false;
+    let fanManualPwm = 50;
+    let fanPending = false;
+
+    async function loadFanStatus() {
+      try {
+        const res = await fetch("/api/system/fan_status");
+        const d = await res.json();
+        if (d.status === "success") {
+          fanLive = {
+            ok: true,
+            mode: d.mode || "AUTO",
+            manual_on: !!d.manual_on,
+            manual: parseInt(d.manual, 10) || 50,
+            left: { state: d.left?.state || "OFF",
+                    duty: parseInt(d.left?.duty, 10) || 0,
+                    temp: d.left?.temp !== undefined ? Number(d.left.temp) : null },
+            right: { state: d.right?.state || "OFF",
+                     duty: parseInt(d.right?.duty, 10) || 0,
+                     temp: d.right?.temp !== undefined ? Number(d.right.temp) : null }
+          };
+          fanMode = fanLive.mode === "AUTO" ? "auto" : "manual";
+          fanPower = fanLive.manual_on;
+          fanManualPwm = fanLive.manual;
+          renderFanUI();
+        }
+      } catch (e) {}
+    }
+
+    function renderFanUI() {
+      const summary = document.getElementById("fanLiveStatus");
+      if (summary) {
+        summary.textContent = "Mode: " + fanLive.mode +
+          (fanLive.mode === "MANUAL"
+            ? (fanLive.manual_on ? " · ON " + fanLive.manual + "%" : " · OFF")
+            : "");
+      }
+      document.getElementById("fanTempLeft").textContent =
+        fanLive.left.temp !== null ? fanLive.left.temp.toFixed(1) + " °C" : "—";
+      document.getElementById("fanTempRight").textContent =
+        fanLive.right.temp !== null ? fanLive.right.temp.toFixed(1) + " °C" : "—";
+      document.getElementById("fanDutyLeft").textContent = "duty " + fanLive.left.duty + "%";
+      document.getElementById("fanDutyRight").textContent = "duty " + fanLive.right.duty + "%";
+
+      document.querySelectorAll("#fanModeGroup .fan-seg-btn").forEach(b => {
+        b.classList.toggle("active", b.dataset.mode === fanMode);
+      });
+      document.querySelectorAll("#fanPowerGroup .fan-seg-btn").forEach(b => {
+        const isOn = b.dataset.power === "on";
+        b.classList.toggle("active", isOn === fanPower);
+        b.disabled = fanMode === "auto";
+      });
+      const pwmSection = document.getElementById("fanPwmSection");
+      if (pwmSection) {
+        const dis = fanMode === "auto";
+        pwmSection.style.opacity = dis ? "0.5" : "1";
+        pwmSection.style.pointerEvents = dis ? "none" : "auto";
+      }
+      const slider = document.getElementById("fanPwmSlider");
+      if (slider && document.activeElement !== slider) slider.value = fanManualPwm;
+      document.getElementById("fanPwmVal").textContent = fanManualPwm + "%";
+    }
+
+    function startSettingsFanPolling() {
+      if (settingsFanInterval) clearInterval(settingsFanInterval);
+      settingsFanInterval = setInterval(loadFanStatus, 2000);
+    }
+    function stopSettingsFanPolling() {
+      if (settingsFanInterval) { clearInterval(settingsFanInterval); settingsFanInterval = null; }
+    }
+
+    async function fanSend(cmd) {
+      const res = await fetch("/api/system/fan_uart_command", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ command: cmd })
+      });
+      const d = await res.json();
+      if (!res.ok || d.status !== "success") throw new Error(d.error || "Failed");
+      return d;
+    }
+
+    async function setFanMode(mode) {
+      if (fanPending) return;
+      fanPending = true;
+      try {
+        await fanSend(mode === "auto" ? "FAN_MODE AUTO" : "FAN_MODE MANUAL");
+        fanMode = mode;
+        fanMsg("✅ Mode → " + mode.toUpperCase());
+        await loadFanStatus();
+      } catch (e) { fanMsg("❌ " + e.message, true); }
+      finally { fanPending = false; }
+    }
+
+    async function setFanPower(on) {
+      if (fanPending) return;
+      if (fanMode === "auto") { fanMsg("⚠ Switch to MANUAL first", true); return; }
+      fanPending = true;
+      try {
+        await fanSend(on ? `FAN_SPEED ${fanManualPwm > 0 ? fanManualPwm : 50}` : "FAN_SPEED 0");
+        fanPower = on;
+        fanMsg(on ? `✅ Fan ON (${fanManualPwm}%)` : "✅ Fan OFF");
+        await loadFanStatus();
+      } catch (e) { fanMsg("❌ " + e.message, true); }
+      finally { fanPending = false; }
+    }
+
+    let fanPwmDebounce = null;
+    function onFanPwmSlider(v) {
+      v = parseInt(v, 10);
+      fanManualPwm = v;
+      document.getElementById("fanPwmVal").textContent = v + "%";
+      clearTimeout(fanPwmDebounce);
+      fanPwmDebounce = setTimeout(() => applyFanPwm(), 300);
+    }
+    function onFanPwmChange(v) { applyFanPwm(); }
+    
+    async function applyFanPwm() {
+      if (fanMode !== "manual") {
+        fanMsg("⚠ PWM only applies in MANUAL mode", true);
+        return;
+      }
+      if (fanPending) return;
+      fanPending = true;
+      try {
+        await fanSend("FAN_SPEED " + fanManualPwm);
+        fanPower = fanManualPwm > 0;
+        fanMsg("✅ PWM → " + fanManualPwm + "%");
+        await loadFanStatus();
+      } catch (e) {
+        fanMsg("❌ " + e.message, true);
+      } finally {
+        fanPending = false;
+      }
+    }
+
+    function fanMsg(msg, isErr) {
+      const el = document.getElementById("fanStatusMsg");
+      if (!el) return;
+      el.style.color = isErr ? "#ff6060" : "#60ff90";
+      el.textContent = msg;
+      clearTimeout(el._t);
+      el._t = setTimeout(() => { el.textContent = ""; }, 3000);
+    }
+
     // ── Init ──
     showScreen("home");
     checkNowPlaying();
     startStatusPolling();
   </script>
+
 </body>
 
 </html>

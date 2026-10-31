@@ -1,3 +1,4 @@
+<!--   File: desktop.html -->
 <!DOCTYPE html>
 <html lang="en">
 
@@ -118,6 +119,13 @@
             padding: 4px 12px;
             border-radius: 40px;
             border: 1px solid var(--glass-border);
+        }
+
+        .volume-label {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-right: 4px;
         }
 
         .volume-btn-group .btn-circle {
@@ -549,6 +557,57 @@
         .card-exit i { color: #ef233c; }
         .card-dac i { color: #f77f00; }
 
+        /* Fan control segmented buttons */
+        .fan-segmented {
+            display: flex;
+            gap: 6px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 4px;
+        }
+        .fan-seg-btn {
+            flex: 1;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            background: transparent;
+            color: var(--text-dim);
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 0.88rem;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .fan-seg-btn:hover:not(:disabled) {
+            color: var(--text-main);
+            background: rgba(255,255,255,0.04);
+        }
+        .fan-seg-btn.active {
+            background: rgba(100,150,255,0.25);
+            color: #fff;
+            border-color: rgba(100,150,255,0.5);
+            box-shadow: 0 0 12px rgba(100,150,255,0.3);
+        }
+        .fan-seg-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+        /* Turn active ON green, active OFF red for instant visual cue */
+        #fan-power-group .fan-seg-btn[data-power="on"].active {
+            background: rgba(0,245,212,0.20);
+            border-color: rgba(0,245,212,0.5);
+            box-shadow: 0 0 12px rgba(0,245,212,0.35);
+            color: #fff;
+        }
+        #fan-power-group .fan-seg-btn[data-power="off"].active {
+            background: rgba(255,69,58,0.20);
+            border-color: rgba(255,69,58,0.5);
+            box-shadow: 0 0 12px rgba(255,69,58,0.35);
+            color: #fff;
+        }
+
         /* DAC Selector Modal buttons */
         .dac-option-btn {
             display: flex;
@@ -722,6 +781,7 @@
                 </div>
                 
                 <div class="volume-btn-group">
+                    <span class="volume-label">Volume</span>
                     <button class="btn-circle" onclick="volumeDown()">−</button>
                     <span id="volume-percent">50%</span>
                     <button class="btn-circle" onclick="volumeUp()">+</button>
@@ -730,7 +790,7 @@
                 <button id="btn-video" class="btn-circle" style="background: var(--accent)"
                     onclick="toggleVideo()" title="Toggle Video Stream">📺</button>
                 <button id="fanToggleBtn" class="btn-circle" style="background: rgba(100,150,255,0.15); color: #6496ff;"
-                    onclick="toggleFan()" title="Toggle Cooling Fan">🌀</button>
+                    onclick="showFanModal()" title="Fan Control">🌀</button>
                 <button id="dacQuickBtn" class="btn-circle" style="background: rgba(247,127,0,0.15); color: #f77f00;"
                     onclick="showDacModal()" title="Switch Audio Output">🔌</button>
             </div>
@@ -857,6 +917,107 @@
 
             <div id="dac-status-msg" style="margin: 12px 0 0; font-size: 0.8rem; color: var(--text-dim); min-height: 1.2em; text-align: center;"></div>
             <button class="btn-secondary" onclick="closeDacModal()" style="width:100%; margin-top:14px;">Close</button>
+        </div>
+    </div>
+
+    
+    <!-- Fan Control Modal -->
+    <div id="fanModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 380px;">
+            <h3 style="margin-bottom: 4px;">🌀 Fan Control</h3>
+            <p style="color: var(--text-dim); font-size: 0.82rem; margin: 0 0 18px;">
+                In AUTO the PI controller manages the fan based on temperature.
+                In MANUAL you set the speed yourself.
+            </p>
+
+            <!-- Live status strip -->
+            <div id="fan-live-status" style="
+                background: rgba(100,150,255,0.08);
+                border: 1px solid rgba(100,150,255,0.25);
+                border-radius: 10px;
+                padding: 10px 14px;
+                margin-bottom: 16px;
+                font-family: 'Outfit', sans-serif;
+                font-size: 0.82rem;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            ">
+                <div id="fan-status-summary" style="color: var(--text-main); font-weight: 600;">
+                    Status: —
+                </div>
+                <div style="display:flex; justify-content:space-between; gap:10px;">
+                    <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+                        <span id="fan-status-line-left" style="color: var(--text-dim);">L: —</span>
+                        <span id="fan-temp-left" style="
+                            background: rgba(100,150,255,0.15);
+                            border: 1px solid rgba(100,150,255,0.35);
+                            border-radius: 8px;
+                            padding: 4px 9px;
+                            font-weight: 600;
+                            color: #fff;
+                            text-align: center;
+                        ">— °C</span>
+                    </div>
+                    <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+                        <span id="fan-status-line-right" style="color: var(--text-dim);">R: —</span>
+                        <span id="fan-temp-right" style="
+                            background: rgba(100,150,255,0.15);
+                            border: 1px solid rgba(100,150,255,0.35);
+                            border-radius: 8px;
+                            padding: 4px 9px;
+                            font-weight: 600;
+                            color: #fff;
+                            text-align: center;
+                        ">— °C</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mode toggle -->
+            <div style="margin-bottom: 14px;">
+                <div style="font-size: 0.78rem; color: var(--text-dim); margin-bottom: 6px; font-weight: 600;">MODE</div>
+                <div class="fan-segmented" id="fan-mode-group">
+                    <button class="fan-seg-btn" data-mode="auto" onclick="setFanMode('auto')">AUTO</button>
+                    <button class="fan-seg-btn" data-mode="manual" onclick="setFanMode('manual')">MANUAL</button>
+                </div>
+            </div>
+
+            <!-- Fan ON/OFF toggle (disabled in Auto) -->
+            <div style="margin-bottom: 14px;">
+                <div style="font-size: 0.78rem; color: var(--text-dim); margin-bottom: 6px; font-weight: 600;">
+                    FAN <span id="fan-toggle-hint" style="color: var(--text-dim); font-weight: 400;">(auto controls this)</span>
+                </div>
+                <div class="fan-segmented" id="fan-power-group">
+                    <button class="fan-seg-btn" data-power="on" onclick="setFanPower(true)">ON</button>
+                    <button class="fan-seg-btn" data-power="off" onclick="setFanPower(false)">OFF</button>
+                </div>
+            </div>
+
+            <!-- Manual PWM slider + numeric input -->
+            <div id="fan-pwm-section" style="margin-bottom: 16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <div style="font-size: 0.78rem; color: var(--text-dim); font-weight: 600;">MANUAL PWM</div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <input id="fan-pwm-input" type="number" min="0" max="100" step="1" value="50"
+                            class="form-input"
+                            style="width: 70px; padding: 4px 6px; margin: 0; text-align: center; font-size: 0.85rem;"
+                            onchange="onFanPwmInputChange()">
+                        <span style="font-size: 0.82rem; color: var(--text-dim);">%</span>
+                    </div>
+                </div>
+                <input id="fan-pwm-slider" type="range" min="0" max="100" step="1" value="50"
+                    class="form-input"
+                    style="width: 100%; padding: 0; margin: 0; height: 24px;"
+                    oninput="onFanPwmSliderChange()">
+                <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 6px;">
+                    Range 0 or 30–100 %. Values 1–29 are automatically clamped to 30 % (stall guard).
+                </div>
+            </div>
+
+            <div id="fan-status-msg" style="margin: 8px 0 0; font-size: 0.8rem; color: var(--text-dim); min-height: 1.2em; text-align: center;"></div>
+
+            <button class="btn-secondary" onclick="closeFanModal()" style="width:100%; margin-top:14px;">Close</button>
         </div>
     </div>
 
@@ -1471,37 +1632,341 @@
             });
         }
         // ── End DAC Selector ──────────────────────────────────────────────────
+        // ── Fan Control (per-channel Auto PI, shared manual PWM) ────────────────
+        let fanMode          = 'auto';    // 'auto' | 'manual'
+        let fanPower         = false;     // manual fan on/off
+        let fanManualPwm     = 50;        // 0 or 30-100
+        let fanRequestPending = false;
 
-        let fanActive = false;
-        // Update fan button UI based on current state
+        // Live state from FAN? — one PI per channel means each side can differ
+        let fanLiveStatus = {
+            ok: false,
+            mode: 'AUTO',
+            manual_on: false,
+            manual: 50,
+            left:  { state: 'OFF', duty: 0, temp: null, ok: false },
+            right: { state: 'OFF', duty: 0, temp: null, ok: false }
+        };
+
+        // Live temps from TEMP? — refreshed only while modal is open
+        let fanTempData = {
+            ok: false,
+            left_c: null, right_c: null,
+            left_ok: false, right_ok: false
+        };
+
+        let fanStatusInterval = null;   // /api/system/fan_status every 2 s
+        let fanTempInterval   = null;   // /api/system/temp       every 2 s
+
+        // ── Poll: FAN? ──────────────────────────────────────────────────────────
+        async function pollFanStatus() {
+            try {
+                const res = await fetch('/api/system/fan_status');
+                const d = await res.json();
+                if (d.status === 'success') {
+                    fanLiveStatus = {
+                        ok: true,
+                        mode:      d.mode || 'AUTO',
+                        manual_on: !!d.manual_on,
+                        manual:    parseInt(d.manual, 10) || 50,
+                        left: {
+                            state: d.left?.state || 'OFF',
+                            duty:  parseInt(d.left?.duty, 10) || 0,
+                            temp:  (d.left?.temp !== undefined && d.left?.temp !== null)
+                                    ? Number(d.left.temp) : null,
+                            ok:    !!d.left?.ok,
+                        },
+                        right: {
+                            state: d.right?.state || 'OFF',
+                            duty:  parseInt(d.right?.duty, 10) || 0,
+                            temp:  (d.right?.temp !== undefined && d.right?.temp !== null)
+                                    ? Number(d.right.temp) : null,
+                            ok:    !!d.right?.ok,
+                        },
+                    };
+                    fanMode  = (d.mode === 'AUTO') ? 'auto' : 'manual';
+                    fanPower = fanLiveStatus.manual_on;
+                    if (d.manual !== undefined && d.manual !== null) {
+                        const m = parseInt(d.manual, 10);
+                        if (!isNaN(m) && m >= 0 && m <= 100) fanManualPwm = m;
+                    }
+                    updateFanModalUI();
+                    updateFanButtonUI();
+                }
+            } catch (e) { /* ignore transient errors */ }
+        }
+
+        // ── Poll: TEMP? ─────────────────────────────────────────────────────────
+        async function pollFanTemps() {
+            try {
+                const res = await fetch('/api/system/temp');
+                const d = await res.json();
+                if (d.status === 'success') {
+                    fanTempData = {
+                        ok: true,
+                        left_c:   (d.left_c  !== null) ? Number(d.left_c)  : null,
+                        right_c:  (d.right_c !== null) ? Number(d.right_c) : null,
+                        left_ok:  !!d.left_ok,
+                        right_ok: !!d.right_ok,
+                    };
+                    updateFanTempUI();
+                }
+            } catch (e) { /* ignore */ }
+        }
+
+        function startFanPolling() {
+            pollFanStatus();
+            pollFanTemps();
+            if (fanStatusInterval) clearInterval(fanStatusInterval);
+            if (fanTempInterval)   clearInterval(fanTempInterval);
+            fanStatusInterval = setInterval(pollFanStatus, 2000);
+            fanTempInterval   = setInterval(pollFanTemps,  2000);
+        }
+
+        function stopFanPolling() {
+            if (fanStatusInterval) { clearInterval(fanStatusInterval); fanStatusInterval = null; }
+            if (fanTempInterval)   { clearInterval(fanTempInterval);   fanTempInterval   = null; }
+        }
+
+        // ── Modal open / close ──────────────────────────────────────────────────
+        function showFanModal() {
+            const msg = document.getElementById('fan-status-msg');
+            if (msg) msg.innerText = '';
+            document.getElementById('fanModal').style.display = 'flex';
+            startFanPolling();
+        }
+
+        function closeFanModal() {
+            document.getElementById('fanModal').style.display = 'none';
+            stopFanPolling();
+        }
+
+        // ── Command dispatch ────────────────────────────────────────────────────
+        async function sendFanCommand(cmd) {
+            const res = await fetch('/api/system/fan_uart_command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: cmd }),
+            });
+            const data = await res.json();
+            if (!res.ok || data.status !== 'success')
+                throw new Error(data.error || 'Command failed');
+            return data;
+        }
+
+        async function setFanMode(mode) {
+            if (fanRequestPending) return;
+            fanRequestPending = true;
+            setFanModalBusy(true);
+            try {
+                await sendFanCommand(mode === 'auto' ? 'FAN_MODE AUTO' : 'FAN_MODE MANUAL');
+                fanMode = mode;
+                fanStatusMsg(`✅ Mode → ${mode.toUpperCase()}`, 'var(--success)');
+                await pollFanStatus();
+                await pollFanTemps();
+            } catch (e) {
+                fanStatusMsg('❌ ' + e.message, '#ff453a');
+            } finally {
+                fanRequestPending = false;
+                setFanModalBusy(false);
+            }
+        }
+
+        async function setFanPower(on) {
+            if (fanRequestPending) return;
+            if (fanMode === 'auto') {
+                fanStatusMsg('⚠️ Switch to MANUAL first', '#ffcc00');
+                return;
+            }
+            fanRequestPending = true;
+            setFanModalBusy(true);
+            try {
+                const cmd = on
+                    ? `FAN_SPEED ${fanManualPwm > 0 ? fanManualPwm : 50}`
+                    : 'FAN_SPEED 0';
+                await sendFanCommand(cmd);
+                fanPower = on;
+                fanStatusMsg(on ? `✅ Fan ON (${fanManualPwm}%)` : '✅ Fan OFF', 'var(--success)');
+                await pollFanStatus();
+            } catch (e) {
+                fanStatusMsg('❌ ' + e.message, '#ff453a');
+            } finally {
+                fanRequestPending = false;
+                setFanModalBusy(false);
+            }
+        }
+
+        // ── Manual PWM handlers ─────────────────────────────────────────────────
+        let fanPwmDebounce = null;
+
+        function onFanPwmSliderChange() {
+            const v = parseInt(document.getElementById('fan-pwm-slider').value, 10);
+            document.getElementById('fan-pwm-input').value = v;
+            fanManualPwm = v;
+            clearTimeout(fanPwmDebounce);
+            fanPwmDebounce = setTimeout(() => applyFanPwm(), 250);
+        }
+
+        function onFanPwmInputChange() {
+            let v = parseInt(document.getElementById('fan-pwm-input').value, 10);
+            if (isNaN(v)) v = 50;
+            if (v < 0)   v = 0;
+            if (v > 100) v = 100;
+            if (v > 0 && v < 30) v = 30;       // stall guard
+            document.getElementById('fan-pwm-input').value = v;
+            document.getElementById('fan-pwm-slider').value = v;
+            fanManualPwm = v;
+            applyFanPwm();
+        }
+
+        async function applyFanPwm() {
+            if (fanMode !== 'manual') {
+                fanStatusMsg('⚠️ PWM only applies in MANUAL mode', '#ffcc00');
+                return;
+            }
+            if (fanRequestPending) return;
+            fanRequestPending = true;
+            setFanModalBusy(true);
+            try {
+                await sendFanCommand(`FAN_SPEED ${fanManualPwm}`);
+                fanPower = fanManualPwm > 0;
+                fanStatusMsg(`✅ PWM → ${fanManualPwm}%`, 'var(--success)');
+                await pollFanStatus();
+            } catch (e) {
+                fanStatusMsg('❌ ' + e.message, '#ff453a');
+            } finally {
+                fanRequestPending = false;
+                setFanModalBusy(false);
+            }
+        }
+
+        // ── UI renderers ────────────────────────────────────────────────────────
+        function updateFanModalUI() {
+            // Mode buttons
+            document.querySelectorAll('#fan-mode-group .fan-seg-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.mode === fanMode);
+            });
+
+            // Power buttons (greyed in Auto)
+            document.querySelectorAll('#fan-power-group .fan-seg-btn').forEach(b => {
+                const isOn = b.dataset.power === 'on';
+                b.classList.toggle('active', isOn === fanPower);
+                b.disabled = (fanMode === 'auto');
+            });
+
+            // PWM section — enabled only in Manual
+            const pwmSection = document.getElementById('fan-pwm-section');
+            if (pwmSection) {
+                const disabled = (fanMode === 'auto');
+                pwmSection.style.opacity = disabled ? '0.5' : '1';
+                pwmSection.style.pointerEvents = disabled ? 'none' : 'auto';
+            }
+
+            // Sync PWM slider/input with current value
+            const slider = document.getElementById('fan-pwm-slider');
+            const input  = document.getElementById('fan-pwm-input');
+            if (slider && document.activeElement !== slider) slider.value = fanManualPwm;
+            if (input  && document.activeElement !== input)  input.value  = fanManualPwm;
+
+            const hint = document.getElementById('fan-toggle-hint');
+            if (hint) hint.innerText = (fanMode === 'auto') ? '(auto controls this)' : '(manual)';
+
+            updateFanStatusStrip();
+            updateFanButtonUI();
+        }
+
+        function updateFanStatusStrip() {
+            const lineL   = document.getElementById('fan-status-line-left');
+            const lineR   = document.getElementById('fan-status-line-right');
+            const badgeL  = document.getElementById('fan-temp-left');
+            const badgeR  = document.getElementById('fan-temp-right');
+            const summary = document.getElementById('fan-status-summary');
+
+            if (!fanLiveStatus.ok) {
+                if (summary) summary.innerText = 'Status: — (no response from Pico)';
+                if (lineL)   lineL.innerText = 'L: —';
+                if (lineR)   lineR.innerText = 'R: —';
+                if (badgeL)  badgeL.innerText = '— °C';
+                if (badgeR)  badgeR.innerText = '— °C';
+                return;
+            }
+
+            if (summary) {
+                summary.innerText = `Mode: ${fanLiveStatus.mode}` +
+                    (fanLiveStatus.mode === 'MANUAL'
+                        ? (fanLiveStatus.manual_on ? ` · ON ${fanLiveStatus.manual}%` : ' · OFF')
+                        : '');
+            }
+
+            const L = fanLiveStatus.left;
+            const R = fanLiveStatus.right;
+
+            if (lineL) {
+                lineL.innerText = `L: ${L.state}` +
+                    (L.ok ? '' : ' (NTC ERR)') +
+                    ` · duty ${L.duty}%`;
+            }
+            if (lineR) {
+                lineR.innerText = `R: ${R.state}` +
+                    (R.ok ? '' : ' (NTC ERR)') +
+                    ` · duty ${R.duty}%`;
+            }
+            if (badgeL) badgeL.innerText = (L.temp !== null) ? L.temp.toFixed(1) + ' °C' : '—';
+            if (badgeR) badgeR.innerText = (R.temp !== null) ? R.temp.toFixed(1) + ' °C' : '—';
+        }
+
+        function updateFanTempUI() {
+            // Handled inside updateFanStatusStrip; TEMP? gives finer precision
+            const badgeL = document.getElementById('fan-temp-left');
+            const badgeR = document.getElementById('fan-temp-right');
+            if (!fanTempData.ok) return;
+            if (badgeL && fanTempData.left_c  !== null)
+                badgeL.innerText = fanTempData.left_c.toFixed(1) + ' °C'
+                    + (fanTempData.left_ok ? '' : ' (err)');
+            if (badgeR && fanTempData.right_c !== null)
+                badgeR.innerText = fanTempData.right_c.toFixed(1) + ' °C'
+                    + (fanTempData.right_ok ? '' : ' (err)');
+        }
+
+        function setFanModalBusy(busy) {
+            document.querySelectorAll(
+                '#fanModal .fan-seg-btn, #fanModal #fan-pwm-slider, #fanModal #fan-pwm-input'
+            ).forEach(el => el.disabled = busy);
+            if (!busy) updateFanModalUI();
+        }
+
+        function fanStatusMsg(msg, color) {
+            const el = document.getElementById('fan-status-msg');
+            if (!el) return;
+            el.style.color = color || 'var(--text-dim)';
+            el.innerText = msg;
+            clearTimeout(el._t);
+            el._t = setTimeout(() => { el.innerText = ''; }, 3000);
+        }
+
+        // ── Home-screen button indicator ────────────────────────────────────────
         function updateFanButtonUI() {
             const btn = document.getElementById('fanToggleBtn');
             if (!btn) return;
-            btn.style.background = fanActive ? 'rgba(100,150,255,0.4)' : 'rgba(100,150,255,0.15)';
-            btn.style.boxShadow = fanActive ? '0 0 15px rgba(100,150,255,0.5)' : 'none';
-            // Tooltip reflects the action that will be performed on click
-            btn.title = fanActive ? 'Toggle Cooling Fan OFF' : 'Toggle Cooling Fan ON';
+            const active = fanLiveStatus.ok
+                ? (fanLiveStatus.left.duty > 0 || fanLiveStatus.right.duty > 0)
+                : false;
+            btn.style.background = active
+                ? 'rgba(100,150,255,0.4)'
+                : 'rgba(100,150,255,0.15)';
+            btn.style.boxShadow = active ? '0 0 15px rgba(100,150,255,0.5)' : 'none';
+            btn.title = 'Fan Control';
         }
-        async function toggleFan() {
-            fanActive = !fanActive;
-            try {
-                // Send UART command via backend endpoint
-                await fetch('/api/system/fan_uart', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ enabled: fanActive })
-                });
-            } catch (e) {
-                alert('Fan control failed.');
-            }
-            updateFanButtonUI();
-        }
-        // Ensure fan starts OFF on page load and UI reflects state
+
+        // Only poll once on page load to initialise the home-screen dot.
+        // The modal starts its own polling in showFanModal().
         window.addEventListener('load', () => {
-            // Assume OFF state initially as required
-            fanActive = false;
             updateFanButtonUI();
         });
+       
+        
+  
+
 
         // EQ Logic
         let eqDebounceTimer = null;
