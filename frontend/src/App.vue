@@ -5,6 +5,7 @@ import { api } from './services/api'
 import NowPlaying from './components/player/NowPlaying.vue'
 import PlayerControls from './components/player/PlayerControls.vue'
 import VolumeControl from './components/player/VolumeControl.vue'
+import SongItem from './components/library/SongItem.vue'
 
 const songs = ref([])
 const player = ref({
@@ -165,25 +166,13 @@ onUnmounted(() => {
       </p>
 
       <div v-else class="song-list">
-        <button
+        <SongItem
           v-for="song in songs"
           :key="song.path"
-          class="song"
-          :class="{ selected: selectedPath === song.path }"
-          @click="playSong(song)"
-        >
-          <span class="play-icon">▶</span>
-
-          <span class="song-info">
-            <strong>{{ song.title || song.filename }}</strong>
-            <small>
-              {{ song.artist || 'Unknown artist' }}
-              <span v-if="song.album">
-                · {{ song.album }}
-              </span>
-            </small>
-          </span>
-        </button>
+          :song="song"
+          :selected="selectedPath === song.path"
+          @play="playSong"
+        />
       </div>
     </section>
   </main>
