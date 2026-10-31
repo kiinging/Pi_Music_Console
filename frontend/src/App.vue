@@ -2,7 +2,9 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { api } from './services/api'
+import NowPlaying from './components/player/NowPlaying.vue'
 import PlayerControls from './components/player/PlayerControls.vue'
+import VolumeControl from './components/player/VolumeControl.vue'
 
 const songs = ref([])
 const player = ref({
@@ -103,14 +105,6 @@ async function loadVolume() {
   }
 }
 
-function formatTime(seconds) {
-  const value = Math.floor(Number(seconds) || 0)
-  const minutes = Math.floor(value / 60)
-  const remaining = value % 60
-
-  return `${minutes}:${String(remaining).padStart(2, '0')}`
-}
-
 onMounted(async () => {
   await Promise.all([
     loadSongs(),
@@ -137,15 +131,12 @@ onUnmounted(() => {
     </header>
 
     <section class="now-playing">
-      <div>
-        <p class="section-label">NOW PLAYING</p>
-        <h2>{{ player.title }}</h2>
-        <p class="artist">{{ player.artist }}</p>
-        <p class="time">
-          {{ formatTime(player.position) }} /
-          {{ formatTime(player.duration) }}
-        </p>
-      </div>
+      <NowPlaying
+        :title="player.title"
+        :artist="player.artist"
+        :position="player.position"
+        :duration="player.duration"
+      />
 
       <PlayerControls
         :paused="player.paused"
@@ -155,19 +146,10 @@ onUnmounted(() => {
       />
     </section>
 
-    <section class="volume">
-      <label>
-        Volume: {{ volume }}%
-      </label>
-
-      <input
-        v-model.number="volume"
-        type="range"
-        min="0"
-        max="100"
-        @change="changeVolume"
-      />
-    </section>
+    <VolumeControl
+      v-model:volume="volume"
+      @change="changeVolume"
+    />
 
     <section class="library">
       <h2>My Music Library</h2>
